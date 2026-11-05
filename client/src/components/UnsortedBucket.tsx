@@ -1,39 +1,36 @@
 // Uncovered-workphase items bucket — drag-source only, no drop target.
 
 import type { Item, ItemType, Workphase } from '../types';
-import { isStub } from '../lib/isStub';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 
 interface UnsortedBucketProps {
   uncoveredWorkphases: Workphase[];
-  invalidItems: Item[];
+  // The live items whose workphase is null or outside this workflow, as the board's items give them:
+  // already out of any filter, and with no Stub (an attached child nests under its parent's Card).
+  unknownStatusItems: Item[];
   getWorkphaseItems: (workphaseId: string) => Item[];
+  // Whether a workphase is uncovered or any live item has an unknown status, Attached ones included.
   needsAttention: boolean;
   itemTypes: ItemType[];
   childCounts: Record<string, number>;
   getAttachedChildren: (parentId: string) => Item[];
   defaultExpanded: boolean;
-  filterProjectId?: string;
   onCardClick: (id: string) => void;
 }
 
 export default function UnsortedBucket({
   uncoveredWorkphases,
-  invalidItems,
+  unknownStatusItems: unknownItems,
   getWorkphaseItems,
   needsAttention,
   itemTypes,
   childCounts,
   getAttachedChildren,
   defaultExpanded,
-  filterProjectId,
   onCardClick,
 }: UnsortedBucketProps) {
   const groups = uncoveredWorkphases.map(w => ({ workphase: w, items: getWorkphaseItems(w.id) }));
-  // Items whose workphase is null or outside this workflow. Attached children
-  // nest under their (also-Unknown) parent rather than showing top-level.
-  const unknownItems = invalidItems.filter(i => !isStub(i) && (!filterProjectId || i.projectId === filterProjectId));
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + unknownItems.length;
 
   if (totalItems === 0 && !needsAttention) return null;

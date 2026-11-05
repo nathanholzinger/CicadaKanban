@@ -18,6 +18,7 @@ import WorkphaseManagerPanel from './WorkphaseManagerPanel';
 import { useBoardManagement } from './workflow/useBoardManagement';
 import { useWorkphaseManagement } from './workflow/useWorkphaseManagement';
 import { useColumnManagement } from './workflow/useColumnManagement';
+import { hasUnknownStatusItem } from './workflow/itemListOps';
 import { useItemManagement } from './workflow/useItemManagement';
 import { useBoardDnd } from './workflow/useBoardDnd';
 import { DragSessionContext, PlacementsContext } from './workflow/DragSessionContext';
@@ -104,6 +105,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     childCounts,
     getWorkphaseItems,
     getMergedColumnItems,
+    getUnknownStatusItems,
     getAttachedChildren,
     handleCreateItem,
     handleItemUpdated,
@@ -425,14 +427,19 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
                         <UnsortedBucket
                           uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-                          invalidItems={board.unsorted.invalidItems}
+                          unknownStatusItems={getUnknownStatusItems(workphases.map(w => w.id))}
                           getWorkphaseItems={getWorkphaseItems}
-                          needsAttention={board.unsorted.needsAttention}
+                          needsAttention={
+                            board.unsorted.uncovered.length > 0 ||
+                            hasUnknownStatusItem(
+                              items,
+                              workphases.map(w => w.id),
+                            )
+                          }
                           itemTypes={itemTypes}
                           childCounts={childCounts}
                           getAttachedChildren={getAttachedChildren}
                           defaultExpanded={Boolean(board.showAttachedChildren)}
-                          filterProjectId={filterProjectId}
                           onCardClick={setSelectedItemId}
                         />
 

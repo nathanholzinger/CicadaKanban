@@ -230,6 +230,28 @@ export function getMergedColumnItemsFrom(
   return selectBoardItems(items, id => id !== null && coveredSet.has(id), filterProjectId, isTerminal, placements);
 }
 
+// Unsorted's Unknown-status list (wiki boards-columns-unsorted §10): the live items whose workphase is
+// missing or isn't one of the workflow's, read from the board's items as every column's list is, so an
+// edit, a delete or a reassignment shows with no reload. Stubs nest in their parent's Card, and an item
+// a pending move takes to a column leaves the list at its release, as in a column's.
+export function getUnknownStatusItemsFrom(
+  items: readonly Item[],
+  workflowWorkphaseIds: readonly string[],
+  filterProjectId?: string,
+  placements: Placements = NO_PLACEMENTS,
+): Item[] {
+  const known = new Set(workflowWorkphaseIds);
+  return selectBoardItems(items, id => !id || !known.has(id), filterProjectId, undefined, placements);
+}
+
+// Whether any live item has an unknown status, the Attached and other projects' ones included: what the
+// API's `needsAttention` counts over `invalidItems` (wiki boards-columns-unsorted §10), over the live items
+// in place of the board load's.
+export function hasUnknownStatusItem(items: readonly Item[], workflowWorkphaseIds: readonly string[]): boolean {
+  const known = new Set(workflowWorkphaseIds);
+  return items.some(item => !item.workphaseId || !known.has(item.workphaseId));
+}
+
 // A Card whose own placement previews it attaching
 // *into* this parent is pulled into the filtered set by that placement
 // (`renderedParentId`/`renderedIsStub`, the same pattern `selectBoardItems`

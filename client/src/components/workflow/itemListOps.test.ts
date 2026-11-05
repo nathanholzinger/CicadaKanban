@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
 import { carriedBranchOf } from '../../lib/hierarchyPlacement';
 import {
   getWorkphaseItemsFrom,
   getMergedColumnItemsFrom,
   getAttachedChildrenFrom,
+  getUnknownStatusItemsFrom,
+  hasUnknownStatusItem,
   hierarchyRows,
   descendantsChildrenOf,
   sectionEntries,
@@ -209,6 +212,83 @@ describe('getMergedColumnItemsFrom', () => {
       item('b', { workphaseId: 'done2', position: null, completedAt: 100 }),
     ];
     expect(getMergedColumnItemsFrom(done, ['done1', 'done2'], undefined, true).map(i => i.id)).toEqual(['b', 'a']);
+  });
+});
+
+// Unsorted's Unknown-status list: the live items whose workphase is none, or not one of the workflow's.
+describe('getUnknownStatusItemsFrom', () => {
+  const WORKFLOW = ['todo', 'doing'];
+  const items = [
+    item('none', { workphaseId: null, position: 2 }),
+    item('foreign', { workphaseId: 'gone', position: 1 }),
+    item('known', { workphaseId: 'doing', position: 3 }),
+    item('stub', { parentId: 'foreign', workphaseId: null, position: 4 }),
+    item('other-project', { projectId: 'p2', workphaseId: 'gone', position: 5 }),
+  ];
+  const ids = (list: Item[]) => list.map(i => i.id);
+
+  it('lists an item with no workphase and one with a foreign workphase, by position, and no known one', () => {
+    expect(ids(getUnknownStatusItemsFrom(items, WORKFLOW))).toEqual(['foreign', 'none', 'other-project']);
+  });
+
+  it('leaves out a Stub, which nests in its parent’s Card', () => {
+    expect(ids(getUnknownStatusItemsFrom(items, WORKFLOW))).not.toContain('stub');
+  });
+
+  it('applies the project filter when given', () => {
+    expect(ids(getUnknownStatusItemsFrom(items, WORKFLOW, 'p1'))).toEqual(['foreign', 'none']);
+  });
+
+  it('reads the live items: an edit shows, and a deleted item is gone', () => {
+    const edited = items.map(i => (i.id === 'none' ? { ...i, title: 'Renamed' } : i));
+    expect(getUnknownStatusItemsFrom(edited, WORKFLOW).find(i => i.id === 'none')?.title).toBe('Renamed');
+
+    const deleted = items.filter(i => i.id !== 'none');
+    expect(ids(getUnknownStatusItemsFrom(deleted, WORKFLOW))).toEqual(['foreign', 'other-project']);
+  });
+
+  it('drops an item once it has a workphase of the workflow, and once a pending move places it in a column', () => {
+    const given = items.map(i => (i.id === 'none' ? { ...i, workphaseId: 'todo' } : i));
+    expect(ids(getUnknownStatusItemsFrom(given, WORKFLOW))).toEqual(['foreign', 'other-project']);
+
+    const pending = placements([['foreign', { workphaseId: 'doing', slot: 'last' }]]);
+    expect(ids(getUnknownStatusItemsFrom(items, WORKFLOW, undefined, pending))).toEqual(['none', 'other-project']);
+  });
+});
+
+describe('hasUnknownStatusItem', () => {
+  const WORKFLOW = ['todo', 'doing'];
+
+  it('is true for an item with no workphase or a foreign one, whichever project it is in', () => {
+    expect(hasUnknownStatusItem([item('a'), item('b', { workphaseId: null })], WORKFLOW)).toBe(true);
+    expect(hasUnknownStatusItem([item('a'), item('b', { projectId: 'p2', workphaseId: 'gone' })], WORKFLOW)).toBe(true);
+  });
+
+  it('counts an Attached item, which the list leaves out', () => {
+    const items = [item('a'), item('s', { parentId: 'a', workphaseId: null })];
+    expect(hasUnknownStatusItem(items, WORKFLOW)).toBe(true);
+    expect(getUnknownStatusItemsFrom(items, WORKFLOW)).toEqual([]);
+  });
+
+  it('is false when every item has one of the workflow’s workphases, and when there are no items', () => {
+    expect(hasUnknownStatusItem([item('a'), item('b', { workphaseId: 'doing' })], WORKFLOW)).toBe(false);
+    expect(hasUnknownStatusItem([], WORKFLOW)).toBe(false);
+  });
+
+  it('turns false when the only unknown item is deleted or given a status', () => {
+    const items = [item('a'), item('b', { workphaseId: null })];
+    expect(
+      hasUnknownStatusItem(
+        items.filter(i => i.id !== 'b'),
+        WORKFLOW,
+      ),
+    ).toBe(false);
+    expect(
+      hasUnknownStatusItem(
+        items.map(i => ({ ...i, workphaseId: 'todo' })),
+        WORKFLOW,
+      ),
+    ).toBe(false);
   });
 });
 

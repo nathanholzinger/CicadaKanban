@@ -259,6 +259,8 @@ Filled in by the Coder.
 |---|---|
 | `useProjectCollection.ts::useProjectCollection` | D3: the project collection and its four writes (`create`, `update`, `remove`, `reorder`), the pending moves, `sidebarProjects`, and the first load (`loaded`). It takes `onParentOpened`, the collapse's `expand` |
 | `useProjectCollection.ts::writeInTurn` | D1: a project's write is sent when its earlier one is answered, whether that succeeded or failed. A write with none out is sent at once, so a release still sends in the same tick. Kept in `writeTails`, a map of each project's last write still out |
+| `itemListOps.ts::getUnknownStatusItemsFrom` | D4: Unsorted's Unknown-status list, through `selectBoardItems`: a workphase that's none or not the workflow's, with the project filter, no Stubs, and the pending placements. `useItemManagement.ts::getUnknownStatusItems` exposes it, closing over the filter and placements |
+| `itemListOps.ts::hasUnknownStatusItem` | D4's flag: any live item, Attached and other projects' included, whose workphase is none or not the workflow's. `BoardView.tsx` ORs it with `board.unsorted.uncovered.length > 0` for `needsAttention` |
 | `useProjectCollection.ts::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
 | `useProjectCollection.ts::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
 
@@ -282,6 +284,15 @@ Filled in by the Coder.
 - **The hook has no tests of its own.** `App.pendingMove.test.tsx` and `App.test.tsx` ran unchanged and are the gate, as D3 says.
 - **A comment moved with it:** `useCollapsedProjects.ts`'s header named `App.tsx` as the place a create and a parent change are written. It now names the hook.
 - **The gate:** `npm run check` passes (438 server, 838 client, 245 script tests). `npm run test:e2e`: 215 passed, 22 skipped.
+
+**Amendment 3: Batch 3 built (Coder, 2026-11-05).** #3, by D4.
+- **The files are the plan's four,** with `UnsortedBucket.tsx` taking `unknownStatusItems` in place of `invalidItems`, and losing its own Stub and project filter, which the selector does. It also loses its `filterProjectId` prop, which nothing else read. `BoardView.tsx` still folds `unsorted.invalidItems` into the loaded items, which is where the live list starts; nothing else reads that field, nor the response's `needsAttention`.
+- **The flag reads the stored workphase,** not a pending placement's, as the API's does. So a pending drag of the only Unknown item into a column empties the list at the release while the badge stays until the write lands, the badge over an empty bucket that stays an Open question.
+- **Tests:**
+  - **The selector and the flag,** in `itemListOps.test.ts`: none and foreign workphases, a known one left out, a Stub left out, the project filter, an edit and a delete, a pending placement, and the Attached and other-projects' items the flag counts.
+  - **The bucket,** in `UnsortedBucket.test.tsx`: ATT-9.3's test keeps its assertion, now with the real selector supplying the list, since the bucket no longer sees the Stub. Two more: the title as it is now, and the bucket closing when its only item is deleted or given a status.
+  - **A surface spec,** `tests/ui/unsorted-unknown-status.spec.ts`, untagged: a rename, a delete and a status, each at once with no reload. **The Sheet has no status field,** so the status goes through its Parent control, an attach under a parent in a column, which the item takes the workphase of and nests in. All three fail against the old bucket and pass with the fix.
+- **The gate:** `npm run check` passes (438 server, 849 client, 245 script tests). `npm run test:e2e`: 218 passed, 22 skipped.
 
 ## Open questions
 

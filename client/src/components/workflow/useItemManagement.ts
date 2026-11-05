@@ -9,6 +9,7 @@ import {
   computeChildCounts,
   getAttachedChildrenFrom,
   getMergedColumnItemsFrom,
+  getUnknownStatusItemsFrom,
   getWorkphaseItemsFrom,
   removeItemAndDescendants,
   type Placement,
@@ -117,6 +118,10 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     return getMergedColumnItemsFrom(items, coveredWorkphaseIds, filterProjectId, isTerminal, placements);
   }
 
+  function getUnknownStatusItems(workflowWorkphaseIds: readonly string[]): Item[] {
+    return getUnknownStatusItemsFrom(items, workflowWorkphaseIds, filterProjectId, placements);
+  }
+
   function getAttachedChildren(parentId: string): Item[] {
     return getAttachedChildrenFrom(items, parentId, placements);
   }
@@ -157,6 +162,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     childCounts,
     getWorkphaseItems,
     getMergedColumnItems,
+    getUnknownStatusItems,
     getAttachedChildren,
     handleCreateItem,
     handleItemUpdated,
