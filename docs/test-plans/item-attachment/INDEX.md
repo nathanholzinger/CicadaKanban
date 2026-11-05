@@ -17,5 +17,5 @@ The page is gesture-agnostic, so each case holds whichever write makes the chang
 | [ATT-7 — Detaching preserves the parent, and severing it](att-7-detach-preserves-parent.md) | What a detach keeps and changes, re-attaching, and reparenting to root |
 | [ATT-8 — Hierarchy changes are logged](att-8-hierarchy-changes-logged.md) | The activity entry a parent or attachment change records |
 | [ATT-9 — The workphase a write leaves an item in](att-9-workphase-a-write-leaves.md) | An Attached item's workphase, where an item leaving attachment lands, and a Free item's workphase staying in its project's workflow |
-| [ATT-10 — Creating an item](att-10-creating-an-item.md) | What a create names, the attachment default, and an optional workphase |
+| [ATT-10 — Creating an item](att-10-creating-an-item.md) | What a create names, the attachment default, an optional workphase, and the Sheet's add-child control enabled below the item cap or disabled with its reason at and past it |
 | [ATT-11 — Deleting an item deletes its subtree](att-11-deleting-an-item.md) | What a delete removes, attached and detached, and what the board stops showing |

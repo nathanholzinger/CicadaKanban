@@ -1,6 +1,6 @@
 # DRAG-7 — Depth overflow and the hierarchy modal
 
-**Next ID:** DRAG-7.32
+**Next ID:** DRAG-7.36
 
 **Terms.** `L` is `sectionLevels`, the tunable number of levels a Card's section shows. A row's *level* is its depth below Card `P`: `P`'s children are at level 1, so the section shows levels 1 to `L`, and an overflow row sits at the level of the children it stands for. *The tree* is `P`'s hierarchy, with `P` top-level, `L` at least 2, and `CAP` deep enough for every state a case names, unless a case says otherwise:
 - `A`, at level 1, heads a chain of attached Stubs, one per level, down to `Q`, at level `L − 1`. When `L` is 2, `Q` is `A`.
@@ -20,7 +20,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.5 | Below a last-level row with no attached children, one tab right makes the item its only attached child | P1 | Automated |
 | DRAG-7.6 | Back in the section, a Stub whose own slot is hidden starts as the Card's last child | P1 | Open |
 | DRAG-7.7 | Clicking an overflow row opens the hierarchy modal, centered, with the Card's attached descendants at every level | P1 | Automated |
-| DRAG-7.8 | With no drag running, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
+| DRAG-7.8 | With no drag or Sheet open, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
 | DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Automated |
 | DRAG-7.10 | Leaving the modal closes it and pops directly to the Card's column or sub-row | P1 | Open |
 | DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Automated |
@@ -40,9 +40,13 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Automated |
 | DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Automated |
 | DRAG-7.27 | The carried item's overflow and its branch's overflow rows are absent during the drag | P2 | Open |
-| DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
+| DRAG-7.28 | A click on a modal row opens its Sheet above the modal | P2 | Automated |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
+| DRAG-7.32 | Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal | P1 | Open |
+| DRAG-7.33 | Parent and child links replace the Sheet over the same modal | P1 | Open |
+| DRAG-7.34 | An edit in the Sheet appears in the open modal | P1 | Open |
+| DRAG-7.35 | The modal loses its last attached descendant while its Sheet is open | P2 | Pending PO |
 
 ---
 
@@ -110,11 +114,11 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 **Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
-## DRAG-7.8 — With no drag running, the modal closes by its X, a click outside it, or Escape, and nothing is written
+## DRAG-7.8 — With no drag or Sheet open, the modal closes by its X, a click outside it, or Escape, and nothing is written
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
-*Given* the modal open by a click, with no drag running, *when* its X button is clicked, *when* a click lands anywhere outside it, or *when* Escape is pressed, *then* each closes the modal, and nothing is written: the board is as it was before the modal opened, `P`'s section and its overflow row included. During a drag, Escape cancels the drag instead, and the modal stays open ([DRAG-7.19](drag-7-overflow-and-hierarchy-modal.md)).
+*Given* the modal open by a click, with no drag running and no Sheet open above it, *when* its X button is clicked, *when* a click lands anywhere outside it, or *when* Escape is pressed, *then* each closes the modal, and nothing is written: the board is as it was before the modal opened, `P`'s section and its overflow row included. During a drag, Escape cancels the drag instead, and the modal stays open ([DRAG-7.19](drag-7-overflow-and-hierarchy-modal.md)). Closing a Sheet above the modal leaves the modal open ([DRAG-7.32](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
@@ -294,11 +298,13 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 **Automation test:** —
 
-## DRAG-7.28 — A click on a row in the modal opens nothing
+## DRAG-7.28 — A click on a modal row opens its Sheet above the modal
 
 **Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
-*Given* the modal open, with no drag running, *when* `R1`'s row in it is clicked, *then* no Sheet opens, the modal stays open as it was, and nothing is written.
+*Given* the modal open, with no drag running, *when* `R1`'s row in it is clicked, *then* `R1`'s Sheet opens above the modal and is available for interaction. The modal stays open at the same place with the same hierarchy, and opening the Sheet writes nothing. The Sheet belongs to `R1`, not the root Card `P` or another row.
+
+*When* instead a press on `R1` starts its drag in the modal, *then* carrying that row opens no Sheet. The drag still places by gap and depth, as in [DRAG-7.9](drag-7-overflow-and-hierarchy-modal.md).
 
 **Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
@@ -315,5 +321,43 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7, wiki board-drag-interaction §7.1, wiki board-drag-interaction §7.3, wiki hierarchy-placement §5
 
 *Given* `R2` picked up in the modal at its original position `p`, *when* it pops out to `P`'s column, zooms back into `P`, starts as `P`'s last child because its pickup slot is hidden in the section ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), then reopens the modal by a hold, and the user moves the ghost back to `R2`'s original gap after `R1a` and before `T`, at level `L + 1`, and releases, *then* no request is sent. `R2.parentId = R`, it remains attached with position `p` and `P`'s workphase, and the modal stays open showing it in that original slot. The modal shows the full hierarchy, so the section's hidden-slot seed doesn't turn this set-down into a move.
+
+**Automation test:** —
+
+## DRAG-7.32 — Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+
+*Given* `R1`'s Sheet open above the hierarchy modal, no drag running, and `P` still present with attached descendants, each of these from that state:
+
+- *when* the Sheet's X is clicked, *then* only the Sheet closes;
+- *when* the Sheet's backdrop is clicked, *then* only the Sheet closes; the click does not dismiss the modal underneath;
+- *when* Escape is pressed, *then* only the Sheet closes, not both surfaces in the same keypress.
+
+After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal.
+
+**Automation test:** —
+
+## DRAG-7.33 — Parent and child links replace the Sheet over the same modal
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+
+*Given* `R1`'s Sheet open over `P`'s hierarchy modal, *when* the link to parent `R` is followed, *then* `R`'s Sheet replaces `R1`'s in the foreground. *When* the child link back to `R1` is followed, and then the link to its child `R1a`, *then* the Sheet likewise shows that named item each time. No second Sheet is left open underneath. The same modal stays open beneath every replacement, at its prior place, with the same hierarchy and scroll position. Following these links writes nothing; closing the last Sheet returns to that modal.
+
+**Automation test:** —
+
+## DRAG-7.34 — An edit in the Sheet appears in the open modal
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+
+*Given* `R1`'s Sheet open over the modal, with title `First child`, *when* its title is successfully changed to `Renamed child`, *then* the modal's row for `R1` shows `Renamed child`, not `First child`, without closing and reopening the modal. `R1` remains under `R` with `R1a` beneath it, at the same position in the hierarchy; unrelated rows keep their titles and places. Closing the Sheet returns to that updated modal, not an older snapshot of the item.
+
+**Automation test:** —
+
+## DRAG-7.35 — The modal loses its last attached descendant while its Sheet is open
+
+**Priority:** P2 · **Status:** Pending PO
+
+*Given* Card `P`'s hierarchy modal is open and its only attached descendant `X` has its Sheet open above it, *when* a successful edit detaches `X`, leaving `P` with no attached descendants while `X`'s Sheet remains open, *then* — **question for the PO:** wiki board-drag-interaction §9 says both that nothing closes the modal while a Sheet is open and that the modal closes when it has no attached descendants left. Does the automatic empty-hierarchy close happen immediately, leaving the Sheet open, or wait until the Sheet closes? The ordinary dismissal case keeps a nonempty hierarchy and does not decide this boundary.
 
 **Automation test:** —

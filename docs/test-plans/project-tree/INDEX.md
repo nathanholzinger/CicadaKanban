@@ -12,7 +12,7 @@ Shared rules have no catalog of their own, so the cases here test them as projec
 | [TREE-2 — What the drag shows](tree-2-what-the-drag-shows.md) | Full/Mid/Low tiers, cap and root boundaries, tier lifetime, the ghost's full-strength top-edge line and its start, independent sidebar values, the carried branch and count line, and opening a collapsed project on a drop |
 | [TREE-3 — What makes a project a legal parent](tree-3-legal-parent-and-cap.md) | A parent that exists, isn't the project and isn't in its subtree, a create's parent, the project cap, and a deep name in a narrow sidebar |
 | [TREE-4 — A project's position compares among its siblings](tree-4-sibling-order.md) | Sibling positions and order, missing positions, reindex disclosure and application, moves drawn at release, independent answers, the next pickup's tree, and rollback as soon as a move fails |
-| [TREE-5 — Creating a project](tree-5-creating-a-project.md) | A create's parent and its place after its siblings |
+| [TREE-5 — Creating a project](tree-5-creating-a-project.md) | A create's parent and sibling position, Add subproject at and below the cap, disabled controls and reasons, unread-cap behavior, and the always-offered top-level create |
 | [TREE-6 — Moving a project](tree-6-moving-a-project.md) | A named neighbor, no neighbor, a neighbor the move can't use, the subtree going with it, the project as its own neighbor, and a named position |
 | [TREE-7 — An edit can change a project's parent](tree-7-editing-the-parent.md) | An edit that keeps the parent, and one that changes it |
 | [TREE-8 — A project always has a name](tree-8-a-projects-name.md) | A create's name, an edit that leaves the name out, and an empty, `null` or blank name |

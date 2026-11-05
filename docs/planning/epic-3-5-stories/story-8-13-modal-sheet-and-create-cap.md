@@ -36,8 +36,9 @@ Two small fixes Nathan found in manual testing (2026-11-04):
 
 - **Wiki passages:** none ahead of the build. The PO writes the rules once Nathan approves (code first).
 - **Test-plan cases (Test Planner, after the PO's pass):**
-  - Revised: **DRAG-7.28,** "A click on a row in the modal opens nothing". Its spec is updated in Phase 1 to what the build does, and checked against the revised case in Phase 3.
-  - Added: cases for the disabled create controls, wherever the PO puts the rule (Open questions).
+  - Revised: **DRAG-7.28** opens the clicked row's Sheet above the modal and opens no Sheet for a row being dragged; **DRAG-7.8** qualifies ordinary modal dismissal to no Sheet open above it. Existing statuses and Automation fields await the Reconciler's assessment against the revised cases.
+  - Added, all **Open**: **DRAG-7.32–DRAG-7.34** (Sheet dismissal and Escape order, parent/child Sheet navigation, and edits reflected in the modal); **TREE-5.2–TREE-5.5** (both project create controls at the cap boundary, disabled behavior at and past it, unread-cap state and always-offered New project); **ATT-10.6–ATT-10.7** (the Sheet's add-child boundary and disabled behavior).
+  - Added **Pending PO**: **DRAG-7.35**, the modal becoming empty while a Sheet is open. The Open question below asks how the two closing rules meet.
 
 ## Inbound deferrals
 
@@ -155,20 +156,63 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **The disabled controls use `disabled`, not `aria-disabled`.** A disabled button takes no click and no focus, so the reason is for a hover.
 - **The overview tab's button gains `aria-label="Add subproject"`,** so its accessible name stays what its title gave it.
 
+**3. The wiki (PO, 2026-11-05).**
+- **The click in the modal,** board-drag-interaction §9: a click on a row opens that item's Sheet above the modal, and a row being dragged opens nothing. It doesn't say "as a Stub's click in a Card's section does", since the wiki states no rule for that click. The modal stays open under it, and the Sheet closing any way returns to the modal as it was. The Sheet's links to a parent or a child open that Sheet in its place, over the same modal, and an edit made in the Sheet shows in the modal. The closing rule gains that while a Sheet is open nothing closes the modal: Escape closes the Sheet, the next the modal. The passage it supersedes and its Open question go. The modal's look gains how a Sheet shows above it, today drawn over it with its backdrop dimming the modal.
+- **The create-at-cap rule is shared,** in hierarchy-placement §6 beside "A feature's UI and its API always enforce the same `CAP`": a control that creates a child shows disabled at a parent at depth `D` with `D + 1 > CAP`, a parent past the cap included; it's drawn, takes no click and no keyboard focus, and gives its reason on hover, "At the depth cap (N levels)". Its Why is the user naming an entry only to be refused. Each feature's page names its controls. The disabled look is the page's first Open question, as today's placeholder.
+- **Each feature's controls:** project-tree §5, "Add subproject" on a sidebar row and on the Overview tab, "New project" always offered, and every "Add subproject" offered until the cap is read. Item-attachment §14, the Sheet's add-child control. Item-sheet's "Adding a child" points there.
+- **Deductions, for Nathan to overrule:**
+  - **The rule is shared,** by the wiki README's convention, as it holds for items and projects alike.
+  - **The wording is a rule,** since Nathan's hands-on passed with it, so a case may pin it. Its `N` is the feature's cap.
+  - **No keyboard focus is a rule,** as the handoff states it: a `disabled` button. It means a keyboard user never reaches the reason. If Nathan wants the reason reachable, the control would be `aria-disabled` and focusable instead, a code change.
+  - **The Sheet drawing above every modal, and over the bell's open list,** is a placeholder in item-sheet's Open questions ("What the Sheet draws over"), not a rule: that page states none of its own, and only the hierarchy modal's case was asked for.
+  - **The links in the Sheet and an edit showing in the modal** are rules (D2), though no test covers them. The Planner may write cases for them.
+- **Not taken into the wiki:** the modal's header opening nothing, which nothing asked for. The parent pickers' missing cap, already in project-tree's and item-sheet's Open questions.
+- **For the Test Planner:** DRAG-7.28's ground is §9's click paragraph, and the Sheet-over-modal closing is §9's closing paragraph. The create controls' ground is hierarchy-placement §6, with each control named in project-tree §5 and item-attachment §14. The helper's own cases (an unread cap, data past the cap) are §6 and project-tree §5. The disabled look is an Open question, so no case for it.
+- **For the Architect:** the roadmap's Story 8 line, "Today a click there opens nothing", as the handoff says.
+- **Resolved Open questions removed:** where the rule lives (above), and the reason's wording (Nathan's hands-on).
+- **Checks:** `check:docs` passes. Nothing is committed.
+
+**4. Test-plan follow-up (Test Planner, 2026-11-05).** Read the handoff and the PO's uncommitted wiki updates, without reading production or test code.
+- **The settled modal rules:** revised DRAG-7.28 and qualified DRAG-7.8. New DRAG-7.32–DRAG-7.34 cover the three Sheet dismissals and two-Escape order, navigation replacing the foreground Sheet over the same modal, and a title edit reaching the modal without reopening it. These cases do not pin z-indexes, dimming, typography or the Sheet's behavior over other modals.
+- **The shared cap rule:** four new TREE-5 cases apply it to both project controls, and two new ATT-10 cases to the Sheet's add-child control. Depths use the wiki's absolute root-at-1 convention; a child at exactly CAP is legal. The disabled controls remain present, advertise the feature's cap in the exact reason, take no click or keyboard focus, and cannot start a create. Cases include existing over-cap data, unread project-cap state and the always-offered top-level project create. No item unread-cap state is invented: the handoff says the item cap is available before the Sheet opens.
+- **Catalog placement:** hierarchy-placement holds shared rules and gets no catalog. The cap cases belong in project-tree §5 and item-attachment §14's suites. Item-sheet still has no settled rules of its own, so its catalog remains an INDEX only. Updated the three affected feature INDEX entries.
+- **One rule intersection needs the PO:** DRAG-7.35 stays Pending PO until the wiki says whether automatic empty-modal closing overrides the Sheet-open hold. The normal closing and title-edit cases avoid that unsettled boundary.
+- **For the Coder/Reconciler:** the handoff's existing Sheet-dismissal and create-control tests are candidates for the new IDs, not mapped coverage. Stamp only their asserted portions, and assess all revised/new cases against the full Then. Sheet links and edits are explicitly reported untested. All new live cases start Open with no Automation pointer; this pass changes no existing status or mapping and grants no new internal-test approval. These non-drag coverage tasks belong to 8.13 or the scheduled Story 8 close-out, not an automatic Story 10 deferral. The reported drag failures below retain their existing route and are not new skips or automation judgments from this pass.
+
 ## Open questions
 
-- **For the PO, after Nathan's hands-on: where the create-at-cap rule lives.** It holds for items and projects alike, so hierarchy-placement §6 is a candidate. It would sit beside "A feature's UI and its API always enforce the same `CAP`". The alternatives are each feature's page:
-  - project-tree §5, "Creating a project";
-  - for items, item-attachment §14, or the item-sheet page's Open questions, since that page states no rules of its own and its "Adding a child" entry lives there.
-- **For Nathan, hands-on:** the reason's wording (D3).
+- **For the PO, DRAG-7.35:** if the last attached descendant is detached by an edit while its Sheet remains open, does the hierarchy modal close immediately or only once the Sheet closes? Board-drag-interaction §9 currently says both "while a Sheet is open above it, nothing closes the modal" and that an empty hierarchy closes it. Please settle the precedence in the wiki; the Pending PO case records the boundary without choosing either outcome.
+
+- **For Story 10, the drag specs that fail in the full E2E run.** Across the two full runs during this story, six `drag-7-*` specs failed, three each time: DRAG-7.10, 7.3 and 7.29 in the first; DRAG-7.16, 7.4 and 7.29 in the second. DRAG-7.10, 7.3 and 7.29 were run alone at the commit before Phase 1 (`ed771e3`) and failed there at about the same rate, so the story didn't cause them. 7.16 and 7.4 were not run there. They look timing-sensitive under load.
 
 ## Living-docs handoff
 
 - **Behavior decisions made while building, for the PO to rule on:**
+  - **The Sheet draws above every modal,** not only the hierarchy modal (Amendment 1). Nothing but the modal and the notifications bell's dropdown shares its screen. An open Sheet's backdrop now covers the bell's dropdown, as it does a modal.
+  - **While a Sheet is open the modal ignores Escape, its X and a click on its backdrop.** Escape closes the Sheet, and the next closes the modal. The Sheet's backdrop covers the modal's, so the click is the Sheet's in practice.
+  - **The create controls are offered while the project cap is unread (null),** since the API refuses a create past the cap anyway (D5). The item cap is always read by the time a Sheet is open.
+  - **A disabled create control is a `disabled` button,** so it takes no click and no keyboard focus, and its reason shows on hover as its title. The reason's wording, "At the depth cap (N levels)", is the Coder's draft. Nathan's hands-on on the deep stack passed with it.
+  - **Where the create-at-cap rule lives** is the Open question below, still the PO's.
+  - **Not covered by a test:** the Sheet's own links to a parent or a child staying in the Sheet, and an edit made in the Sheet showing in the modal (D2). Both are code paths this story didn't change, and the plan's hands-on lists them for Nathan.
 - **Planned passages now built:** none (code first).
 - **Passages superseded:**
-  - board-drag-interaction §9, "A click on a row in the modal opens nothing: the item's Sheet would open behind the modal".
+  - board-drag-interaction §9, "A click on a row in the modal opens nothing: the item's Sheet would open behind the modal" (`README.md`, the passage around line 1012).
   - Its Open question, "Opening a Sheet from the hierarchy modal (§9)", is answered by D2.
+  - The roadmap's Story 8 entry says "Today a click there opens nothing" (`epic-3-5-roadmap.md`, around line 1327). It describes the state before this story, for the Architect.
 - **Implementation passages to place:**
-- **Test-plan cases affected:** DRAG-7.28, its spec updated in Phase 1 ahead of the case.
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **Placed already, by the Coder:**
+    - `HierarchyModal.tsx`'s header: a row's click opens its Sheet above it, and the order of the Escapes.
+    - `ItemDetailPanel.tsx`'s comment above the z-indexes.
+    - `hierarchy.ts::noChildReason`'s comment, with the two depth bases.
+    - `workflow/AGENTS.md`, in the hierarchy-modal paragraph: the click, the Sheet above it and the `sheetOpen` hold.
+  - **None left for the PO or the Planner.**
+- **Test-plan cases affected:**
+  - **DRAG-7.28** (Revised, Planner). The case still reads "A click on a row in the modal opens nothing". Its tests now say what the build does: the E2E spec (`drag-7-hierarchy-modal.spec.ts`) is "a click on a row in the modal opens that item's Sheet above it", and a unit test in `HierarchyModal.test.tsx` carries the ID. Both are to be checked against the revised case.
+  - **No case yet, tests carry no ID** (Planner, for the new cases):
+    - The Sheet over the modal closing by Escape, its X and its backdrop, each returning to the modal as it was, then a last Escape closing the modal (E2E, `drag-7-hierarchy-modal.spec.ts`).
+    - Escape, and the X, closing the modal with no Sheet open and not with one open (`HierarchyModal.test.tsx`).
+    - Each create control, enabled below the cap and disabled with its reason at it (`SortableProjectRow.test.tsx`, `ProjectOverviewTab.test.tsx`, `ItemDetailPanel.test.tsx`).
+    - The helper's rule (`hierarchy.test.ts::noChildReason`), including an unread cap and data already past it.
+  - **No test was deleted, and none lost its case ID.**
+  - **Planner handoff applied:** Scope and Amendment 4 list the revised cases, nine new Open cases, the Pending PO boundary and the Coder/Reconciler follow-up. No test files were read or edited by the Planner, and no new Automated claim was made.
+- **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §9 (the click opens the Sheet above the modal, and the modal held open under it) and its Open questions (the Sheet question removed, the modal's look gains the Sheet above it); hierarchy-placement §6 (the create-at-cap rule, now shared), its Related line and a new Open question (the disabled control's look); project-tree §5 and item-attachment §14 (each feature's controls); item-sheet's Open questions ("Adding a child", and a new "What the Sheet draws over"). See Amendment 3.

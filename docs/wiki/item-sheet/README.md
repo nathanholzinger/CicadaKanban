@@ -34,4 +34,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
 - **The children list.** It lists the item's children, each with an
   Attached/Detached toggle.
 - **Adding a child.** It creates an Attached child, which takes the item's
-  workphase ([`../item-attachment/`](../item-attachment/) §2a, §14).
+  workphase ([`../item-attachment/`](../item-attachment/) §2a, §14). At
+  the cap it shows disabled, by the shared rule
+  ([`../item-attachment/`](../item-attachment/) §14).
+- **What the Sheet draws over.** It draws above the board and every
+  modal on it, the notifications bell's open list included, its backdrop
+  dimming them.

@@ -12,5 +12,5 @@
 | [DRAG-4 — Card attach and hierarchy placement](drag-4-attach-and-stub-placement.md) | Zooming into a Card's Descendants, the starting gap, and placement by gap and depth, including an empty hierarchy |
 | [DRAG-5 — Stub → out: detach](drag-5-detach-and-overflow.md) | Moving a Stub within its Card, detaching it, picking it up again, and reparenting it into another Card |
 | [DRAG-6 — Optimistic preview, reconciliation, and failure](drag-6-preview-reconciliation.md) | What the board shows on release, reconciling responses, re-drags, failures, item and column drags stopped by a resync, the banner, and the stopped item's flash window |
-| [DRAG-7 — Depth overflow and the hierarchy modal](drag-7-overflow-and-hierarchy-modal.md) | How many levels a Card's section shows, the overflow row and its gaps, and the hierarchy modal: opened by a click or by a hold during a drag, how it closes, and a board reload |
+| [DRAG-7 — Depth overflow and the hierarchy modal](drag-7-overflow-and-hierarchy-modal.md) | How many levels a Card's section shows, overflow rows and gaps, the modal's opening and closing, Sheets opened over it with navigation and edits, and a board reload |
 | [DRAG-8 — The carried branch](drag-8-carried-branch.md) | Attached-branch pickup and lifetime, Free descendants, pending writes, layout and restoration, and the carried copy's count line |

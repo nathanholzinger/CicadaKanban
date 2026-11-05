@@ -81,7 +81,11 @@ its own header.
   `boundsRect`), so a cursor over the header is still in the modal. A click opens it centered,
   and so does a mount with no drag running: whether the cursor places the modal is decided
   once, as it mounts (`HierarchyModal.tsx`), so a board reload that remounts a modal a hold
-  opened doesn't leave it at the window's corner.
+  opened doesn't leave it at the window's corner. A click on a Stub row opens that item's Sheet
+  (`BoardView.tsx` passes `setSelectedItemId`), which draws above the modal
+  (`ItemDetailPanel.tsx`'s z-index is above `ModalShell`'s) and leaves it open: while a Sheet is
+  open `HierarchyModal`'s `sheetOpen` holds off its Escape, X and backdrop, so one Escape closes
+  the Sheet and the next the modal.
   **A hold during a drag opens it under the cursor.** While the ghost sits directly above or
   below an overflow row, at its level (`DescendantsProjection.overflowBeside`, which
   `descendantsProjection.ts::modalHoldTarget` turns into the hold's target, and not in an

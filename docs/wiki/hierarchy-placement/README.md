@@ -9,9 +9,10 @@ and [`../../test-plans/project-tree/`](../../test-plans/project-tree/).
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
 §4.1, §5a, §7 (a Card's descendants section on the board, its tiers,
 and its carried branch) ·
-[`../project-tree/`](../project-tree/) §1–§3 (the project sidebar, its
-tiers and carried branch, and the project cap) ·
-[`../item-attachment/`](../item-attachment/) §8 (the item cap)
+[`../project-tree/`](../project-tree/) §1–§3, §5 (the project
+sidebar, its tiers and carried branch, the project cap, and its create
+controls) · [`../item-attachment/`](../item-attachment/) §8, §14 (the
+item cap, and the Sheet's add-child control)
 
 This page answers "given where a dragged entry is released in a
 hierarchy, where does it land, how deep may a hierarchy go, and how is
@@ -153,6 +154,16 @@ way that doesn't reparent it. It isn't hidden, flagged or repaired.
 **A feature's UI and its API always enforce the same `CAP`:** one value,
 so changing it changes it everywhere that feature's entries are placed.
 
+**A control that creates a child shows disabled at a parent the cap
+allows no child under,** at depth `D` with `D + 1 > CAP`, since a
+create has no subtree. A parent already past the cap takes none either,
+by the formula. The control is drawn, takes no click and no keyboard
+focus, and gives its reason on hover: "At the depth cap (N levels)",
+with `N` the feature's cap. **Why:** offered, it would have the user
+name the new entry, only for the API to refuse it. Each feature's page
+names its controls. How a disabled control looks isn't a rule yet (Open
+questions).
+
 **The cap is a display constraint, not a data constraint.** It exists
 because an indented hierarchy has to stay legible, not because deeper
 trees are wrong. Each feature's page grounds its value.
@@ -245,4 +256,5 @@ questions).
 
 Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
-None open.
+- **How a disabled create control looks (§6).** Today it's dimmed, with
+  a not-allowed cursor, and doesn't light up on hover.

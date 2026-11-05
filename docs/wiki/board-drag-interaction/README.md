@@ -1008,15 +1008,21 @@ they do from the section: they show on the board as Cards of their own.
 
 **Clicking an overflow row opens the modal, centered,** when no drag is
 running. During a drag, a hold beside an overflow row opens it instead.
-A drag can start in it, and a drag in it is §7.3's. A click on a row
-in the modal opens nothing: the item's Sheet would open behind the
-modal (Open questions).
+A drag can start in it, and a drag in it is §7.3's.
+
+**A click on a row in the modal opens that item's Sheet, above the
+modal.** A row being dragged opens nothing. The modal stays open under
+the Sheet, and closing the Sheet, any way it closes, returns to the
+modal as it was. A link in the Sheet to the item's parent or a child
+opens that item's Sheet in its place, over the same modal. An edit made
+in the Sheet shows in the modal, which shows the board's items.
 
 **The modal closes by its X button, a click anywhere outside it, or
 Escape.** During a drag, Escape cancels the drag instead, and the
-modal stays open (§7.3). The modal also closes when its Card is gone,
-or has no attached descendants left, since it would have nothing to
-show.
+modal stays open (§7.3). While a Sheet is open above it, nothing closes
+the modal: Escape closes the Sheet, and the next Escape the modal. The
+modal also closes when its Card is gone, or has no attached descendants
+left, since it would have nothing to show.
 
 **A board reload leaves an open modal open,** while its Card still has
 attached descendants, showing the hierarchy as the reloaded board has
@@ -1027,9 +1033,9 @@ modal, or a reload that lands mid-drag and stops the drag (§10).
 a click is. The drag that placed it under the cursor has ended (§10),
 so nothing places it there again.
 
-How the overflow row and the modal look, including the modal's size
-and how it shows the Card at its root, isn't a rule yet (Open
-questions).
+How the overflow row and the modal look, including the modal's size,
+how it shows the Card at its root, and how a Sheet shows above it,
+isn't a rule yet (Open questions).
 
 ## 10. Optimistic preview, reconciliation, and failure
 
@@ -1200,13 +1206,11 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   branch's leaving at pickup and its return when the drag ends (§7.2).
   Today all three are instant.
 - **How the overflow row and the hierarchy modal look (§9).** The
-  overflow row's style, the modal's size, and how the modal shows the
-  Card at its root. Today's overflow row is a muted count in a row the
-  size of a Stub's, and the modal is a box headed by the Card's title,
-  with an X button.
-- **Opening a Sheet from the hierarchy modal (§9).** A click on a row in
-  the modal opens nothing. Opening the item's Sheet needs the modal to
-  give way to the Sheet, or the Sheet to draw above the modal.
+  overflow row's style, the modal's size, how the modal shows the Card
+  at its root, and how a Sheet shows above the modal. Today's overflow
+  row is a muted count in a row the size of a Stub's, and the modal is a
+  box headed by the Card's title, with an X button. A Sheet opened from
+  it draws over it, and the Sheet's backdrop dims the modal.
 - **Zooming into a Card in a done column (§2, rule 6; §6.1).** The Card
   zoomed into is the one the side highlight names, a neighbor of the
   ghost. A done list's ghost doesn't move, so only the Cards beside it

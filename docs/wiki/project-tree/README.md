@@ -227,6 +227,14 @@ A create needs a name (§8). The new project uses the workflow its parent
 uses, until it's given one of its own (§10). A collapsed parent opens in
 the sidebar once the create succeeds (§11).
 
+**"Add subproject" shows disabled at a parent the project cap allows no
+child under** ([`../hierarchy-placement/`](../hierarchy-placement/)
+§6), on a sidebar row and on a project's Overview tab alike. "New
+project", at the sidebar's top, makes a top-level project, so it's
+always offered. Until the client has read the cap, every "Add
+subproject" is offered, and the API still refuses a create past the cap
+(§3).
+
 ## 6. Moving a project
 
 **`PATCH /api/projects/:id/move` places a project under a new parent, or

@@ -419,6 +419,11 @@ questions). An Attached child created without one takes its parent's
 A create is a write like any other: §1, §2a, §7 and §8 hold for it, and
 §11a logs a create under a parent.
 
+**The Sheet's add-child control shows disabled at a parent the item cap
+allows no child under**
+([`../hierarchy-placement/`](../hierarchy-placement/) §6;
+[`../item-sheet/`](../item-sheet/)).
+
 ---
 
 ## Open questions
