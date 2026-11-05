@@ -87,6 +87,8 @@ The roadmap entry's items 1–11; item 5 is done (A3). They stay in the roadmap 
 - **A fix is small:** leave out the rows of the held ids alone, not their children. The decision it needs is the depths a gap beside `Y` offers: the two shallower ones would name `X` itself, which the server refuses.
 - **What exists:** the hook test asserts only that `Y` is drawn under `X`, no part of the held branch, and that the next pickup holds it hidden; the App test asserts the refusal leaves the earlier edit. The surface spec, the release that is sent, and the refusal that follows it are this story's, with the test of the placement (a gap after `Y`, tabbed one level deeper, saves `X` under `Y`). TREE-1.14 is `Open` until then.
 
+**Story 8.13 audit — #8 (2026-11-05).** [Code quality audit](../../audits/code-quality-audit-story-8-13.md), finding #8: `tests/ui/drag-7-hierarchy-modal.spec.ts:635–661` (DRAG-7.10) asserts two 800 ms excursions and returns against a literal 1,500 ms delay. The clock-reset sequence belongs in deterministic pop-machine tests under the existing drag-testing convention; browser automation retains reachability/write outcomes and reads thresholds from `seedDragTuning`'s returned values. Carry this exact issue with Inbound deferrals item 9 and D2's flakiness/test-layer work; any Manual conversion remains Nathan's decision. This accepts the route without requiring a separate 8.13 rewrite.
+
 ## Approach and phases
 
 ### Decisions
