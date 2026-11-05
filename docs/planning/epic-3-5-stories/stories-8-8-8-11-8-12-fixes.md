@@ -257,8 +257,20 @@ Filled in by the Coder.
 
 | Symbol | Carries |
 |---|---|
+| `App.tsx::writeInTurn` | D1: a project's write is sent when its earlier one is answered, whether that succeeded or failed. A write with none out is sent at once, so a release still sends in the same tick. Kept in `writeTails`, a map of each project's last write still out |
+| `App.tsx::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
+| `App.tsx::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
 
 ## Amendments
+
+**Amendment 1: Batch 1 built (Coder, 2026-11-05).** #1 and #2, in `App.tsx` only, by D1 and D2 as written.
+- **D1's scope held:** a move and an edit go through `writeInTurn`. A create and a delete don't, as D1 says.
+- **Tests,** in `App.pendingMove.test.tsx`, untagged (Open questions, for the Planner):
+  - **#1:** the audit's order, `R` under `P` then under `Q` before `P`'s answer: the second request waits, `R` is drawn under `Q` from its release, and it ends there. The same with `P`'s move refused. Another project's move is still sent at once. An edit of `R` waits behind `R`'s move.
+  - **#2:** a refused move's read held while another project's move lands, and the same for a delete's refresh: the older tree is dropped and a second read is made. A read that no write overtook is applied as before.
+  - **Against the old `App.tsx`,** five of the seven fail: the second move sent early, the other project's move (its call count is the old code's), the edit sent early, and the two stale reads applied. The other two, the refused-first move and the plain read, pass either way, as they should: they pin what must not change.
+- **The test file's mocks are reset between tests,** not only cleared. A held answer queued for a request that was never sent (the second move, behind the first) would otherwise reach the next test's.
+- **The gate:** `npm run check` passes.
 
 ## Open questions
 

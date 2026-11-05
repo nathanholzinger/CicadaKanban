@@ -1,7 +1,7 @@
 // State root: layout, workflow inheritance (a project with no workflow inherits
 // from its nearest ancestor that has one).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Workflow } from './types';
 import type { Project } from './types';
 import { fetchWorkflows, createWorkflow } from './api/workflows';
@@ -46,6 +46,12 @@ export default function App() {
   const collapsedProjects = useCollapsedProjects();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
+  // Each project's last write still out, so its next one waits for that answer (`writeInTurn`).
+  const writeTails = useRef(new Map<string, Promise<void>>());
+  // How many project writes' answers have been applied, and which read of the whole tree is the latest
+  // (`refreshProjects`).
+  const writesApplied = useRef(0);
+  const latestRead = useRef(0);
 
   useEffect(() => {
     fetchProjectDepthCap()
@@ -73,6 +79,40 @@ export default function App() {
     }
   }
 
+  // A project's writes go to the server one at a time, in the order they were made: this one is sent when
+  // the project's earlier one is answered, whether that succeeded or failed. The server then saves them in
+  // that order, and so do the answers apply, so the last answer is the latest write and none is stale.
+  // Different projects' writes don't wait for each other.
+  function writeInTurn<T>(id: string, write: () => Promise<T>): Promise<T> {
+    const earlier = writeTails.current.get(id);
+    const run = earlier ? earlier.then(write) : write();
+    const tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    writeTails.current.set(id, tail);
+    void tail.then(() => {
+      if (writeTails.current.get(id) === tail) writeTails.current.delete(id);
+    });
+    return run;
+  }
+
+  // Reads the whole tree after a write and applies it, unless a write's answer has been applied since the
+  // read started: that snapshot is older than a tree the sidebar already shows, so the tree is read again.
+  // A read started later supersedes one still out.
+  async function refreshProjects(failure: string) {
+    const read = ++latestRead.current;
+    const applied = writesApplied.current;
+    try {
+      const fresh = await fetchProjects();
+      if (read !== latestRead.current) return;
+      if (applied !== writesApplied.current) return refreshProjects(failure);
+      setProjects(fresh);
+    } catch (err) {
+      console.error(failure, err);
+    }
+  }
+
   function handleOpenCreateProject(parentId?: string) {
     setCreateProjectParentId(parentId);
     setShowCreateProjectModal(true);
@@ -86,6 +126,7 @@ export default function App() {
         parentId: createProjectParentId,
       });
       setProjects(prev => applyWriteResponse(prev, created));
+      writesApplied.current++;
       // A subproject opens its parent, so it shows (wiki project-tree §2).
       const parentId = parentPutUnder(undefined, created);
       if (parentId) collapsedProjects.expand(parentId);
@@ -111,8 +152,9 @@ export default function App() {
   async function handleUpdateProject(id: string, data: UpdateProjectInput) {
     const before = projects.find(p => p.id === id);
     try {
-      const updated = await updateProject(id, data);
+      const updated = await writeInTurn(id, () => updateProject(id, data));
       setProjects(prev => applyWriteResponse(prev, updated));
+      writesApplied.current++;
       // A project put under a new parent opens it, as a drop does.
       const parentId = parentPutUnder(before, updated);
       if (parentId) collapsedProjects.expand(parentId);
@@ -125,10 +167,9 @@ export default function App() {
   async function handleDeleteProject(id: string) {
     try {
       await deleteProject(id);
+      writesApplied.current++;
       setSelectedProjectId(prev => (prev === id ? null : prev));
-      fetchProjects()
-        .then(setProjects)
-        .catch(err => console.error('Failed to refresh projects after delete:', err));
+      void refreshProjects('Failed to refresh projects after delete:');
     } catch (err) {
       console.error('Failed to delete project:', err);
       throw err;
@@ -147,18 +188,17 @@ export default function App() {
     setPendingMoves(prev => [...prev, pending]);
     const settle = () => setPendingMoves(prev => prev.filter(move => move !== pending));
     try {
-      const updated = await moveProject(id, { parentId, prevId, nextId });
+      const updated = await writeInTurn(id, () => moveProject(id, { parentId, prevId, nextId }));
       // One update: the answer's positions replace the drawn move, so no frame shows the old place.
       setProjects(prev => applyWriteResponse(prev, updated));
+      writesApplied.current++;
       settle();
     } catch (err) {
       // The move goes back with its answer, the project at the place it had before the attempt;
       // the refetch resyncs the tree (wiki project-tree §4).
       console.error('Failed to reposition project:', err);
       settle();
-      fetchProjects()
-        .then(setProjects)
-        .catch(refetchErr => console.error('Failed to refresh projects after failed reorder:', refetchErr));
+      void refreshProjects('Failed to refresh projects after failed reorder:');
     }
   }
 

@@ -6,7 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Project } from './types';
-import { fetchProjectDepthCap, fetchProjects, moveProject } from './api/projects';
+import {
+  deleteProject,
+  fetchProjectDepthCap,
+  fetchProjects,
+  moveProject,
+  updateProject,
+  type UpdateProjectInput,
+} from './api/projects';
 import { fetchWorkflows } from './api/workflows';
 import type { ReorderProject } from './components/sidebar/useProjectDragReorder';
 import type { PendingMove } from './lib/hierarchy';
@@ -16,13 +23,21 @@ import App from './App';
 vi.mock('./api/projects');
 vi.mock('./api/workflows');
 vi.mock('./components/NotificationsBell', () => ({ default: () => null }));
-vi.mock('./components/ProjectPage', () => ({ default: () => null }));
+vi.mock('./components/ProjectPage', () => ({
+  default: ({ onUpdate }: { onUpdate: UpdateProject }) => {
+    update = onUpdate;
+    return null;
+  },
+}));
 
 // Every tree the stand-in sidebar was given, as its rows in order: `id` at its depth, so a render that
 // drew a project at the wrong place is on the record. And the projects of the latest, to read their
 // positions: the stand-in lists them with the moves it is given, as the real sidebar does.
 const seen = vi.hoisted(() => ({ trees: [] as string[][], projects: [] as Project[] }));
 let release: ReorderProject;
+let remove: (id: string) => Promise<void>;
+type UpdateProject = (id: string, data: UpdateProjectInput) => Promise<void>;
+let update: UpdateProject;
 
 vi.mock('./components/ProjectSidebar', async () => {
   const { flattenTree: flatten } = await import('./components/sidebar/projectTreeUtils');
@@ -31,12 +46,15 @@ vi.mock('./components/ProjectSidebar', async () => {
       projects,
       pendingMoves,
       onReorderProject,
+      onDeleteProject,
     }: {
       projects: Project[];
       pendingMoves: PendingMove[];
       onReorderProject: ReorderProject;
+      onDeleteProject: (id: string) => Promise<void>;
     }) => {
       release = onReorderProject;
+      remove = onDeleteProject;
       const rows = flatten(projects, new Set(projects.map(p => p.id)), pendingMoves).map(
         i => `${'-'.repeat(i.depth)}${i.id}`,
       );
@@ -72,6 +90,8 @@ function held<T>() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // A held answer queued for a request that was never sent must not reach the next test's.
+  for (const api of [fetchProjects, moveProject, updateProject, deleteProject]) vi.mocked(api).mockReset();
   seen.trees = [];
   localStorage.clear();
   vi.mocked(fetchProjects).mockResolvedValue(TREE);
@@ -333,5 +353,141 @@ describe('TREE-2.12: every end of the drag draws the branch again under the proj
     expect(tree()).toBe('Q -X --A ---A1 --B');
     await act(async () => answer.resolve(makeProject('X', { parentId: 'Q', position: 1 })));
     expect(tree()).toBe('Q -X --A ---A1 --B');
+  });
+});
+
+describe('a project written twice before its first answer: the writes go out one at a time, in the order made', () => {
+  // R is top-level. It is moved under P after C, then, before that answer, under Q.
+  const underP = () => makeProject('R', { parentId: 'P', position: 1.5 });
+  const underQ = () => makeProject('R', { parentId: 'Q', position: 1 });
+  const UNDER_Q = 'P -C -D Q -R';
+
+  async function releaseTwice() {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await openApp();
+    const first = held<Project>();
+    const second = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    act(() => void release('R', 'P', 'C', null));
+    act(() => void release('R', 'Q', null, null));
+    return { first, second };
+  }
+
+  it('sends the second move only once the first is answered, and draws R under Q from its release on', async () => {
+    const { first, second } = await releaseTwice();
+
+    expect(moveProject).toHaveBeenCalledExactlyOnceWith('R', { parentId: 'P', prevId: 'C', nextId: null });
+    expect(tree()).toBe(UNDER_Q);
+
+    await act(async () => first.resolve(underP()));
+    expect(moveProject).toHaveBeenCalledTimes(2);
+    expect(moveProject).toHaveBeenLastCalledWith('R', { parentId: 'Q', prevId: null, nextId: null });
+    expect(tree()).toBe(UNDER_Q);
+
+    await act(async () => second.resolve(underQ()));
+    expect(tree()).toBe(UNDER_Q);
+    expect(seen.projects.find(p => p.id === 'R')).toMatchObject({ parentId: 'Q', position: 1 });
+  });
+
+  it('sends the second move after the first is refused, and ends with R under Q', async () => {
+    const { first, second } = await releaseTwice();
+
+    await act(async () => first.reject(new Error('refused')));
+    expect(moveProject).toHaveBeenCalledTimes(2);
+    expect(tree()).toBe(UNDER_Q);
+
+    await act(async () => second.resolve(underQ()));
+    expect(tree()).toBe(UNDER_Q);
+    expect(seen.projects.find(p => p.id === 'R')).toMatchObject({ parentId: 'Q', position: 1 });
+  });
+
+  it('keeps another project’s move out of the line: it is sent at once', async () => {
+    await releaseTwice();
+    vi.mocked(moveProject).mockReturnValueOnce(held<Project>().promise);
+
+    act(() => void release('D', null, null, 'P'));
+
+    expect(moveProject).toHaveBeenCalledTimes(2);
+    expect(moveProject).toHaveBeenLastCalledWith('D', { parentId: null, prevId: null, nextId: 'P' });
+  });
+
+  it('holds an edit of R behind R’s move, and sends it once that is answered', async () => {
+    localStorage.setItem('activeProjectId', 'R');
+    await openApp();
+    const answer = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(answer.promise);
+    vi.mocked(updateProject).mockResolvedValueOnce(makeProject('R', { parentId: 'P', name: 'Renamed', position: 1.5 }));
+    act(() => void release('R', 'P', 'C', null));
+
+    let edited!: Promise<void>;
+    act(() => {
+      edited = update('R', { name: 'Renamed' });
+    });
+    expect(updateProject).not.toHaveBeenCalled();
+
+    await act(async () => answer.resolve(underP()));
+    await act(async () => edited);
+
+    expect(updateProject).toHaveBeenCalledExactlyOnceWith('R', { name: 'Renamed' });
+  });
+});
+
+describe('a read of the whole tree after a write: applied only when no write has landed since it started', () => {
+  // The server's tree once Q has been moved under P, after D.
+  const SERVER = treeOf(['P', null, 1], ['C', 'P', 1], ['D', 'P', 2], ['Q', 'P', 3], ['R', null, 3]);
+  const qSaved = () => makeProject('Q', { parentId: 'P', position: 3 });
+
+  it('draws Q where its answer put it when the read that a refused move started lands with the older tree', async () => {
+    await openApp();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const r = held<Project>();
+    const q = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(r.promise).mockReturnValueOnce(q.promise);
+    act(() => void release('R', 'P', 'C', null));
+    act(() => void release('Q', 'P', 'D', null));
+    const read = held<Project[]>();
+    vi.mocked(fetchProjects).mockClear();
+    vi.mocked(fetchProjects).mockReturnValueOnce(read.promise);
+
+    await act(async () => r.reject(new Error('refused')));
+    await act(async () => q.resolve(qSaved()));
+    expect(tree()).toBe('P -C -D -Q R');
+    vi.mocked(fetchProjects).mockResolvedValue(SERVER);
+    await act(async () => read.resolve(TREE));
+
+    // The older tree is dropped, and the tree is read again.
+    expect(fetchProjects).toHaveBeenCalledTimes(2);
+    expect(tree()).toBe('P -C -D -Q R');
+  });
+
+  it('does the same for the read after a delete', async () => {
+    await openApp();
+    vi.mocked(deleteProject).mockResolvedValueOnce(undefined);
+    const read = held<Project[]>();
+    vi.mocked(fetchProjects).mockClear();
+    vi.mocked(fetchProjects).mockReturnValueOnce(read.promise);
+    await act(async () => remove('R'));
+    const q = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(q.promise);
+    act(() => void release('Q', 'P', 'D', null));
+    await act(async () => q.resolve(qSaved()));
+    vi.mocked(fetchProjects).mockResolvedValue(SERVER.filter(p => p.id !== 'R'));
+
+    await act(async () => read.resolve(TREE));
+
+    expect(fetchProjects).toHaveBeenCalledTimes(2);
+    expect(tree()).toBe('P -C -D -Q');
+  });
+
+  it('applies a read that no write has overtaken, as before', async () => {
+    await openApp();
+    vi.mocked(deleteProject).mockResolvedValueOnce(undefined);
+    vi.mocked(fetchProjects).mockClear();
+    vi.mocked(fetchProjects).mockResolvedValue(TREE.filter(p => p.id !== 'R'));
+
+    await act(async () => remove('R'));
+
+    expect(fetchProjects).toHaveBeenCalledTimes(1);
+    expect(tree()).toBe('P -C -D Q');
   });
 });
