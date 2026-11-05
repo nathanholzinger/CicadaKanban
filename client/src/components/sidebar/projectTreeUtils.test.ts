@@ -2,9 +2,18 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenTree,
   fullChildrenOf,
+  parentPutUnder,
+  projectNameIndentPx,
+  projectRowIndentPx,
   resolveGap,
   siblingIdsFromAnchor,
   INDENT_WIDTH,
+  ROW_CHEVRON_WIDTH_CLASS,
+  ROW_CHEVRON_WIDTH_PX,
+  ROW_GAP_CLASS,
+  ROW_GAP_PX,
+  ROW_HANDLE_WIDTH_CLASS,
+  ROW_HANDLE_WIDTH_PX,
   type FlatItem,
 } from './projectTreeUtils';
 import { computeProjection, toRows } from '../../lib/hierarchyPlacement';
@@ -142,5 +151,51 @@ describe('siblingIdsFromAnchor', () => {
 
   it('no anchor (the sole child of its parent) is neither', () => {
     expect(siblingIdsFromAnchor(null)).toEqual({ prevId: null, nextId: null });
+  });
+});
+
+// A Tailwind step is a quarter of a rem, which is 4px at the browser's default size.
+const stepOf = (px: number) => px / 4;
+
+describe('where a project’s name starts in its row', () => {
+  it('sets each leading control by a class that is the same width as the number the name’s start adds up', () => {
+    expect(ROW_HANDLE_WIDTH_CLASS).toBe(`w-${stepOf(ROW_HANDLE_WIDTH_PX)}`);
+    expect(ROW_CHEVRON_WIDTH_CLASS).toBe(`w-${stepOf(ROW_CHEVRON_WIDTH_PX)}`);
+    expect(ROW_GAP_CLASS).toBe(`gap-${stepOf(ROW_GAP_PX)}`);
+  });
+
+  it('is the row’s padding and then the handle, the chevron and the gap around each', () => {
+    expect(projectNameIndentPx(0)).toBe(projectRowIndentPx(0) + 12 + 4 + 16 + 4);
+  });
+
+  it('steps by the indent per depth, as the row’s own padding does', () => {
+    for (const depth of [0, 1, 2, 5]) {
+      expect(projectNameIndentPx(depth) - projectNameIndentPx(0)).toBe(depth * INDENT_WIDTH);
+      expect(projectNameIndentPx(depth) - projectRowIndentPx(depth)).toBe(
+        projectNameIndentPx(0) - projectRowIndentPx(0),
+      );
+    }
+  });
+});
+
+describe('parentPutUnder: the parent a write opens', () => {
+  const before = makeProject('X', { parentId: 'A' });
+
+  it('is the parent a create puts a project under', () => {
+    expect(parentPutUnder(undefined, makeProject('N', { parentId: 'P' }))).toBe('P');
+  });
+
+  it('is none for a top-level project', () => {
+    expect(parentPutUnder(undefined, makeProject('N'))).toBeNull();
+    expect(parentPutUnder(before, makeProject('X', { parentId: null }))).toBeNull();
+  });
+
+  it('is the new parent of a project a write moved under another', () => {
+    expect(parentPutUnder(before, makeProject('X', { parentId: 'P' }))).toBe('P');
+    expect(parentPutUnder(makeProject('X'), makeProject('X', { parentId: 'P' }))).toBe('P');
+  });
+
+  it('is none for a write that left the project under the parent it had, a rename among them', () => {
+    expect(parentPutUnder(before, makeProject('X', { parentId: 'A', name: 'Renamed' }))).toBeNull();
   });
 });

@@ -87,7 +87,7 @@ export type ReorderProject = (
 ) => Promise<void>;
 
 // `flatItems` is the rendered tree; `expand` opens a collapsed parent a
-// project was just dropped into. `depthCap` is the project cap, null until it's
+// project was just dropped into (`useCollapsedProjects.ts`, the one way a project opens). `depthCap` is the project cap, null until it's
 // known: a tab state that would put the dragged subtree past it is still
 // offered, marked invalid, and a release in it writes nothing
 // (wiki hierarchy-placement §6).

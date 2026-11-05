@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.11 — A project's pickup takes its descendants with it
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** Phase 1 built and committed (Amendment 1). Phase 2, Nathan's hands-on, found three fixes to fold in, D7–D9, built in Phase 3 (Amendment 2)
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** Phase 1 built and committed (Amendment 1). Phase 2, Nathan's hands-on, found three fixes to fold in, D7–D9 (Amendment 2). Phase 3 built them, for review and commit (Amendment 3). Phase 4, Nathan's hands-on, approved D9, and moved what's left of D7 and D8, with the depth-range report, to Story 8.12, "The sidebar's ghost moves to the gap" (Amendments 4 and 5). Phase 5, settle and hand off, is next
 
 ## Goal
 
@@ -30,7 +30,12 @@ Give the project sidebar's drag the carried branch that Story 8.8 gave the board
 - **The drop line for "child of Top" reads as Top's sibling.** It starts left of Top's name (D8).
 - **A new subproject is hidden under its parent,** which starts collapsed when it was created after the sidebar loaded (D9). Not a drag change: it rides along because it's the same sidebar.
 
-**Found, and not fixed here:** sometimes the only depth a gap offers is "child of the row above", where Nathan expected hierarchy-placement §1's full range. It's likely D8's offset: the depth follows the pointer from the handle's column, which is where the line starts, about 30px left of the names. Phase 4 retests it. If it outlasts D8, it's a story of its own.
+D9 closes with this story. D7 and D8 ship as built, each better than what it replaced, and what's left of them moves out (below).
+
+**Found, and moved out** (Phase 4, Nathan, 2026-11-04) to Story 8.12, "The sidebar's ghost moves to the gap" ([`story-8-12-sidebar-ghost-moves-to-gap.md`](story-8-12-sidebar-ghost-moves-to-gap.md)), which runs next. In that story the dragged project's ghost row follows the gap, as a Stub's does. Moved there:
+- **Sometimes the only depth a gap offers is "child of the row above",** where Nathan expected hierarchy-placement §1's full range. It outlasted D8. Nathan suspects how the cursor is read, more than the placement rule.
+- **The drop line isn't always drawn where the cursor suggests** (D8's remainder).
+- **The movement after a drop is still awkward** (D7's remainder).
 
 **Out of scope:**
 - **What the board does.** Its walk, wording and line move to where the sidebar can use them, and nothing the board draws or places changes.
@@ -102,6 +107,7 @@ None. The roadmap's 8.11 entry is the story's own, found with Story 8.8.
 - **It also drops a scroll.** Before animating, dnd-kit scrolls the dragged row into view (`@dnd-kit/core`'s `useDropAnimation`), so a drop far down a scrolled list could scroll the list back to the pickup. This is from dnd-kit's source, not seen in the browser.
 - **Not done: drawing the move at release,** as the board does, so the copy could land at the new place. It needs a pending state in `App.tsx`, and an undo for a refused move. It's a story of its own if the response's wait ever shows.
 - `DragGhost`'s comment says the copy outlives the drag by the drop animation. That changes. The E2E helper's wait for the copy to go (`tests/helpers/dragGesture.ts`) still holds, and finishes sooner.
+- **Kept as built** (Phase 4, Nathan, 2026-11-04). It's better than the flight back, but the movement after a drop is still awkward. Story 8.12 draws the move at release, which should settle it.
 
 **D8. The drop line starts where a name at its depth starts** (Phase 2, Nathan, 2026-11-04).
 - **Today:**
@@ -115,6 +121,7 @@ None. The roadmap's 8.11 entry is the story's own, found with Story 8.8.
   - The Coder settles how the number and the row's classes stay in step, so a change to one changes the other or says it must.
 - **Placement doesn't change.** The pointer still travels 14px a level, measured from pickup. Only where the line is drawn moves.
 - `projectRowIndentPx`'s comment, which says the line begins where the row's content does, changes.
+- **Kept as built** (Phase 4, Nathan, 2026-11-04). A release lands at the depth the line shows, but the line isn't always where the cursor suggests. That moves to Story 8.12, with the depth-range report.
 
 **D9. Every project starts open, and a project put under a collapsed one opens it** (Phase 2, Nathan, 2026-11-04).
 - **Today:**
@@ -207,7 +214,7 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **A new project, then a subproject under it (D9).** Both show.
   - **A subproject created under a project you collapsed (D9),** from the sidebar and from the project page. The parent opens.
   - **The project page's parent dropdown (D9),** moving a project under a collapsed one. It opens.
-- **Nathan decides:** approve, or amend the plan.
+- **Nathan decides:** approve, or amend the plan. He approved D9. He kept D7 and D8 as built, and moved what's left of them out, with the depth range (Amendment 4).
 
 **Phase 5: settle and hand off**
 - Whatever Phase 4 changes is built here, with an amendment.
@@ -216,9 +223,9 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **project-tree §1:** "Resting on the dragged project's own row, or a row of its subtree". The subtree's rows aren't drawn now, so only the project's own row is left to rest on, as on the board. The paragraph's "the subtree's dimmed (§2)" goes.
   - **project-tree §2:** "The dragged project's descendants are Low", "On a tree well within the cap, only the dragged project's descendants dim", and the example's "`X`'s child are Low". The copy's second line is new.
   - **hierarchy-placement §7:** "The dragged entry's descendants are Low, at every depth, wherever a surface draws them". The sidebar now draws none of them. Both surfaces now carry a branch with the same line, so the PO decides whether that becomes a shared rule here, with each surface's page saying what its branch holds.
-  - **project-tree §1, from D7 and D8,** for the PO to decide whether either is a rule:
-    - the copy goes at release, with no flight back to the pickup;
-    - the drop line starts where a name at its depth starts.
+  - **D7 and D8 go to neither the wiki nor the test plan.** Neither changes a stated rule, and Story 8.12 replaces both (Amendment 4).
+  - **Anything Story 8.12 changes right away is left out of this story's wiki and test-plan pass** (Nathan, 2026-11-04). The handoff says so for each item it affects, so the PO and the Planner don't write a rule or a case that 8.12 rewrites next. 8.12's plan lists what it changes: the line becoming the line and the ghost, the gap read from the ghost's slot, the move drawn at release, and the copy. 8.12's own handoff covers those passages and cases.
+  - **The skipped specs stay skipped here:** TREE-1.4, TREE-1.1 and TREE-1.11/TREE-3.9 (Nathan, 2026-11-04). Story 8.12 updates and unskips TREE-1.1 and TREE-1.11/TREE-3.9.
   - **project-tree §2's "A collapsed project opens when a project is dropped into it" (D9).** It now holds for a create and a parent change too, on their success. Every project starts open, a new one included.
     - The chevrons come off the page's Open questions if the PO makes that a rule.
     - §5 (creating a project) and §7 (an edit can change a project's parent) may each name the opening.
@@ -227,9 +234,9 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
     - TREE-1.6, whose subtree rows can't be rested on now, and TREE-1.9's last sentence, which points at it;
     - TREE-1.16, whose moved-out `Y` stays hidden for the drag (D1);
     - TREE-1.4, whose spec is skipped;
+    - TREE-1.1 and TREE-1.11/TREE-3.9, whose specs Phase 3 skipped for the line's start (Amendment 3);
     - a new case, or cases, for the sidebar's carried branch and its line;
-    - TREE-2.2, a collapsed project opening on a drop, extended to a create and a parent change, or joined by cases of their own in TREE-5 and TREE-7 (D9);
-    - cases for D7 and D8, if the PO makes them rules.
+    - TREE-2.2, a collapsed project opening on a drop, extended to a create and a parent change, or joined by cases of their own in TREE-5 and TREE-7 (D9).
 - **Gate,** if code changed.
 
 ## Code map
@@ -255,7 +262,19 @@ Filled in by the Coder, phase by phase.
 | `dragChrome.test.tsx` | The wording, and the line: its element, out of the flow, taking no pointer. |
 | `sidebar/useProjectDragReorder.test.ts` | The sidebar's branch: its ids and counts at pickup, the rows under a collapsed descendant and a collapsed carried project, none for a project with no children, the rows to draw leaving the branch and keeping the project's own, drawn again on a release, a release that writes nothing, a release past the cap and a cancel, held when a response lands mid-drag (a descendant moved out stays hidden, a project moved under the carried one is drawn). TREE-1.14's test reads the held branch where it read `descendantIds`. |
 | `sidebar/SortableProjectRow.test.tsx` | `DragGhost`'s line with a branch, inside the copy and out of its box, and none without. The descendant-row test went with `isDescendantOfActive`. |
-| `tests/ui/project-tree-drag.spec.ts` | TREE-1.4's spec is skipped, with its reason. |
+| `tests/ui/project-tree-drag.spec.ts` | TREE-1.4's spec is skipped, with its reason. Phase 3 skips TREE-1.1 and TREE-1.11/TREE-3.9 too, for the drop line's start (Amendment 3). Story 8.12's Phase 3 updates and unskips those two, and their skip reasons say so (Amendment 5). TREE-1.4 and TREE-2.1 stay skipped, for Story 10. |
+| `ProjectSidebar.tsx` (`dropAnimation={null}`) | D7: the overlay has no drop animation, so the copy goes at release at every end of the drag. |
+| `sidebar/SortableProjectRow.tsx::DragGhost` | Its comment says the copy goes at release. |
+| `sidebar/projectTreeUtils.ts::projectNameIndentPx`, `ROW_HANDLE_WIDTH_*`, `ROW_CHEVRON_WIDTH_*`, `ROW_GAP_*` | D8: where a name starts at a depth, from the row's padding and the row's leading controls. Each control is a class and the number it sets, spelled twice as `cardMetrics.ts`'s pairs are, and `projectTreeUtils.test.ts` pins each pair. `projectRowIndentPx` keeps the row's padding and its comment. |
+| `sidebar/SortableProjectRow.tsx` (drop line, row classes) | D8: the line's `marginLeft` is `projectNameIndentPx(indicatorDepth)`, the over-cap line's too. The row draws its gap, handle and chevron with the shared classes, so the number and the row can't part unseen. |
+| `sidebar/useCollapsedProjects.ts` | D9: the projects the user collapsed, with `toggle` and `expand`. Every other project is open, a new one included, and nothing is stored. `expand` is the one way a collapsed project opens. |
+| `sidebar/projectTreeUtils.ts::parentPutUnder` | D9: the parent a successful write put a project under: the written project's parent when it isn't the one the project had before. None for a top-level project, and none for a write that left it where it was. |
+| `App.tsx` | D9: holds the collapsed set (`useCollapsedProjects`), hands it to the sidebar with `onToggleCollapse` and `onExpandProject`, and opens the parent after a create and after a parent change succeed. A failed write returns before it. |
+| `ProjectSidebar.tsx` (`collapsedIds`, `onToggleCollapse`, `onExpandProject`) | D9: no collapse state of its own. It derives the open set from the projects and the collapsed ids, and hands `onExpandProject` to the drag hook as the drop's `expand`. |
+| `workflow/dragRegions.ts`, `sidebar/useProjectDragReorder.ts` | Comments only: the sidebar's copy goes at release, and `expand` is `useCollapsedProjects`'s. |
+| `tests/helpers/dragGesture.ts::settled` | The helper waits 60ms past the copy going (`POST_DRAG_CLICK_GUARD_MS`), since dnd-kit swallows the click after a drag for 50ms (Amendment 3). |
+| `sidebar/projectTreeUtils.test.ts`, `sidebar/SortableProjectRow.test.tsx` | The class and number pairs, the name's start at each depth, `parentPutUnder`; the drop line's start, the over-cap line's, and the row's controls drawn by the shared classes. |
+| `sidebar/useCollapsedProjects.test.ts`, `App.test.tsx` | The collapsed set; and `App.tsx`'s wiring: every project open, a new one included; a create and a parent change into a collapsed parent open it; a failed one, and a project a write doesn't put anything under, leave it collapsed. |
 
 ## Amendments
 
@@ -291,10 +310,49 @@ Filled in by the Coder, phase by phase.
 - **Out of scope** now says that D8 moves the line's start, not its look.
 - **D9's parent-change case was asked as its own question,** and is in on Nathan's "fold it all in". It comes out cleanly if he'd rather the dropdown leave a hand-set collapse alone.
 
+**3. 2026-11-04, Phase 3 built** (Coder).
+- **D7:** `ProjectSidebar.tsx`'s `DragOverlay` takes `dropAnimation={null}`. In the browser, with the move response held 800ms, the copy was gone 4ms after the release, and X's row stayed at its pickup place until the response landed and then moved.
+- **D8, the Coder's calls:**
+  - **The number and the row's classes stay in step** as `cardMetrics.ts`'s pairs do. The row's handle, chevron and gap are each a class and the width it sets, in `projectTreeUtils.ts` (`ROW_HANDLE_WIDTH_*`, `ROW_CHEVRON_WIDTH_*`, `ROW_GAP_*`), and `SortableProjectRow.tsx` draws its row with the classes. `projectNameIndentPx` adds up the numbers, and a test pins each class to its number.
+  - **In the browser,** on a tree of A, A1 (under A), A1a (under A1), B and X: the line for depth 0, 1 and 2 starts at x = 48, 62 and 76, which is where A's, A1's and A1a's names start. The line for depth 3 starts at 90, 14px right of A1a's name.
+- **D9, the Coder's calls:**
+  - **The collapsed set is `sidebar/useCollapsedProjects.ts`, called by `App.tsx`.** `App.tsx` writes two of the three ways a project opens, so the state couldn't stay in the sidebar. The sidebar takes `collapsedIds`, `onToggleCollapse` and `onExpandProject`, and derives its open set (`expandedIds`) for `flattenTree` and the row, whose signatures are unchanged. The drop's `expand` is `onExpandProject`, so there is one way a project opens.
+  - **A create and a parent change open the parent through `projectTreeUtils.ts::parentPutUnder(before, written)`:** the written project's parent, when it isn't the parent the project had before. So a rename, or an edit that leaves a project under the parent it has, doesn't open a parent the user collapsed. `App.tsx` opens it after the awaited write, so a failed write returns first and leaves it collapsed.
+  - **`App.tsx` has its first unit test.** `ProjectPage` and the notifications bell are mocked, two buttons stand in for the page's writes, and the sidebar, the create dialog and `App.tsx`'s handlers are real.
+  - **In the browser:** a project created after the load shows its first subproject; a subproject created under a collapsed P opens it, from the sidebar's "Add subproject"; and R's parent dropdown set to P opens a collapsed P.
+- **A change to the plan's Phase 3, a spec and a helper:**
+  - **TREE-1.1 and TREE-1.11/TREE-3.9 are skipped.** The plan said the drag specs should pass as they stand. These two assert the drop line's `margin-left` at the row's padding (`projectRowIndentPx`), which is the start D8 moved. They're skipped with a one-line reason, as the roadmap has it (skipped, not updated), for Story 10. Amendment 5 routes them to Story 8.12 instead, and their skip reasons say so. Each loses coverage that has nothing to do with the line's start: TREE-1.1 the line's side, the rows not sliding aside, and a release saving what the line shows; TREE-1.11/TREE-3.9 the cap's marking and the refused release. Pointing each at `projectNameIndentPx` would keep them, and is one line apiece.
+  - **`tests/helpers/dragGesture.ts::settled` waits 60ms past the copy going** (`POST_DRAG_CLICK_GUARD_MS`). The plan said D7 left the helper's wait as it was, finishing sooner. The wait is right for the copy, but dnd-kit also swallows the click after a drag for 50ms (`@dnd-kit/core`'s `AbstractPointerSensor`, a capture-phase `stopPropagation` on `document`), which the board's drop animation outlasts and the sidebar's copy, going at release, no longer does. TREE-4.8 failed once in a group run, at the click on "New project" right after a refused drop, and passed on its own and on two reruns. A throwaway spec (deleted) that clicked right after a release saw three of five clicks swallowed, and none once it waited 20ms. A real user doesn't click within 50ms of a drop.
+- **The new tests were checked against the code.**
+  - With a create not opening its parent, the create's test fails. With a parent change not opening it, that test fails.
+  - With `parentPutUnder` answering the written parent whatever the project had before, its rename case and the App's rename case fail.
+  - With the drop line at the row's padding, the row's two line tests fail.
+  - With the create opening its parent before the write is answered, the failed-create test fails.
+  - With the sidebar's collapsed set starting with a project in it, the hook's tests and four of the App's fail.
+- **The gate.**
+  - **`npm run check`:** passes. `check:docs` is 401 files with 0 hits, the client has 733 tests (23 new), the server 438 and the scripts 245.
+  - **`npm run test:e2e`:** 213 passed, 24 skipped and 0 failed. The two skips over Phase 1's are TREE-1.1 and TREE-1.11/TREE-3.9.
+- **Not built, as the plan has it:** no new drag spec, and D9's spec waits for the Planner's case (Phase 5). The depth-range report is Phase 4's retest.
+
+**4. 2026-11-04, Phase 4's hands-on** (Architect, for Nathan).
+- **D9 is approved,** and closes with the story.
+- **D7 and D8 stay as built,** each better than what it replaced. What's left of them moves to a new roadmap entry, Story 8's "The sidebar's ghost moves to the gap":
+  - D7's: the movement after a drop is still awkward;
+  - D8's: the line isn't always drawn where the cursor suggests.
+- **The depth-range report moves there too.** It outlasted D8, and Nathan suspects how the cursor is read, more than the placement rule.
+- **The Goal** now says what moved out, and D7 and D8 each say they're kept as built.
+- **The handoff:** D7 and D8 no longer go to the PO, since the ghost story replaces both. The Planner's list gains the two specs Phase 3 skipped.
+
+**5. 2026-11-04, the ghost story is Story 8.12, and runs next** (Architect, for Nathan).
+- Its plan is [`story-8-12-sidebar-ghost-moves-to-gap.md`](story-8-12-sidebar-ghost-moves-to-gap.md), and the Goal, D7, D8 and the handoff now name it.
+- **Phase 5's handoff gains two rules from Nathan:**
+  - anything 8.12 changes right away is left out of this story's wiki and test-plan pass;
+  - the skipped specs stay skipped here, and 8.12 updates and unskips TREE-1.1 and TREE-1.11/TREE-3.9.
+
 ## Open questions
 
 None yet.
 
 ## Living-docs handoff
 
-Written by the Coder in Phase 3.
+Written by the Coder in Phase 5.

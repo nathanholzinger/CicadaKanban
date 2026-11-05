@@ -7,6 +7,13 @@ import { makeProject } from '../../test/projectFixture';
 import { GHOST_ROW, tierClass } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { DragGhost, SortableProjectRow } from './SortableProjectRow';
+import {
+  ROW_CHEVRON_WIDTH_CLASS,
+  ROW_GAP_CLASS,
+  ROW_HANDLE_WIDTH_CLASS,
+  projectNameIndentPx,
+  projectRowIndentPx,
+} from './projectTreeUtils';
 
 function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {}) {
   render(
@@ -81,6 +88,32 @@ describe('SortableProjectRow, drawn by its tier', () => {
     const line = document.querySelector('[data-drop-line]')!;
     expect(line).not.toBeNull();
     expect(box.contains(line)).toBe(false);
+  });
+});
+
+// The drop line starts where a name at its depth starts, not where the row's padding does: the drag
+// handle is hidden through a drag, and so is a leaf's chevron, so the row's own start has nothing at it.
+describe('SortableProjectRow, where its drop line starts', () => {
+  const lineIn = () => document.querySelector<HTMLElement>('[data-drop-line]')!;
+
+  it('starts at the name’s column for the depth the line shows, whatever the row’s own depth is', () => {
+    renderRow({ indicatorSide: 'before', indicatorDepth: 2 });
+    expect(lineIn().style.marginLeft).toBe(`${projectNameIndentPx(2)}px`);
+    expect(projectNameIndentPx(2)).toBeGreaterThan(projectRowIndentPx(2));
+  });
+
+  it('starts the line past the cap at the same column', () => {
+    renderRow({ indicatorSide: 'after', indicatorDepth: 3, indicatorInvalid: true });
+    expect(lineIn()).toHaveAttribute('data-drop-invalid', 'true');
+    expect(lineIn().style.marginLeft).toBe(`${projectNameIndentPx(3)}px`);
+  });
+
+  it('puts the name where the line’s column says: the row’s controls are the classes the number adds up', () => {
+    const box = renderRow();
+    expect(box.classList).toContain(ROW_GAP_CLASS);
+    expect(screen.getByLabelText('Drag to reorder').classList).toContain(ROW_HANDLE_WIDTH_CLASS);
+    expect(screen.getByLabelText('Expand').classList.contains(ROW_CHEVRON_WIDTH_CLASS)).toBe(true);
+    expect(box.style.paddingLeft).toBe(`${projectRowIndentPx(0)}px`);
   });
 });
 

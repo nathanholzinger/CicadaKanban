@@ -1,5 +1,7 @@
-// Sidebar-only project tree helpers: the render list (`flattenTree`) and the
-// row indent it is drawn at (`INDENT_WIDTH`, `projectRowIndentPx`).
+// Sidebar-only project tree helpers: the render list (`flattenTree`), the
+// row indent it is drawn at (`INDENT_WIDTH`, `projectRowIndentPx`) and where a
+// name starts in it (`projectNameIndentPx`), and the parent a write opens
+// (`parentPutUnder`).
 // Placement itself is the shared `lib/hierarchyPlacement.ts`, the same rule
 // as a board Card's Descendants layer. This module is the adapter around it:
 // the gap a hovered row names (`resolveGap`), the real tree's `childrenOf`
@@ -34,11 +36,40 @@ export const INDENT_WIDTH = 14;
 // level, this is a base inset, and the two are equal by coincidence.
 const ROW_BASE_INSET_PX = 12;
 
-// A row's content inset at `depth` — one spelling for the row's own padding
-// and its drop indicator's start, so the line always begins where the row's
-// content does.
+// A row's left padding at `depth`, where its leading controls (the drag handle
+// and the chevron) start: one spelling for the row's own padding.
 export function projectRowIndentPx(depth: number): number {
   return ROW_BASE_INSET_PX + depth * INDENT_WIDTH;
+}
+
+// What stands ahead of a project's name in its row, each a Tailwind class and
+// the width it sets, spelled twice as `cardMetrics.ts`'s pairs are, and pinned
+// together by `projectTreeUtils.test.ts`: the drag handle, the chevron, and the
+// row's gap between one control and the next. `SortableProjectRow.tsx` draws its
+// row with the classes, and `projectNameIndentPx` adds up the numbers.
+export const ROW_HANDLE_WIDTH_PX = 12;
+export const ROW_HANDLE_WIDTH_CLASS = 'w-3';
+export const ROW_CHEVRON_WIDTH_PX = 16;
+export const ROW_CHEVRON_WIDTH_CLASS = 'w-4';
+export const ROW_GAP_PX = 4;
+export const ROW_GAP_CLASS = 'gap-1';
+
+// Where a project's name starts at `depth`, from the row's left edge: its padding
+// and then the handle, the chevron and the gap around each. One spelling for
+// where the drop line starts, so a line for a depth begins under the name a
+// project at that depth has, which is what tells it from the depth beside it.
+// The handle and a leaf's chevron are hidden, not gone, so their room is there
+// through a drag.
+export function projectNameIndentPx(depth: number): number {
+  return projectRowIndentPx(depth) + ROW_HANDLE_WIDTH_PX + ROW_GAP_PX + ROW_CHEVRON_WIDTH_PX + ROW_GAP_PX;
+}
+
+// The parent a successful write put a project under, which opens (`useCollapsedProjects.ts`): the
+// written project's parent, when it is not the one the project had before the write. None when it has no
+// parent, or when the write left it under the one it had, so a rename doesn't open a parent the user
+// collapsed. `before` is undefined for a create.
+export function parentPutUnder(before: Project | undefined, written: Project): string | null {
+  return written.parentId !== null && written.parentId !== before?.parentId ? written.parentId : null;
 }
 
 // The render list: the shared walk, with a collapsed project's children left

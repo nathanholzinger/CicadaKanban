@@ -1176,9 +1176,101 @@ than the story, planned as its D7–D9:
 - every project starts open, and one put under a collapsed project opens
   it, so a new subproject isn't hidden. This one isn't a drag change.
 
-A report that a gap sometimes offers only "child of the row above" is
-retested after the line's fix, and becomes a story of its own if it
-outlasts it.
+**After the hands-on of the fixes** (Nathan, 2026-11-04):
+- **The third fix closes with the story.**
+- **The first two ship as built,** each better than what it replaced.
+- **What's left of them moves to Story 8.12, "The sidebar's ghost moves
+  to the gap",** below: the movement after a drop, and where the line is
+  drawn against the cursor.
+- **Its wiki and test-plan pass leaves out what 8.12 changes right
+  away,** and its skipped specs stay skipped for 8.12 to take up.
+- **So does the report** that a gap sometimes offers only "child of the
+  row above", which outlasted the line's fix.
+
+---
+
+### Story 8.12 — The sidebar's ghost moves to the gap
+**Plan:** [`story-8-12-sidebar-ghost-moves-to-gap.md`](story-8-12-sidebar-ghost-moves-to-gap.md)
+
+**Found with Story 8.11** (Nathan, 2026-11-04). It runs next, after
+8.11 closes.
+
+**Goal:** the dragged project's ghost row behaves as a Stub's does at a
+Card's Descendants layer (wiki board-drag-interaction §7.1):
+- it moves to the gap, at the depth the project will land at;
+- the rows slide aside to make room.
+
+Today it stays where the project was picked up, and a blue line shows the
+gap. This reverses project-tree §1's "an indicator line, not a ghost".
+
+**What it takes,** from the Architect's reading of the code:
+- **A gap that holds still.** Today the gap is read from the row nearest
+  the dragged row's box, and which half of that row the box's center is
+  in. A ghost that moves pushes rows under a cursor that hasn't moved, so
+  that reading would flip back and forth. The board has its own way of
+  reading the gap, and dnd-kit's sortable list has another. The plan
+  takes dnd-kit's: it hits against the rows where they were at pickup,
+  so they can slide without moving the gap.
+- **The move drawn at release,** with an undo for a refused move (wiki
+  project-tree §4). Otherwise a ghost already at the new place jumps back
+  to the pickup until the response lands. With it, the drop animation can
+  come back, and the copy glides into the ghost's place, as on the board.
+- **The line stays, always along the ghost's top edge** (Nathan,
+  2026-11-04), since the depth is decided against the project above. Over
+  the cap, the line stays red.
+- **The carried copy is held to the list's width, and steps right one
+  level at a time,** as the board's does. Nathan may keep it, or let it
+  follow the cursor sideways, in the hands-on.
+
+**Carried in from Story 8.11** (Nathan, 2026-11-04):
+- **The movement after a drop is still awkward** (8.11's D7). Today the
+  copy goes at release. The row and its branch stay at the pickup until
+  the response lands, then move. Drawing the move at release should
+  settle it.
+- **The line isn't always drawn where the cursor suggests** (8.11's D8).
+  A release lands at the depth the line shows.
+- **Sometimes a gap offers only "child of the row above"**, where Nathan
+  expected hierarchy-placement §1's full range. Nathan suspects how the
+  cursor is read more than the placement rule. Leads, unconfirmed:
+  - **The cursor sits about 30px left of the line.**
+    - The drag starts on the handle, and the depth is the pickup's depth
+      plus the pointer's sideways travel since, 14px a level.
+    - Since 8.11's D8, the line starts at the name's column, and the
+      cursor stays on the handle's.
+    - So a cursor placed where the line should start reads about two
+      levels deeper. That's clamped to the deepest the gap offers, which
+      is often "child of the row above".
+  - **The gap is read from the dragged row's box, not the cursor.** Where
+    the handle was grabbed moves that box's center up to 6px off the
+    cursor, and with it the point where a row's top half turns into its
+    bottom half.
+  - **A scrolled list, unchecked.** Since 8.11, the pickup shortens the
+    list by the branch. Near the bottom of a scrolled list that may move
+    the scroll and leave the rows dnd-kit measured out of place.
+  - **The rule itself:** right under a project whose first child is shown,
+    the only state is "first child" (hierarchy-placement §1's worked
+    example).
+  - **When it happens, note:**
+    - the rows above and below the line;
+    - the dragged project's depth;
+    - where the cursor was against the line;
+    - whether the list was scrolled.
+
+**Tests:** most of the sidebar's drag specs check the line. Nathan made
+an exception to Story 8's rule (2026-11-04):
+- they're updated here, not skipped for Story 10, once he approves the
+  gesture;
+- Story 8.11's skipped TREE-1.1 and TREE-1.11/TREE-3.9 are unskipped;
+- where a spec checks the line, it checks the ghost in the same test,
+  not in a second set of tests.
+
+**The docs follow Nathan's hands-on:**
+- **The PO:** project-tree §1, the line joined by the ghost, and the
+  passages Story 8.11's pass left for this story.
+- **The Planner:** TREE-1's cases that name the line.
+
+**It runs before "The cues' final look,"** so the looks are tuned
+against the gesture they'll keep.
 
 ---
 

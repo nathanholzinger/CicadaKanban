@@ -75,7 +75,8 @@ export async function hoverTo(page: Page, target: Point) {
 // pointerdown that lands while its drop animation is still winding down can
 // fail to activate the next drag, and a spec that then hovers and releases
 // asserts against a gesture that never happened. The DragOverlay copy
-// (`boardLocators.ts::dragOverlay`) is there for exactly this wait.
+// (`boardLocators.ts::dragOverlay`) is there for exactly this wait, and then a beat
+// for the click dnd-kit swallows after a drag (`POST_DRAG_CLICK_GUARD_MS`).
 export async function release(page: Page) {
   await page.mouse.up();
   await settled(page);
@@ -89,8 +90,15 @@ export async function cancel(page: Page) {
   await settled(page);
 }
 
+// dnd-kit stops the click that follows a drag from reaching the page for 50ms after the drag ends
+// (`AbstractPointerSensor`'s document click listener). The board's copy outlives that, gliding to its
+// drop, but the project sidebar's goes at release, so a click right after the wait for the copy would be
+// swallowed. A little past the 50ms.
+const POST_DRAG_CLICK_GUARD_MS = 60;
+
 async function settled(page: Page) {
   await expect(dragOverlay(page)).toHaveCount(0, { timeout: 2000 });
+  await page.waitForTimeout(POST_DRAG_CLICK_GUARD_MS);
 }
 
 export async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<Point>) {

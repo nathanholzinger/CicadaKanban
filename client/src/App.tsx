@@ -18,6 +18,8 @@ import type { UpdateProjectInput } from './api/projects';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
+import { parentPutUnder } from './components/sidebar/projectTreeUtils';
+import { useCollapsedProjects } from './components/sidebar/useCollapsedProjects';
 import AgentsModal from './components/AgentsModal';
 import NotificationsBell from './components/NotificationsBell';
 import { browserStorage, readStored, removeStored, writeStored } from './lib/browserStorage';
@@ -37,6 +39,8 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
     readStored(browserStorage(), ACTIVE_PROJECT_STORAGE_KEY),
   );
+  // The sidebar's collapsed projects: here, since a create and a parent change open one too.
+  const collapsedProjects = useCollapsedProjects();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
 
@@ -79,6 +83,9 @@ export default function App() {
         parentId: createProjectParentId,
       });
       setProjects(prev => applyWriteResponse(prev, created));
+      // A subproject opens its parent, so it shows (wiki project-tree §2).
+      const parentId = parentPutUnder(undefined, created);
+      if (parentId) collapsedProjects.expand(parentId);
     } catch (err) {
       console.error('Failed to create project:', err);
       throw err;
@@ -99,9 +106,13 @@ export default function App() {
   }
 
   async function handleUpdateProject(id: string, data: UpdateProjectInput) {
+    const before = projects.find(p => p.id === id);
     try {
       const updated = await updateProject(id, data);
       setProjects(prev => applyWriteResponse(prev, updated));
+      // A project put under a new parent opens it, as a drop does.
+      const parentId = parentPutUnder(before, updated);
+      if (parentId) collapsedProjects.expand(parentId);
     } catch (err) {
       console.error('Failed to update project:', err);
       throw err;
@@ -194,6 +205,9 @@ export default function App() {
           projects={projects}
           projectDepthCap={projectDepthCap}
           selectedProjectId={selectedProjectId}
+          collapsedIds={collapsedProjects.collapsedIds}
+          onToggleCollapse={collapsedProjects.toggle}
+          onExpandProject={collapsedProjects.expand}
           onSelectProject={handleSelectProject}
           onCreateProject={handleOpenCreateProject}
           onDeleteProject={handleDeleteProject}

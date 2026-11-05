@@ -7,15 +7,20 @@ import { CSS } from '@dnd-kit/utilities';
 import type { DropTier } from '../../lib/dragTargets';
 import type { CarriedBranch, DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
-import { projectRowIndentPx } from './projectTreeUtils';
+import {
+  ROW_CHEVRON_WIDTH_CLASS,
+  ROW_GAP_CLASS,
+  ROW_HANDLE_WIDTH_CLASS,
+  projectNameIndentPx,
+  projectRowIndentPx,
+} from './projectTreeUtils';
 import { CarriedBranchLine, DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, tierClass } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
   'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
-const CHEVRON_BTN_BASE =
-  'flex h-4 w-4 shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400';
+const CHEVRON_BTN_BASE = `flex h-4 ${ROW_CHEVRON_WIDTH_CLASS} shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400`;
 // The drop line while its tab state would put the dragged project's subtree past
 // the project cap (wiki hierarchy-placement §6): the board's line in red. A
 // placeholder look.
@@ -112,20 +117,20 @@ export function SortableProjectRow({
           data-drop-line={indicatorSide}
           data-drop-invalid={indicatorInvalid ? 'true' : undefined}
           className={`${indicatorInvalid ? INVALID_DROP_INDICATOR_LINE : DROP_INDICATOR_LINE} ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
-          style={{ marginLeft: projectRowIndentPx(indicatorDepth) }}
+          style={{ marginLeft: projectNameIndentPx(indicatorDepth) }}
         />
       )}
 
       <div
         data-drop-tier={tier ?? undefined}
-        className={`group flex items-center gap-1 rounded-lg transition-colors select-none ${rowOpacityClass()} ${rowBackgroundClass()}`}
+        className={`group flex items-center ${ROW_GAP_CLASS} rounded-lg transition-colors select-none ${rowOpacityClass()} ${rowBackgroundClass()}`}
         style={{ padding: `6px 12px 6px ${projectRowIndentPx(item.depth)}px` }}
       >
         {/* Drag handle */}
         <button
           {...attributes}
           {...listeners}
-          className="flex w-3 shrink-0 cursor-grab touch-none items-center justify-center text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
+          className={`flex ${ROW_HANDLE_WIDTH_CLASS} shrink-0 cursor-grab touch-none items-center justify-center text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing`}
           tabIndex={-1}
           aria-label="Drag to reorder"
           title="Drag to reorder"
@@ -208,7 +213,8 @@ export function SortableProjectRow({
 }
 
 // The carried copy. Its `DRAG_OVERLAY_ATTR` is the E2E helper's "drag finished"
-// wait: the copy outlives the drag by dnd-kit's drop animation. Its branch, if it has one, is
+// wait: the copy goes at release, with no drop animation (`ProjectSidebar.tsx`), so the wait
+// ends when the drag does. Its branch, if it has one, is
 // said on a second line hung under the box, out of the flow, so what dnd-kit measures of the
 // copy stays this one box (`dragChrome.tsx::CarriedBranchLine`).
 export function DragGhost({
