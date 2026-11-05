@@ -2,7 +2,7 @@
 // down to its code. One TypeScript parse of the text gives all of it: the checker's reading of the
 // comments and test titles (`extractFromSource`), the import declarations, multi-line ones
 // included, which a regex can't tell from the code around them, and the text of the strings,
-// regular expressions and templates, whose spaces are a value. `splitLines` is the one split of a
+// regular expressions, templates and JSX text, whose spaces are a value. `splitLines` is the one split of a
 // text into lines, and every line number here counts from 1, so a line's number means the same to
 // the kinds, to the scan that pairs them with blame's, and to the diff.
 
@@ -109,11 +109,47 @@ function addLines(into: Set<number>, from: number, to: number): void {
   for (let line = from; line <= to; line++) into.add(line + 1);
 }
 
+export interface JsxTextRun {
+  /** What JSX makes of the text: the rendered string. */
+  value: string;
+  /** The characters of it that render, as 0-based lines and columns; a line break and its indentation are not among them. */
+  spans: Array<{ line: number; start: number; end: number }>;
+}
+
+/**
+ * What JSX makes of a text between elements. Within a line every space is kept. A line break is
+ * dropped with the indentation after it and the spaces before it, and the lines that hold text
+ * are joined by one space; the first line keeps its leading spaces and the last its trailing ones.
+ * So a change of indentation or a reflow doesn't change what renders, and a change of a space
+ * inside a line does.
+ */
+export function jsxTextRun(sourceFile: ts.SourceFile, node: ts.JsxText): JsxTextRun {
+  const text = sourceFile.text;
+  const pieces: string[] = [];
+  const spans: JsxTextRun['spans'] = [];
+  const breaks = [...text.slice(node.pos, node.end).matchAll(/\r\n|\n|\r/g)];
+  let from = node.pos;
+  for (let i = 0; i <= breaks.length; i++) {
+    const to = i < breaks.length ? node.pos + breaks[i].index : node.end;
+    let start = from;
+    let end = to;
+    if (i > 0) while (start < end && /[ \t]/.test(text[start])) start++;
+    if (i < breaks.length) while (end > start && /[ \t]/.test(text[end - 1])) end--;
+    if (end > start) {
+      pieces.push(text.slice(start, end));
+      const at = sourceFile.getLineAndCharacterOfPosition(start);
+      spans.push({ line: at.line, start: at.character, end: at.character + (end - start) });
+    }
+    if (i < breaks.length) from = to + breaks[i][0].length;
+  }
+  return { value: pieces.join(' '), spans };
+}
+
 /**
  * Per line, the character spans that are a value rather than code: a string, a regular
- * expression, and the text of a template from its backtick (or the `}` that resumes it) to its end,
- * on every line it reaches. A space inside one is part of what the code means, where a space
- * between tokens is formatting.
+ * expression, the text of a template from its backtick (or the `}` that resumes it) to its end,
+ * on every line it reaches, and the text JSX renders (`jsxTextRun`). A space inside one is part of
+ * what the code means, where a space between tokens is formatting.
  */
 function valueSpans(sourceFile: ts.SourceFile, lineCount: number): Span[][] {
   const spans = Array.from({ length: lineCount }, (): Span[] => []);
@@ -131,6 +167,9 @@ function valueSpans(sourceFile: ts.SourceFile, lineCount: number): Span[][] {
       for (let line = start.line; line <= end.line; line++) {
         spans[line]?.push([line === start.line ? start.character : 0, line === end.line ? end.character : Infinity]);
       }
+    }
+    if (ts.isJsxText(node)) {
+      for (const { line, start, end } of jsxTextRun(sourceFile, node).spans) spans[line]?.push([start, end]);
     }
     ts.forEachChild(node, visit);
   };

@@ -145,6 +145,52 @@ describe('removalSites', () => {
     });
   });
 
+  // JSX text is what its lines render as: every space within a line, and a line break with its indentation
+  // as nothing or one space. A script scan can't see it, so the whole file says where it is.
+  describe('a change in JSX text', () => {
+    const view = (...body: string[]): string[] => ['export const view = (', ...body, ');'];
+    const tsx = (hunks: ReturnType<typeof hunk>[], before: string[], after: string[]): number[] =>
+      sitesOf(hunks, before, after, [], 'a.tsx');
+
+    it('takes a hunk that changes a space inside JSX text on one line', () => {
+      assert.deepEqual(tsx([hunk(1, 1, 1, 1)], ['const v = <pre>a b</pre>;'], ['const v = <pre>a  b</pre>;']), [0]);
+    });
+
+    it('takes a hunk that changes a space in JSX text that leads its line', () => {
+      const text = (line: string): string[] => view('  <p>', line, '  </p>');
+      assert.deepEqual(tsx([hunk(3, 1, 3, 1)], text('    hello world'), text('    hello  world')), [2]);
+    });
+
+    it('takes a hunk that changes a word of JSX text across lines', () => {
+      const text = (second: string): string[] => view('  <p>', '    one two', second, '  </p>');
+      assert.deepEqual(tsx([hunk(4, 1, 4, 1)], text('    three four'), text('    three fore')), [3]);
+    });
+
+    it('leaves out a hunk that re-indents JSX text, since the indentation is not rendered', () => {
+      const text = (indent: string): string[] => view(`${indent}<p>`, `${indent}  hello  world`, `${indent}</p>`);
+      assert.deepEqual(tsx([hunk(2, 3, 2, 3)], text('  '), text('    ')), []);
+    });
+
+    it('leaves out a hunk that reflows JSX text onto lines of its own, or between lines', () => {
+      assert.deepEqual(tsx([hunk(1, 1, 1, 3)], ['const v = <p>a b c</p>;'], ['const v = <p>', '  a b c', '</p>;']), []);
+      const before = view('  <p>', '    one two', '    three', '  </p>');
+      const after = view('  <p>', '    one', '    two three', '  </p>');
+      assert.deepEqual(tsx([hunk(3, 2, 3, 2)], before, after), []);
+    });
+
+    it('leaves out a hunk that only swaps the quotes of a string in a JSX file, as in any other', () => {
+      assert.deepEqual(tsx([hunk(1, 1, 1, 1)], ['const s = "a b";'], ["const s = 'a b';"]), []);
+      assert.deepEqual(tsx([hunk(1, 1, 1, 1)], ['const v = <a title="a b" />;'], ["const v = <a title='a b' />;"]), []);
+    });
+
+    it('still takes a hunk that changes a space in a string beside JSX text', () => {
+      assert.deepEqual(
+        tsx([hunk(1, 1, 1, 1)], ['const v = <a title="a b" />;'], ['const v = <a title="a  b" />;']),
+        [0],
+      );
+    });
+  });
+
   it('leaves out a hunk that only swaps the quotes of a string with spaces, commas and parentheses in it', () => {
     assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], ['const s = "a, (b); c";'], ["const s = 'a, (b); c';"]), []);
   });

@@ -77,6 +77,48 @@ describe('readingOf', () => {
     assert.equal(readingOf(facts({ changed: [], removalSites: [1], oldText, newText })), 'all');
   });
 
+  describe('JSX text, which compares by the text JSX makes of it', () => {
+    const jsx = (overrides: Partial<FileFacts> & Pick<FileFacts, 'oldText' | 'newText'>): FileFacts =>
+      facts({ path: 'client/src/A.tsx', changed: [1], ...overrides });
+
+    it('gives a file that changed one space inside JSX text on one line to every pass, since that is what renders', () => {
+      const oldText = lines('export const view = <pre>a b</pre>;');
+      const newText = lines('export const view = <pre>a  b</pre>;');
+      assert.equal(readingOf(jsx({ changed: [], removalSites: [1], oldText, newText })), 'all');
+    });
+
+    it('gives a file that changed one space in JSX text that leads its line to every pass', () => {
+      const view = (text: string): string => lines('export const view = (', '  <p>', `    ${text}`, '  </p>', ');');
+      const oldText = view('hello world');
+      const newText = view('hello  world');
+      assert.equal(readingOf(jsx({ changed: [3], oldText, newText })), 'all');
+    });
+
+    it('gives a file that changed one space in JSX text that continues over lines to every pass', () => {
+      const view = (second: string): string =>
+        lines('export const view = (', '  <p>', '    one two', `    ${second}`, '  </p>', ');');
+      assert.equal(readingOf(jsx({ changed: [4], oldText: view('three four'), newText: view('three  four') })), 'all');
+    });
+
+    it('gives a file that changed a word of JSX text to every pass', () => {
+      const oldText = lines('export const view = <p>hello world</p>;');
+      const newText = lines('export const view = <p>hello there</p>;');
+      assert.equal(readingOf(jsx({ oldText, newText })), 'all');
+    });
+
+    it('reads a file that only re-indented its JSX text as formatting: the indentation is not rendered', () => {
+      const view = (indent: string): string =>
+        lines('export const view = (', `${indent}<p>`, `${indent}  hello  world`, `${indent}</p>`, ');');
+      assert.equal(readingOf(jsx({ changed: [2, 3, 4], oldText: view('  '), newText: view('    ') })), 'drift');
+    });
+
+    it('keeps a space that starts or ends JSX text on its line with an element beside it', () => {
+      const oldText = lines('export const view = <p>a <b>b</b></p>;');
+      const newText = lines('export const view = <p>a<b>b</b></p>;');
+      assert.equal(readingOf(jsx({ oldText, newText })), 'all');
+    });
+  });
+
   it('reads nothing of a file whose only change is code moved in', () => {
     const oldText = lines('run(1);');
     const newText = lines('run(1);', 'stop();', 'go();', 'wait();', 'end();');

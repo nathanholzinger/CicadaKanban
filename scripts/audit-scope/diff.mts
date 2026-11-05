@@ -2,7 +2,8 @@
 // file's diff, from which come its removal sites.
 
 import ts from 'typescript';
-import { isScriptFile, templateLines } from './lineKinds.mts';
+import { parseScript } from '../check-docs/extract.mts';
+import { isScriptFile, jsxTextRun, templateLines } from './lineKinds.mts';
 
 const { SyntaxKind } = ts;
 
@@ -129,6 +130,46 @@ function codeTokens(text: string): string[] {
   return tokens;
 }
 
+/** A file whose text can hold JSX, which a scan of a hunk's lines alone can't read. */
+const isJsxFile = (path: string): boolean => /\.[jt]sx$/.test(path);
+
+interface LineToken {
+  text: string;
+  /** The first and last lines the token reaches, counted from 1. */
+  first: number;
+  last: number;
+}
+
+/**
+ * A JSX file's tokens, from a parse of the whole file: the same tokens `codeTokens` gives, and each
+ * run of JSX text as one token with the string JSX makes of it, so a reflow or a new indentation is
+ * the same token and a changed space inside a line is not. A line break beside text is not a token.
+ */
+function parsedTokens(path: string, text: string): LineToken[] {
+  const sourceFile = parseScript(path, text);
+  const lineOf = (pos: number): number => sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+  const tokens: LineToken[] = [];
+  const visit = (node: ts.Node): void => {
+    if (node.kind >= SyntaxKind.FirstJSDocNode && node.kind <= SyntaxKind.LastJSDocNode) return;
+    if (ts.isJsxText(node)) {
+      const { value, spans } = jsxTextRun(sourceFile, node);
+      if (spans.length > 0) {
+        tokens.push({ text: `jsx ${JSON.stringify(value)}`, first: spans[0].line + 1, last: spans.at(-1)!.line + 1 });
+      }
+      return;
+    }
+    const children = node.getChildren(sourceFile);
+    if (children.length > 0) {
+      children.forEach(visit);
+    } else if (node.kind !== SyntaxKind.EndOfFileToken && !FORMATTING_TOKENS.has(node.kind)) {
+      const value = ts.isStringLiteral(node) ? JSON.stringify(node.text) : node.getText(sourceFile);
+      tokens.push({ text: value, first: lineOf(node.getStart(sourceFile)), last: lineOf(node.end - 1) });
+    }
+  };
+  visit(sourceFile);
+  return tokens;
+}
+
 /**
  * Whether two texts differ only in how they are written. A script is compared by its tokens, so
  * a change inside a string, a template or a regular expression is a change. Any other file has
@@ -159,7 +200,9 @@ export interface SiteContext {
  *
  * A line inside a template literal is its value, so a hunk that removes one, blank or not, or
  * adds one is never only formatting, whatever its lines read as alone: the script keeps the site
- * when it can't tell.
+ * when it can't tell. In a JSX file the lines are read from a parse of the whole file, since JSX
+ * text is a value too, though one whose line breaks and indentation don't render: a reflow of it
+ * is formatting, and a changed space inside a line is not.
  */
 export function removalSites(hunks: readonly Hunk[], { path, oldLines, newLines, changed }: SiteContext): number[] {
   // Each side read from its whole file, and only when a hunk reaches a decision that needs it.
@@ -170,6 +213,15 @@ export function removalSites(hunks: readonly Hunk[], { path, oldLines, newLines,
   };
   const oldTemplates = lazy(() => templateLines(path, oldLines.join('\n')));
   const newTemplates = lazy(() => templateLines(path, newLines.join('\n')));
+  const oldTokens = lazy(() => parsedTokens(path, oldLines.join('\n')));
+  const newTokens = lazy(() => parsedTokens(path, newLines.join('\n')));
+  // The tokens that reach any of `lines`, as strings.
+  const tokensAt = (tokens: readonly LineToken[], lines: readonly number[]): string[] => {
+    const wanted = new Set(lines);
+    return tokens
+      .filter(token => span(token.first, token.last - token.first + 1).some(line => wanted.has(line)))
+      .map(token => token.text);
+  };
 
   return hunks.flatMap(hunk => {
     const { removed, added } = touchedLines([hunk]);
@@ -179,7 +231,12 @@ export function removalSites(hunks: readonly Hunk[], { path, oldLines, newLines,
     const removedText = removed.map(line => oldLines[line - 1] ?? '');
     if (removedText.every(isBlank) && !removesValue()) return [];
     const addedText = added.map(line => newLines[line - 1] ?? '');
-    const formatting = added.length > 0 && writtenAlike(path, removedText.join('\n'), addedText.join('\n'));
+    const alike = (): boolean => {
+      if (!isJsxFile(path)) return writtenAlike(path, removedText.join('\n'), addedText.join('\n'));
+      const [before, after] = [tokensAt(oldTokens(), removed), tokensAt(newTokens(), added)];
+      return before.length === after.length && before.every((token, i) => token === after[i]);
+    };
+    const formatting = added.length > 0 && alike();
     if (formatting && !removesValue() && !addsValue()) return [];
     return [hunk.newCount === 0 ? hunk.newStart : hunk.newStart - 1];
   });

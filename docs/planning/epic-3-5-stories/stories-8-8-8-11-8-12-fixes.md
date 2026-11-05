@@ -263,6 +263,8 @@ Filled in by the Coder.
 | `itemListOps.ts::hasUnknownStatusItem` | D4's flag: any live item, Attached and other projects' included, whose workphase is none or not the workflow's. `BoardView.tsx` ORs it with `board.unsorted.uncovered.length > 0` for `needsAttention` |
 | `routes/items.ts` `POST /`, `PUT /:id` | D5: `parentId`, `projectId`, `type` and `agentId` each take `referenceShapeError` (nullable, optional) before their lookup, in the order the lookups already ran. `PUT`'s `agentId` takes it too, the ride-along |
 | `itemHierarchy.ts::resolveCreate` | D5: `workphaseId` takes `referenceShapeError` before its lookup, as `validateHierarchyRequest` does |
+| `lineKinds.mts::jsxTextRun` | D6: what JSX makes of a text between elements: every space within a line kept, a line break with its indentation dropped, and the lines that hold text joined by one space. Gives the rendered string and the character spans that render. `valueSpans` marks those spans as a value, so `strippedCode` keeps their spaces |
+| `diff.mts::parsedTokens` | D6: a JSX file's tokens from a parse of the whole file, each run of JSX text as one token of its rendered string. `removalSites` compares the removed and added lines by these for a `.tsx` or `.jsx` file, and by `codeTokens` for any other script |
 | `useProjectCollection.ts::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
 | `useProjectCollection.ts::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
 
@@ -301,6 +303,15 @@ Filled in by the Coder.
 - **Where each check sits:** just before its own lookup, so a request with two bad fields still meets the first refusal it met before. Every message and every omitted, null or inherited meaning is as it was. The new message is `<field> must be a string or null`.
 - **Tests,** in `server/tests/routes/items.test.ts`, untagged (Open questions, for the Planner): one refusal test for each of the create's five fields, `parentId`, `projectId`, `type`, `agentId` and `workphaseId`, with `workflows.test.ts`'s values and an array holding a real id. Each asserts the 400, that the message names the field, and that nothing was created. And one for `PUT`'s `agentId`, which also asserts the item is unchanged. The five create tests failed against the old routes. The `PUT` test was not run against them: the probe above is its failing evidence.
 - **The gate:** `npm run check` passes (444 server, 849 client, 245 script tests). `npm run test:e2e`: 218 passed, 22 skipped.
+
+**Amendment 5: Batch 5 built (Coder, 2026-11-05).** #5, by D6, in `scripts/audit-scope/` only.
+- **The how, which D6 left to the Coder:**
+  - **Classification (`lineKinds.mts`):** JSX text is a value span, but only the part JSX renders. A line break and the indentation after it, and the spaces before one, are not in the span, so re-indenting JSX text is still formatting and a changed space inside a line is code. `jsxTextRun` reads each text node by JSX's own rule, and `valueSpans` and the diff share it.
+  - **Removal sites (`diff.mts`):** `codeTokens` scans a hunk's lines alone, in standard mode, so it can't see JSX text, and a line of prose can look like a string or a regular expression to it. For `.tsx` and `.jsx` files, `removalSites` now reads both sides' tokens from a parse of the whole file (`parsedTokens`), takes the tokens that reach the hunk's removed and added lines, and compares those. Each run of JSX text is one token, its rendered string, so a reflow is the same token. Other scripts keep `codeTokens`.
+- **A reflow reads two ways, as before:** the code normalization compares line by line, so a reflow that moves words between lines still gives every pass, as it does for code. Only the removal site compares by token, and a reflow there is formatting. That is what D6 asks for.
+- **Tests,** beside the string, regex and template cases: `classify.test.mts`, a changed space in JSX text on one line, leading its line and continuing over lines all read `'all'`, a changed word reads `'all'`, a re-indentation reads `'drift'`, and a space beside an element is kept; `diff.test.mts`, the same changes yield a removal site and a re-indentation or a reflow onto lines of its own or between lines yields none, with a quote swap in a JSX file still formatting. Five of the 13 fail against the old scripts, and the eight that pass either way pin what must not change.
+- **Checked on real files:** the removal-site path read four of this repo's `.tsx` files, whole, without error, and a file against itself gave no site.
+- **The gate:** `npm run check` passes (444 server, 849 client, 258 script tests). No E2E: tooling only.
 
 ## Open questions
 
