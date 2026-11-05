@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.12 — The sidebar's ghost moves to the gap
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built, committed and approved (Amendment 2). Phase 4 wrote the Living-docs handoff (Amendment 3), and the PO's pass is done (Amendment 4). Phase 5, a move drawn by slot, is folded in and next (Amendment 5)
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built, committed and approved (Amendment 2). Phase 4 wrote the Living-docs handoff (Amendment 3), and the PO's pass is done (Amendment 4). Phase 5, a move drawn by slot, is folded in (Amendment 5) and built (Amendment 7)
 
 ## Goal
 
@@ -264,9 +264,10 @@ Filled in by the Coder, phase by phase.
 | `SortableProjectRow.tsx::SortableProjectRow` | Takes the strategy's transform in every state, the dragged row's included (D1). Drawn at `ghost.depth`; carries the line on its top edge (D3). Test surfaces: `data-drag-ghost` (the depth it is drawn at) and `data-drop-line` (the depth the line is drawn at), `data-drop-invalid` as before. |
 | `SortableProjectRow.tsx::DragGhost` | The copy laid out as the row at a depth: the row's padding, then the handle's and the chevron's room, so its name sits at `projectNameIndentPx` (D4). Its edge is a ring, so it takes no room. Over the cap it takes `INVALID_PLACEMENT_CLASS` (D3). |
 | `ProjectSidebar.tsx::HOLD_COPY_X` | The overlay's modifier, on the `DragOverlay` alone: x stays at the pickup, y follows the pointer (D4). The default drop animation is back (D6). |
-| `lib/hierarchy.ts::PendingMove`, `withMoveApplied` | A sent move laid over the tree by its relation (D5): table-generic, beside `sortedChildrenByParent`. See Amendment 1. |
-| `App.tsx` (`pendingMoves`, `sidebarProjects`, `handleReorderProject`) | The moves out, oldest first; the tree the sidebar reads has them laid over once; each leaves with its own answer, in the update that folds the answer or on its failure (D5). |
-| `useProjectDragReorder.test.ts`, `projectTreeUtils.test.ts`, `SortableProjectRow.test.tsx`, `lib/hierarchy.test.ts`, `App.pendingMove.test.tsx` | The gap, the hook, the row and the copy, the overlay, and the move in `App.tsx` (Phase 1's tests). |
+| `lib/hierarchy.ts::PendingMove`, `withMoveApplied`, `sortedChildrenByParent` | A sent move laid over the tree by its relation (D5), table-generic. `withMoveApplied` gives the moved project the release's parent and changes nothing else. `sortedChildrenByParent(nodes, moves)` takes each move out of the children it sits in and puts it in its new parent's by its slot, after the sort, in the order sent. No `position` is read or written (Amendment 5). |
+| `App.tsx` (`pendingMoves`, `sidebarProjects`, `handleReorderProject`) | The moves out, oldest first. `sidebarProjects` is the tree with their parents laid over once, and `pendingMoves` goes to the sidebar beside it for the order. Each move leaves with its own answer, in the update that folds the answer or on its failure (D5). |
+| `ProjectSidebar.tsx` (`pendingMoves`), `projectTreeUtils.ts::flattenTree`, `fullChildrenOf`, `useProjectDragReorder.ts` (`moves`) | The moves out, read where siblings are ordered: the render list, the real tree's children, and the hook's first-child lookup and branch walk, which are `fullChildrenOf`'s (Amendment 7). |
+| `useProjectDragReorder.test.ts`, `projectTreeUtils.test.ts`, `SortableProjectRow.test.tsx`, `lib/hierarchy.test.ts`, `App.pendingMove.test.tsx` | The gap, the hook, the row and the copy, the overlay, and the move in `App.tsx` (Phase 1's tests, with Phase 5's: the slot layer, the render list and children with a move out, a pickup reading a move out, and TREE-4.12's positions). |
 | `tests/helpers/projectTreeDrag.ts` (`aim`, `aimAtOwnRow`, `ghostSlot`) | `aim` aims at a row and has no side: the ghost takes the slot of the row the copy is nearest. `aimAtOwnRow` aims at the pickup point, for the dragged project's own gap. `ghostSlot` reads the rows on either side of the ghost as painted, which a spec polls while the rows slide. |
 | `tests/pages/ProjectSidebarPage.ts::ghost` | The dragged project's row, beside `dropLine`. |
 | `tests/ui/project-tree-drag.spec.ts`, `tests/ui/project-tree-sidebar.spec.ts` | TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag run against the ghost (Amendment 2). TREE-1.4 and TREE-2.1 stay skipped for Story 10. |
@@ -354,6 +355,21 @@ Filled in by the Coder, phase by phase.
 - **Routing:** the roadmap's Story 10 item 10 records the reported unskips and names the remaining gesture-dependent cases, including the new IDs. TREE-4.12's implementation coverage belongs with this story's Phase 5, which the Architect added during this pass, with only any remaining gesture-dependent coverage routed to Story 10. Phase 5 changes no expected visible placement in the cases. No copy-hold, pixel step, exact invalid styling or glide case is written: the PO left those in Open questions. No new Pending PO case arose.
 - **Checks:** `npm run check:docs` passes (403 files, zero hits), and `git diff --check` passes. This documentation pass ran no runtime tests.
 
+**Amendment 7: Phase 5 built (Coder, 2026-11-04).** A move is drawn by slot, as Amendment 5 has it. No position is written on any copy, and what is drawn is what it was. What the plan left to the Coder, and what the build found:
+- **The prop's shape.** `ProjectSidebar` takes `pendingMoves` beside `projects`, whose parents are laid over. `flattenTree` and `fullChildrenOf` take the moves as a last parameter, none by default.
+- **`useProjectDragReorder` takes them too.** Amendment 5 names `flattenTree` and `fullChildrenOf` as the readers of sibling order, and the hook is a third caller of `fullChildrenOf`: its first-child lookup, which names the neighbor of a tab into a gap, and its branch walk. Left on the stored order, a project moved to a parent's front would be passed over for the old first child. The hook's `moves` is its last parameter, none by default.
+- **`sortedChildrenByParent` takes a move's node out of whichever children hold it,** so a caller that hasn't laid the parent over still orders right, and a parent it empties is dropped from the index, so `get(parent)` is still undefined for a project with no children.
+- **Tests.**
+  - `lib/hierarchy.test.ts`: the `withMoveApplied` block is now "a move laid over the tree", renamed since it tests both halves. The order tests read the slot layer, no node's `position` changes, and the later of two moves of one project wins while both are out. They run with positions of their own, so a place by slot is told from a place by position.
+  - `sidebar/projectTreeUtils.test.ts`: the render list and the real tree's children with a move out, one a parent's first child.
+  - `sidebar/useProjectDragReorder.test.ts`: a pickup reads a move still out. The first child a tab names, the branch, and a tab into the moved project.
+  - `App.pendingMove.test.tsx`: every tree assertion passes as it was, which is the check that nothing drawn moved. The stand-in sidebar had to read `pendingMoves`, since it is the sidebar's reader, and so it changed. New: **TREE-4.12**, whose title carries the ID. It is the case's example, with the positions of every project read off what the sidebar was given before and after the answer.
+  - TREE-4.9 and TREE-4.10 overlap that file's tests but not their fixtures, so they are not stamped. The Reconciler judges those.
+- **The handoff's two ranks lines** are marked settled by Amendment 5. The handoff's test list names `lib/hierarchy.test.ts` for the move laid over a tree, which still holds, and the describe's new name is above.
+- **Not changed:** the root `AGENTS.md`, which says no project write takes a number. Whether it names `withMoveApplied` beside the board's `applyPlacements` stays the Architect's call. Wiki positioning §5 stands as Nathan ruled.
+- **No hands-on,** as planned: nothing drawn changes.
+- **Gate:** `npm run check` passes (438 server, 794 client, 245 script tests). `npm run test:e2e`: 215 passed, 22 skipped, none failed, the same as before Phase 5.
+
 ## Open questions
 
 - **For Nathan, in Phase 2:** D4's held copy, or a copy that follows the pointer sideways, as today. *Settled in Amendment 2: the held copy stays.*
@@ -387,7 +403,7 @@ Written by the Coder in Phase 4, after Nathan approved the gesture (Amendment 2)
     - **The next pickup reads the tree with the moves laid over,** so its subtree, tiers and branch include the user's last drag.
     - **What can still land mid-drag** (Amendment 3). §1 says the user's own last move can land mid-drag. A drag's move no longer does. An edit from the project page's parent dropdown, a create, a refused move going back, and the read after a refusal can. §1's last bullet keeps its rules for these. The cycle it describes is reachable by an edit that puts a project under the dragged one.
   - **Where a drag ends** (D6). A drop glides the copy into the project's new place. An end that writes nothing (Escape, the own gap, a release past the cap) glides it back to the project's own slot, where the ghost returns. The branch is drawn again at every end (hierarchy-placement §8). The board's glide is no wiki rule, so I recommend this one is a look, with the copy's.
-  - **A drawn move uses ranks** (Amendment 1). While a move is out, the new parent's children are ranked 0, 1, 2… in the `position` of a copy that is never stored or sent. Wiki positioning §5 says the client never computes a position "not even for display". A rank is an index in the drawn list, which §5 calls the ordinal feedback. **The PO or the Architect decides whether §5 says so,** or wants the moves threaded through each reader of the tree instead.
+  - **A drawn move uses ranks** (Amendment 1). While a move is out, the new parent's children are ranked 0, 1, 2… in the `position` of a copy that is never stored or sent. Wiki positioning §5 says the client never computes a position "not even for display". A rank is an index in the drawn list, which §5 calls the ordinal feedback. **The PO or the Architect decides whether §5 says so,** or wants the moves threaded through each reader of the tree instead. *Settled by Amendment 5, built in Amendment 7: Nathan ruled for the second. The overlay lays the parent over and places each move by slot, and no position is written.*
   - **8.11's D7 is undone** (D6), so it goes to neither the wiki nor the test plan. **8.11's D8 is kept** as the line's start (above).
 - **Planned passages now built:** none. None were planned.
 - **Passages superseded,** each for the PO:
@@ -431,15 +447,16 @@ Written by the Coder in Phase 4, after Nathan approved the gesture (Amendment 2)
     - the gap: `sidebar/projectTreeUtils.test.ts` (`resolveGap`);
     - the ghost, its slot and the line's state: `sidebar/useProjectDragReorder.test.ts`;
     - the ghost's row, its line, and the copy: `sidebar/SortableProjectRow.test.tsx`;
-    - a move laid over a tree: `lib/hierarchy.test.ts` (`withMoveApplied`);
-    - a move from its release to its answer: `App.pendingMove.test.tsx`.
+    - a move laid over a tree: `lib/hierarchy.test.ts` ("a move laid over the tree", `withMoveApplied` and the moves `sortedChildrenByParent` takes);
+    - the render list and the real tree's children with a move out: `sidebar/projectTreeUtils.test.ts`; a pickup reading one: `sidebar/useProjectDragReorder.test.ts`;
+    - a move from its release to its answer: `App.pendingMove.test.tsx`, which also carries TREE-4.12.
   - **Skipped specs, all in `tests/ui/project-tree-drag.spec.ts`:** TREE-1.4 and TREE-2.1 stay skipped for Story 10, each with its reason. The six specs this story unskipped are TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag, and their case texts above are what follows.
 - **For the Architect:**
   - **Story 10's item 10** says "TREE-1.1 and TREE-1.11/TREE-3.9 remain skipped only until Story 8.12 updates and unskips them". They are unskipped, with TREE-1.8, TREE-1.9, TREE-2.3 and TREE-4.7's drag. It holds TREE-1.4 and TREE-2.1 for the sidebar now, as before.
   - **Gesture-dependent coverage no spec has** (Story 8 allows no new drag specs): the copy held at the list's x and stepping with the depth, a refused move drawn then put back, two drags released in quick succession, and a scrolled list. The unit tests cover the move's life from release to answer and two moves out (`App.pendingMove.test.tsx`) and the copy's depth, and Phase 1's probe checked the held x and a refusal in a browser. The Coder ran no scrolled list and no two drags in quick succession, and the hands-on's report doesn't mention either.
   - **The roadmap's 8.12 entry** has a "Today" paragraph that says the ghost stays at the pickup and that this reverses "an indicator line, not a ghost". That is right as the problem's statement and wrong as live.
   - **The depth range** (inbound 3). D2 and D4 are the answer, and Nathan's hands-on said the placement feels more intuitive and raised nothing against the range. The Coder ran neither the scrolled list nor the deep stack against it. If it comes back, the roadmap treats it as a defect, fixed in Story 8.
-  - **Wiki positioning §5 and the ranks** (above, for the PO). The root `AGENTS.md` says no project write takes a number, which is still true. Whether it names `withMoveApplied` beside the board's `applyPlacements` is the Architect's call.
+  - **Wiki positioning §5 and the ranks** (above, for the PO). The root `AGENTS.md` says no project write takes a number, which is still true. Whether it names `withMoveApplied` beside the board's `applyPlacements` is the Architect's call. *Settled by Amendment 5: the ranks are gone, wiki positioning §5 stands, and the root `AGENTS.md` needs no change.*
 - **Left to the Coder at close:**
   - **The unit tests take the new cases' IDs** in their titles, and the old ones whose wording moved are retitled: the hook's TREE-1.6 and TREE-2.x describes, and `SortableProjectRow.test.tsx`'s TREE-2.1 and TREE-2.7.
   - **The gate,** if that changes anything.

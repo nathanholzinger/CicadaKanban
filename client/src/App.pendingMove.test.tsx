@@ -9,6 +9,7 @@ import type { Project } from './types';
 import { fetchProjectDepthCap, fetchProjects, moveProject } from './api/projects';
 import { fetchWorkflows } from './api/workflows';
 import type { ReorderProject } from './components/sidebar/useProjectDragReorder';
+import type { PendingMove } from './lib/hierarchy';
 import { makeProject } from './test/projectFixture';
 import App from './App';
 
@@ -18,17 +19,29 @@ vi.mock('./components/NotificationsBell', () => ({ default: () => null }));
 vi.mock('./components/ProjectPage', () => ({ default: () => null }));
 
 // Every tree the stand-in sidebar was given, as its rows in order: `id` at its depth, so a render that
-// drew a project at the wrong place is on the record.
-const seen = vi.hoisted(() => ({ trees: [] as string[][] }));
+// drew a project at the wrong place is on the record. And the projects of the latest, to read their
+// positions: the stand-in lists them with the moves it is given, as the real sidebar does.
+const seen = vi.hoisted(() => ({ trees: [] as string[][], projects: [] as Project[] }));
 let release: ReorderProject;
 
 vi.mock('./components/ProjectSidebar', async () => {
   const { flattenTree: flatten } = await import('./components/sidebar/projectTreeUtils');
   return {
-    default: ({ projects, onReorderProject }: { projects: Project[]; onReorderProject: ReorderProject }) => {
+    default: ({
+      projects,
+      pendingMoves,
+      onReorderProject,
+    }: {
+      projects: Project[];
+      pendingMoves: PendingMove[];
+      onReorderProject: ReorderProject;
+    }) => {
       release = onReorderProject;
-      const rows = flatten(projects, new Set(projects.map(p => p.id))).map(i => `${'-'.repeat(i.depth)}${i.id}`);
+      const rows = flatten(projects, new Set(projects.map(p => p.id)), pendingMoves).map(
+        i => `${'-'.repeat(i.depth)}${i.id}`,
+      );
       seen.trees.push(rows);
+      seen.projects = projects;
       return <ol aria-label="projects">{rows.join(' ')}</ol>;
     },
   };
@@ -66,10 +79,10 @@ beforeEach(() => {
   vi.mocked(fetchWorkflows).mockResolvedValue([]);
 });
 
-async function openApp() {
+async function openApp(atRest = AT_REST) {
   render(<App />);
   await screen.findByLabelText('projects');
-  expect(tree()).toBe(AT_REST);
+  expect(tree()).toBe(atRest);
   return userEvent.setup();
 }
 
@@ -183,5 +196,37 @@ describe('a project move, from its release to its answer', () => {
     act(() => void release('D', null, null, 'P'));
 
     expect(tree()).toBe('D P -C Q R');
+  });
+});
+
+describe('the positions of a tree with a move out', () => {
+  // P, with the children A and B; X, with the child X1. Each position is its own, so a place by slot is
+  // told from a place by position: X's, 30, is past B's, and X1's, 7, is below every one of P's children.
+  const SLOT_TREE = [
+    makeProject('P', { position: 1 }),
+    makeProject('A', { parentId: 'P', position: 10 }),
+    makeProject('B', { parentId: 'P', position: 20 }),
+    makeProject('X', { position: 30 }),
+    makeProject('X1', { parentId: 'X', position: 7 }),
+  ];
+  const positions = () => Object.fromEntries(seen.projects.map(p => [p.id, p.position]));
+
+  it('TREE-4.12: a drawn move changes order by slot without computing any position', async () => {
+    vi.mocked(fetchProjects).mockResolvedValue(SLOT_TREE);
+    await openApp('P -A -B X -X1');
+    const answer = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(answer.promise);
+
+    act(() => void release('X', 'P', 'A', null));
+
+    // X is drawn after A, with X1 under it, by the slot it names. Every position is the server's.
+    expect(tree()).toBe('P -A -X --X1 -B');
+    expect(positions()).toEqual({ P: 1, A: 10, B: 20, X: 30, X1: 7 });
+    expect(moveProject).toHaveBeenCalledExactlyOnceWith('X', { parentId: 'P', prevId: 'A', nextId: null });
+
+    // The answer gives X its position, 15, and nothing else changes, nor does the tree drawn.
+    await act(async () => answer.resolve(makeProject('X', { parentId: 'P', position: 15 })));
+    expect(tree()).toBe('P -A -X --X1 -B');
+    expect(positions()).toEqual({ P: 1, A: 10, B: 20, X: 15, X1: 7 });
   });
 });

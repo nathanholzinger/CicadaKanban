@@ -1,7 +1,9 @@
 // Tree math over flat { id, parentId } collections — a subtree and its height,
 // ancestors, depth, the depth-cap rule, the sorted children index, a move laid
-// over it before its answer lands, and reparent dropdown options — and the
-// sibling order, shared by the project hierarchy and the item hierarchy.
+// over the tree before its answer lands (the parent in `withMoveApplied`, the
+// place among its siblings in `sortedChildrenByParent`), and reparent dropdown
+// options — and the sibling order, shared by the project hierarchy and the
+// item hierarchy.
 
 import { flattenHierarchyOf } from './hierarchyPlacement';
 
@@ -46,23 +48,6 @@ function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
   return childrenOf;
 }
 
-// parentId -> its children in sibling order (`byPositionThenCreatedAt`), the
-// roots under `null`. A node whose `parentId` no node in `nodes` has is a root
-// too, so the sidebar's tree and the project page's parent dropdown, which both
-// walk this, agree on data with a dangling parent.
-export function sortedChildrenByParent<T extends TreeNode & Positioned>(nodes: readonly T[]): Map<string | null, T[]> {
-  const ids = new Set(nodes.map(n => n.id));
-  const childrenOf = new Map<string | null, T[]>();
-  for (const n of nodes) {
-    const key = n.parentId !== null && ids.has(n.parentId) ? n.parentId : null;
-    const list = childrenOf.get(key) ?? [];
-    list.push(n);
-    childrenOf.set(key, list);
-  }
-  for (const list of childrenOf.values()) list.sort(byPositionThenCreatedAt);
-  return childrenOf;
-}
-
 // A move that was sent and not yet answered, as its request carries it: the parent, and the
 // sibling to insert beside (`prevId` after it, `nextId` before it), never a position.
 export interface PendingMove {
@@ -72,27 +57,59 @@ export interface PendingMove {
   nextId: string | null;
 }
 
-// `nodes` as they will be once `move` lands, so a surface can draw the move at once. By
-// relation: the moved node goes under `move.parentId` beside the sibling it names, or last when it
-// names none (the only child of an empty parent), and a sibling that isn't there any more counts as
-// none. The new parent's children are then ranked in that order, 0, 1, 2…, for
-// `sortedChildrenByParent` to read. A rank is the ordinal feedback of wiki positioning §5, an index
-// in the list drawn: it sits on a copy that is never stored, sent or compared with a real position,
-// since a write names a neighbor and the server resolves the number, and the answer replaces these
-// nodes. Several moves are laid over in the order they were sent. A node that isn't in `nodes`
+// parentId -> its children in sibling order (`byPositionThenCreatedAt`), the
+// roots under `null`. A node whose `parentId` no node in `nodes` has is a root
+// too, so the sidebar's tree and the project page's parent dropdown, which both
+// walk this, agree on data with a dangling parent.
+//
+// `moves` are sent and not yet answered. Each, in the order sent, takes its node out of the
+// children it sits in and puts it back in its new parent's, by its slot: after `prevId`, before
+// `nextId`, or last when it names neither or the one it names isn't a child there. A parent no node
+// has counts as the top level, as above. This is the rule the board's `applyPlacements` places an
+// item by, and it never reads or writes a `position`. `nodes` already carry the move's parent
+// (`withMoveApplied`), which the readers of `parentId` need; the order is what only this index
+// holds. A move for a node that isn't in `nodes` (deleted since) is skipped.
+export function sortedChildrenByParent<T extends TreeNode & Positioned>(
+  nodes: readonly T[],
+  moves: readonly PendingMove[] = [],
+): Map<string | null, T[]> {
+  const ids = new Set(nodes.map(n => n.id));
+  const keyOf = (parentId: string | null) => (parentId !== null && ids.has(parentId) ? parentId : null);
+  const childrenOf = new Map<string | null, T[]>();
+  for (const n of nodes) {
+    const key = keyOf(n.parentId);
+    const list = childrenOf.get(key) ?? [];
+    list.push(n);
+    childrenOf.set(key, list);
+  }
+  for (const list of childrenOf.values()) list.sort(byPositionThenCreatedAt);
+
+  for (const move of moves) {
+    const moved = nodes.find(n => n.id === move.id);
+    if (!moved) continue;
+    for (const [key, list] of childrenOf) {
+      const at = list.indexOf(moved);
+      if (at === -1) continue;
+      list.splice(at, 1);
+      if (list.length === 0) childrenOf.delete(key);
+    }
+    const siblings = childrenOf.get(keyOf(move.parentId)) ?? [];
+    const anchorAt = siblings.findIndex(n => n.id === (move.prevId ?? move.nextId));
+    siblings.splice(anchorAt === -1 ? siblings.length : move.prevId ? anchorAt + 1 : anchorAt, 0, moved);
+    childrenOf.set(keyOf(move.parentId), siblings);
+  }
+  return childrenOf;
+}
+
+// `nodes` as they will be once `move` lands, as far as a node knows: the moved one under
+// `move.parentId`. That is all it changes, and no `position` with it: what reads a node's parent
+// (`getSubtree`, `getAncestors`, the drag's classification) sees the move, and the place among its
+// siblings is `sortedChildrenByParent`'s, given the same move. A surface that draws a move before its
+// answer lands lays both over, once, so its rows, its children and what the next drag reads are one
+// tree. Several moves are laid over in the order they were sent. A node that isn't in `nodes`
 // (deleted since) is skipped.
-export function withMoveApplied<T extends TreeNode & Positioned>(nodes: readonly T[], move: PendingMove): T[] {
-  const moved = nodes.find(n => n.id === move.id);
-  if (!moved) return [...nodes];
-  const siblings = (sortedChildrenByParent(nodes).get(move.parentId) ?? []).filter(n => n.id !== move.id);
-  const anchorAt = siblings.findIndex(n => n.id === (move.prevId ?? move.nextId));
-  const at = anchorAt === -1 ? siblings.length : move.prevId ? anchorAt + 1 : anchorAt;
-  const rank = new Map([...siblings.slice(0, at), moved, ...siblings.slice(at)].map((n, i) => [n.id, i]));
-  return nodes.map(n => {
-    const position = rank.get(n.id);
-    if (position === undefined) return n;
-    return n.id === move.id ? { ...n, parentId: move.parentId, position } : { ...n, position };
-  });
+export function withMoveApplied<T extends TreeNode>(nodes: readonly T[], move: PendingMove): T[] {
+  return nodes.map(n => (n.id === move.id ? { ...n, parentId: move.parentId } : n));
 }
 
 export interface Subtree {

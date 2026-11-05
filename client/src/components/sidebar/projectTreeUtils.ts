@@ -10,7 +10,7 @@
 // set-down in the project's own slot (`releaseOf`).
 
 import type { Project } from '../../types';
-import { sortedChildrenByParent } from '../../lib/hierarchy';
+import { sortedChildrenByParent, type PendingMove } from '../../lib/hierarchy';
 import { flattenHierarchyOf, ownSlotOf, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
 
 export interface FlatItem {
@@ -65,9 +65,15 @@ export function parentPutUnder(before: Project | undefined, written: Project): s
 }
 
 // The render list: the shared walk, with a collapsed project's children left
-// out of it. A collapsed project still reports that it has some.
-export function flattenTree(projects: Project[], expandedIds: Set<string>): FlatItem[] {
-  const childMap = sortedChildrenByParent(projects);
+// out of it. A collapsed project still reports that it has some. `moves` are the
+// moves sent and not yet answered, whose place among their siblings the order
+// reads (`lib/hierarchy.ts::sortedChildrenByParent`).
+export function flattenTree(
+  projects: Project[],
+  expandedIds: Set<string>,
+  moves: readonly PendingMove[] = [],
+): FlatItem[] {
+  const childMap = sortedChildrenByParent(projects, moves);
   const childrenOf = (parentId: string | null) => childMap.get(parentId) ?? [];
   const shownChildrenOf = (parentId: string | null) =>
     parentId === null || expandedIds.has(parentId) ? childrenOf(parentId) : [];
@@ -80,9 +86,13 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
 // The library's `childrenOf` over the *real* tree, ignoring collapse state
 // entirely: the sidebar places against the real tree, so a project tabbed
 // right of a collapsed Top lands ahead of Top's real first child, which
-// `flatItems` never has at all (wiki project-tree §1).
-export function fullChildrenOf(projects: readonly Project[]): (parentId: string | null) => readonly string[] {
-  const childMap = sortedChildrenByParent(projects);
+// `flatItems` never has at all (wiki project-tree §1). It reads the same moves the
+// render list does, so a project moved to a parent's front is that parent's first child here too.
+export function fullChildrenOf(
+  projects: readonly Project[],
+  moves: readonly PendingMove[] = [],
+): (parentId: string | null) => readonly string[] {
+  const childMap = sortedChildrenByParent(projects, moves);
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
 }
 

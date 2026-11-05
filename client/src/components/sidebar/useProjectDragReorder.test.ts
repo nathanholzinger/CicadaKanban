@@ -5,6 +5,7 @@ import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
 import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
 import { tierVars } from '../dragChrome';
+import { withMoveApplied, type PendingMove } from '../../lib/hierarchy';
 import { flattenTree, INDENT_WIDTH } from './projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './useProjectDragReorder';
 
@@ -17,13 +18,22 @@ function tree(...rows: Array<readonly [id: string, parentId: string | null]>): P
 // The sidebar's drag as dnd-kit reports it to the hook: pick a project up, rest the carried copy
 // nearest a row, which is the row whose slot the ghost takes, with the pointer at `depth` (the
 // absolute depth its offset picks), and release. `collapsed` names the projects whose children
-// the sidebar doesn't draw.
-function sidebarDrag(projects: Project[], collapsed: readonly string[] = [], depthCap: number | null = null) {
+// the sidebar doesn't draw. `moves` are moves sent and not yet answered, drawn as `App.tsx` hands them to
+// the sidebar: their parents on `projects`, their places among the siblings beside.
+function sidebarDrag(
+  sent: Project[],
+  collapsed: readonly string[] = [],
+  depthCap: number | null = null,
+  moves: readonly PendingMove[] = [],
+) {
+  const projects = moves.reduce((tree, move) => withMoveApplied(tree, move), sent);
   const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
   const expand = vi.fn<(id: string) => void>();
   const expanded = new Set(projects.map(p => p.id).filter(id => !collapsed.includes(id)));
-  const flatItems = flattenTree(projects, expanded);
-  const { result } = renderHook(() => useProjectDragReorder(projects, flatItems, onReorderProject, expand, depthCap));
+  const flatItems = flattenTree(projects, expanded, moves);
+  const { result } = renderHook(() =>
+    useProjectDragReorder(projects, flatItems, onReorderProject, expand, depthCap, moves),
+  );
   let activeId = '';
   let overId = '';
 
@@ -748,6 +758,42 @@ describe('the tier each row is drawn at', () => {
       drag.pickUp('X');
       expect(drag.hook.tierVars).toEqual(asVars(DEFAULT_DRAG_TUNING));
     });
+  });
+});
+
+// A move sent and not yet answered is in the tree a pickup reads: its parent is on the project, and its place
+// among the siblings is the moves'. The first child a tab into the gap under a parent names, and the branch
+// a pickup carries, are read from the real tree's children, which the moves order.
+describe('a move still out, read by the next pickup', () => {
+  // P, with the child C1; then Q and X at the top level. Q's move under P, ahead of C1, is out.
+  const projects = tree(['P', null], ['C1', 'P'], ['Q', null], ['X', null]);
+  const moveQ: PendingMove = { id: 'Q', parentId: 'P', prevId: null, nextId: 'C1' };
+
+  it('names the moved project as the first child of its new parent, ahead of the stored order', () => {
+    const drag = sidebarDrag(projects, [], null, [moveQ]);
+    drag.pickUp('X');
+    expect(drag.hook.rowIds).toEqual(['P', 'Q', 'C1', 'X']);
+    drag.hover('Q', 1);
+    expect(drag.slot()).toEqual(['P', 'Q']);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'P', null, 'Q');
+  });
+
+  it('carries the whole branch of its new parent, the moved project included', () => {
+    const drag = sidebarDrag(projects, [], null, [moveQ]);
+    drag.pickUp('P');
+    expect(drag.hook.branch?.ids).toEqual(new Set(['Q', 'C1']));
+    expect(drag.hook.drawnItems.map(i => i.id)).toEqual(['P', 'X']);
+  });
+
+  it('lets a tab into the moved project make the dragged project its first child', () => {
+    const drag = sidebarDrag(projects, [], null, [moveQ]);
+    drag.pickUp('X');
+    drag.hover('C1', 2);
+    expect(drag.slot()).toEqual(['Q', 'C1']);
+    expect(drag.hook.projectedDepth).toBe(2);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'Q', null, null);
   });
 });
 

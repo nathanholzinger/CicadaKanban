@@ -162,9 +162,10 @@ export default function App() {
     }
   }
 
-  // What the sidebar draws: the tree with every move still out laid over it, once, so its rows, the real
-  // tree's children and what the next pickup reads (its subtree and tiers) are one tree. No move out is
-  // the same array.
+  // What the sidebar draws: every move still out laid over the tree once, as far as a node knows (its
+  // parent), with the moves beside it for the one index that sorts siblings. So its rows, the real
+  // tree's children and what the next pickup reads (its subtree and tiers) are one tree, and no
+  // position is touched. No move out is the same array.
   const sidebarProjects = pendingMoves.reduce((tree, move) => withMoveApplied(tree, move), projects);
   const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null;
   const projectSubprojects = projects.filter(p => p.parentId === selectedProjectId);
@@ -218,6 +219,7 @@ export default function App() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ProjectSidebar
           projects={sidebarProjects}
+          pendingMoves={pendingMoves}
           projectDepthCap={projectDepthCap}
           selectedProjectId={selectedProjectId}
           collapsedIds={collapsedProjects.collapsedIds}

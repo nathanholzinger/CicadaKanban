@@ -82,6 +82,60 @@ describe('flattenTree', () => {
   });
 });
 
+// A move sent and not yet answered is drawn by the render list and by the real tree's children alike: its
+// parent is on the project (`withMoveApplied`), its place among the siblings is the moves' (`moves`).
+describe('a move out, read by the render list and the real tree', () => {
+  // P, with the children C1 and C2, then Q and R at the top level. Each sits at a position of its own.
+  const projects = [
+    makeProject('P', { position: 10 }),
+    makeProject('C1', { parentId: 'P', position: 10 }),
+    makeProject('C2', { parentId: 'P', position: 20 }),
+    makeProject('Q', { position: 20 }),
+    makeProject('R', { position: 30 }),
+  ];
+  const everyProject = new Set(projects.map(p => p.id));
+  const move = { id: 'R', parentId: 'P', prevId: 'C1', nextId: null };
+  const laidOver = projects.map(p => (p.id === 'R' ? { ...p, parentId: 'P' } : p));
+  const rowsOf = (items: FlatItem[]) => items.map(i => `${i.id}@${i.depth}`);
+
+  it('draws the project under its new parent, beside the sibling it names, whatever its position', () => {
+    expect(rowsOf(flattenTree(laidOver, everyProject, [move]))).toEqual(['P@0', 'C1@1', 'R@1', 'C2@1', 'Q@0']);
+  });
+
+  it('leaves every project’s position as the server sent it', () => {
+    const items = flattenTree(laidOver, everyProject, [move]);
+    expect(items.map(i => i.project.position)).toEqual([10, 10, 30, 20, 20]);
+  });
+
+  it('draws it where the sort alone would put it when no move is out', () => {
+    expect(rowsOf(flattenTree(laidOver, everyProject))).toEqual(['P@0', 'C1@1', 'C2@1', 'R@1', 'Q@0']);
+    expect(rowsOf(flattenTree(laidOver, everyProject, []))).toEqual(rowsOf(flattenTree(laidOver, everyProject)));
+  });
+
+  it('shows the parent it left without a chevron when the project was its only child', () => {
+    const only = [makeProject('P', { position: 1 }), makeProject('C', { parentId: 'P', position: 1 })];
+    const to = { id: 'C', parentId: null, prevId: 'P', nextId: null };
+    const items = flattenTree(
+      only.map(p => (p.id === 'C' ? { ...p, parentId: null } : p)),
+      new Set(['P', 'C']),
+      [to],
+    );
+    expect(rowsOf(items)).toEqual(['P@0', 'C@0']);
+    expect(items[0].hasChildren).toBe(false);
+  });
+
+  it('reads the same place in the real tree’s children, collapsed or not', () => {
+    expect(fullChildrenOf(laidOver, [move])('P')).toEqual(['C1', 'R', 'C2']);
+    expect(fullChildrenOf(laidOver, [move])(null)).toEqual(['P', 'Q']);
+    expect(fullChildrenOf(laidOver)('P')).toEqual(['C1', 'C2', 'R']);
+  });
+
+  it('puts a project moved to a parent’s front first among its children, which a first-child lookup reads', () => {
+    const front = { id: 'R', parentId: 'P', prevId: null, nextId: 'C1' };
+    expect(fullChildrenOf(laidOver, [front])('P')[0]).toBe('R');
+  });
+});
+
 // The gap is the ghost's slot: the dragged project's own row is one of the rows drawn, and the gap is
 // the place of the row the copy is nearest, among the rows without the dragged one.
 describe('resolveGap', () => {

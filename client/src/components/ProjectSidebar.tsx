@@ -2,11 +2,13 @@
 // the drag itself is `sidebar/useProjectDragReorder.ts`), and a handle on its
 // right edge that sets its width (`sidebar/useSidebarResize.ts`). Which projects
 // are collapsed is `App.tsx`'s (`sidebar/useCollapsedProjects.ts`): a write there can open one.
-// A move sent and not yet answered is already in the `projects` it is given (`App.tsx`).
+// A move sent and not yet answered is drawn already: its parent is in the `projects` it is given, and
+// its place among the siblings is in `pendingMoves` (`App.tsx`).
 
 import { DndContext, DragOverlay, closestCenter, type Modifier } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Project } from '../types';
+import type { PendingMove } from '../lib/hierarchy';
 import { flattenTree } from './sidebar/projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './sidebar/useProjectDragReorder';
 import { useSidebarResize } from './sidebar/useSidebarResize';
@@ -20,7 +22,10 @@ const HOLD_COPY_X: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 const COPY_MODIFIERS = [HOLD_COPY_X];
 
 interface ProjectSidebarProps {
+  /** The tree to draw, with the parent of every move still out laid over (`lib/hierarchy.ts::withMoveApplied`). */
   projects: Project[];
+  /** The moves sent and not yet answered, oldest first, whose place among the siblings the order reads. */
+  pendingMoves: readonly PendingMove[];
   /** The project depth cap the drag offers tab states against; null until it's known. */
   projectDepthCap: number | null;
   selectedProjectId: string | null;
@@ -37,6 +42,7 @@ interface ProjectSidebarProps {
 
 export default function ProjectSidebar({
   projects,
+  pendingMoves,
   projectDepthCap,
   selectedProjectId,
   collapsedIds,
@@ -48,9 +54,16 @@ export default function ProjectSidebar({
   onReorderProject,
 }: ProjectSidebarProps) {
   const expandedIds = new Set(projects.map(p => p.id).filter(id => !collapsedIds.has(id)));
-  const flatItems = flattenTree(projects, expandedIds);
+  const flatItems = flattenTree(projects, expandedIds, pendingMoves);
 
-  const drag = useProjectDragReorder(projects, flatItems, onReorderProject, onExpandProject, projectDepthCap);
+  const drag = useProjectDragReorder(
+    projects,
+    flatItems,
+    onReorderProject,
+    onExpandProject,
+    projectDepthCap,
+    pendingMoves,
+  );
   const resize = useSidebarResize();
 
   // The list scrolls in a box inside the aside, so the handle on the aside's edge

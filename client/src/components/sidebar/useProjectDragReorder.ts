@@ -22,7 +22,7 @@ import {
 } from '@dnd-kit/core';
 import type { Project } from '../../types';
 import { classifyTargets, type DropTier } from '../../lib/dragTargets';
-import { getSubtree, isWithinDepthCap, type Subtree } from '../../lib/hierarchy';
+import { getSubtree, isWithinDepthCap, type PendingMove, type Subtree } from '../../lib/hierarchy';
 import {
   carriedBranchOf,
   computeProjection,
@@ -73,7 +73,12 @@ export interface GhostState {
 // Every row is placed among siblings, so naming one as the line's anchor gives the carried
 // project that row's parent. Before the cap is known nothing is past it: the carried project's
 // descendants are 'neither' and every other row a legal parent.
-function drawnAtPickup(activeId: string, projects: readonly Project[], depthCap: number | null): Drawn {
+function drawnAtPickup(
+  activeId: string,
+  projects: readonly Project[],
+  moves: readonly PendingMove[],
+  depthCap: number | null,
+): Drawn {
   const { tiers } = classifyTargets(activeId, projects, depthCap ?? Infinity, () => true);
   const tuning = loadDragTuning();
   return {
@@ -84,7 +89,7 @@ function drawnAtPickup(activeId: string, projects: readonly Project[], depthCap:
       ghost: tuning.projectDraggedOpacity,
     }),
     subtree: getSubtree(activeId, projects),
-    branch: carriedBranchOf(activeId, fullChildrenOf(projects)),
+    branch: carriedBranchOf(activeId, fullChildrenOf(projects, moves)),
   };
 }
 
@@ -99,13 +104,16 @@ export type ReorderProject = (
 // project was just dropped into (`useCollapsedProjects.ts`, the one way a project opens). `depthCap` is the project cap, null until it's
 // known: a tab state that would put the dragged subtree past it is still
 // offered, marked invalid, and a release in it writes nothing
-// (wiki hierarchy-placement §6).
+// (wiki hierarchy-placement §6). `moves` are the moves sent and not yet answered: `projects` already
+// carry their parents, and the order of their projects among siblings is what `moves` adds, read by the
+// first-child lookup and the branch walk as it is by `flatItems`.
 export function useProjectDragReorder(
   projects: Project[],
   flatItems: readonly FlatItem[],
   onReorderProject: ReorderProject,
   expand: (id: string) => void,
   depthCap: number | null = null,
+  moves: readonly PendingMove[] = [],
 ) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
@@ -129,7 +137,7 @@ export function useProjectDragReorder(
   const rows = toRows(flatItems, exclude);
   // A Top's first-child lookup must see the *real* tree, not the render
   // list (which a collapsed project already left out).
-  const childrenOf = fullChildrenOf(projects);
+  const childrenOf = fullChildrenOf(projects, moves);
 
   // The projection's depth (the top level is 0) is the dropped project's parent's
   // depth in the cap's count (a root is 1), so it is the cap's `targetDepth` as it stands.
@@ -144,7 +152,7 @@ export function useProjectDragReorder(
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(String(active.id));
-    setDrawn(drawnAtPickup(String(active.id), projects, depthCap));
+    setDrawn(drawnAtPickup(String(active.id), projects, moves, depthCap));
     setProjected(null);
     setGap(null);
   }
