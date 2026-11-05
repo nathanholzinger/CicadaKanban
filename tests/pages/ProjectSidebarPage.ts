@@ -66,7 +66,15 @@ export class ProjectSidebarPage {
     return this.locator.getByRole('separator', { name: 'Resize sidebar' });
   }
 
-  // The line a drag draws at its gap, on the side of one row.
+  // The dragged project's own row while the drag runs, the ghost: it slides to the gap, and its
+  // `data-drag-ghost` is the depth it is drawn at. The carried copy repeats the project's name,
+  // so this is how a spec names the row rather than `row`.
+  get ghost() {
+    return this.locator.locator('[data-drag-ghost]');
+  }
+
+  // The line a drag draws at its gap, along the ghost's top edge; its `data-drop-line` is the depth
+  // it is drawn at.
   get dropLine() {
     return this.locator.locator('[data-drop-line]');
   }

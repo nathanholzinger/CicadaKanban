@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.12 — The sidebar's ghost moves to the gap
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phase 1 built (D1–D6, Amendment 1), for Nathan to commit and try hands-on (Phase 2)
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built. Nathan approved the gesture as built (Amendment 2) and the specs are updated and unskipped. Phase 4, the Living-docs handoff, is next
 
 ## Goal
 
@@ -242,7 +242,9 @@ Filled in by the Coder, phase by phase.
 | `lib/hierarchy.ts::PendingMove`, `withMoveApplied` | A sent move laid over the tree by its relation (D5): table-generic, beside `sortedChildrenByParent`. See Amendment 1. |
 | `App.tsx` (`pendingMoves`, `sidebarProjects`, `handleReorderProject`) | The moves out, oldest first; the tree the sidebar reads has them laid over once; each leaves with its own answer, in the update that folds the answer or on its failure (D5). |
 | `useProjectDragReorder.test.ts`, `projectTreeUtils.test.ts`, `SortableProjectRow.test.tsx`, `lib/hierarchy.test.ts`, `App.pendingMove.test.tsx` | The gap, the hook, the row and the copy, the overlay, and the move in `App.tsx` (Phase 1's tests). |
-| `tests/ui/project-tree-drag.spec.ts`, `tests/ui/project-tree-sidebar.spec.ts` | TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag are skipped until Phase 3 updates them. TREE-1.4 and TREE-2.1 stay skipped for Story 10. |
+| `tests/helpers/projectTreeDrag.ts` (`aim`, `aimAtOwnRow`, `ghostSlot`) | `aim` aims at a row and has no side: the ghost takes the slot of the row the copy is nearest. `aimAtOwnRow` aims at the pickup point, for the dragged project's own gap. `ghostSlot` reads the rows on either side of the ghost as painted, which a spec polls while the rows slide. |
+| `tests/pages/ProjectSidebarPage.ts::ghost` | The dragged project's row, beside `dropLine`. |
+| `tests/ui/project-tree-drag.spec.ts`, `tests/ui/project-tree-sidebar.spec.ts` | TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag run against the ghost (Amendment 2). TREE-1.4 and TREE-2.1 stay skipped for Story 10. |
 
 ## Amendments
 
@@ -258,9 +260,18 @@ Filled in by the Coder, phase by phase.
 - **Checked in a browser** (a throwaway Playwright probe, deleted): the ghost moves to the gap and the rows slide; the line is at `projectNameIndentPx` on the ghost's top edge; the copy stays at the list's left edge and its width; a still cursor holds one gap; a release draws the project at its new place at once, with the answer 900ms out; a refusal puts it back; Escape glides the copy home in about 300ms.
 - **Gate:** `npm run check` passes (438 server, 778 client, 245 script tests). `npm run test:e2e`: 209 passed, 28 skipped, none failed. That is 8.11's 213 passed and 24 skipped, less the four specs skipped here (TREE-1.8, TREE-1.9, TREE-2.3, TREE-4.7's drag). The board's drag specs are unchanged.
 
+**Amendment 2: Phase 2 approved, and the specs updated (Coder, Nathan, 2026-11-04).** Nathan tried Phase 1 and approved it as built: "the placement feels much more intuitive now". He raised nothing to change, so D4's held copy stays, which settles the open question below. He asked for the skipped specs to be unskipped where that is straightforward, and the rest deferred to Story 10.
+- **Unskipped, all straightforward:** TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag. Their titles keep their case IDs.
+- **Where a spec checks the line, it checks the ghost in the same test.** The ghost's slot is the rows on either side of it (`ghostSlot`), and its depth is `data-drag-ghost`. TREE-1.1 and TREE-1.11/TREE-3.9 check the line's start at `projectNameIndentPx`. TREE-1.1 also checks that B slid a row down while the rows above it stayed, and that no row was added for the ghost. TREE-1.11/TREE-3.9 also checks the carried copy's dashed outline over the cap and none inside it.
+- **TREE-1.8, TREE-1.9, TREE-2.3 and TREE-4.7's drag** aim at the dragged project's own row (`aimAtOwnRow`) for its own gap, where they aimed at a neighbor's half.
+- **`aim` lost its `side` argument.** Every caller is updated, `TREE-1.12`, `TREE-2.2`, `TREE-4.8` and the resize spec's drag among them. TREE-4.8 aimed at A, which under the ghost is the gap above A, so the move it refused was not the under-A move it describes. It passed either way, since a refused move goes back wherever it was aimed. It now aims at the gap under A.
+- **Deferred to Story 10: TREE-1.4 and TREE-2.1,** as the plan has them. Their rows aren't drawn while X is carried, and the Planner rewrites the cases first. Only their calls to `aim` changed, so they still compile, and each is still skipped with its own reason.
+- **The drawn-then-back case** (a refused move drawn at the release, then put back) has no spec. `App.pendingMove.test.tsx` covers it, and so did the Phase 1 probe. A spec would need a delayed refusal. Say if you want one in TREE-4.8.
+- **Gate:** `npm run check` passes. The sidebar specs ran five times over with none failing. `npm run test:e2e`: 215 passed, 22 skipped, none failed, which is Phase 1's 209 and 28 with the six unskipped.
+
 ## Open questions
 
-- **For Nathan, in Phase 2:** D4's held copy, or a copy that follows the pointer sideways, as today.
+- **For Nathan, in Phase 2:** D4's held copy, or a copy that follows the pointer sideways, as today. *Settled in Amendment 2: the held copy stays.*
 
 ## Living-docs handoff
 

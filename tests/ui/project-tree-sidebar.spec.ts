@@ -2,7 +2,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { pickUp, release } from '../helpers/dragGesture';
-import { aim } from '../helpers/projectTreeDrag';
+import { aim, aimAtOwnRow } from '../helpers/projectTreeDrag';
 import {
   fetchProjectDepthCap,
   pinProjectCreatedAt,
@@ -90,9 +90,9 @@ test('TREE-4.8: after a failed write, the sidebar shows the project where it was
   };
   const refusedWrite = (method: string) => page.waitForResponse(res => res.request().method() === method);
 
-  // X is dragged under A, and released.
+  // X is dragged under A, as its first child, and released.
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('A'), 'after', 1);
+  await aim(page, from, projectSidebar.row('B'), 1);
   const moved = refusedWrite('PATCH');
   await release(page);
   expect((await moved).status()).toBe(400);
@@ -152,11 +152,11 @@ test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows t
     return ids;
   }
 
-  // Skipped until the drag specs are updated to the ghost: it aims at a row's half, so its release names another gap than it did. The gap is now the ghost's slot, the row the copy is nearest.
-  test.skip('a drag of X under P, after B', async ({ page, request, projectSidebar }) => {
+  test('a drag of X under P, after B', async ({ page, request, projectSidebar }) => {
     await seedTree(request, page);
+    // X's own gap is below B, and one tab right of X puts it among P's children.
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
-    await aim(page, from, projectSidebar.row('B'), 'after', 1);
+    await aimAtOwnRow(page, from, 1);
     await release(page);
 
     // X is P's child once the move lands; only then is its place in the order a

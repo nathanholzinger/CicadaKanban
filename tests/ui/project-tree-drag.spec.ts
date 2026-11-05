@@ -1,11 +1,16 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { cancel, hoverTo, pickUp, release } from '../helpers/dragGesture';
-import { aim, watchWrites } from '../helpers/projectTreeDrag';
+import { dragOverlay } from '../helpers/boardLocators';
+import { cancel, hoverTo, paintedBoxOf, pickUp, release } from '../helpers/dragGesture';
+import { aim, aimAtOwnRow, ghostSlot, watchWrites } from '../helpers/projectTreeDrag';
 import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
-import { INDENT_WIDTH, projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
+import {
+  INDENT_WIDTH,
+  projectNameIndentPx,
+  projectRowIndentPx,
+} from '../../client/src/components/sidebar/projectTreeUtils';
 
 test.beforeEach(async () => {
   await resetAndSeedDb();
@@ -20,35 +25,39 @@ const TREE_1 = [
   ['B', null],
   ['X', null],
 ] as const;
+// The rows of TREE_1 other than the one dragged.
+const TREE_1_ROWS = ['A', 'A1', 'A1a', 'B'];
 
-// Skipped until the drag specs are updated to the ghost: it aims at a row's half, reads the line's side and expects no row to slide. The gap is now the ghost's slot, the rows slide aside, and the line rides the ghost's top edge and starts at the name's column (`projectNameIndentPx`).
-test.skip('TREE-1.1: an indicator line shows the gap, and a release saves exactly what the line shows', async ({
+test('TREE-1.1: an indicator line shows the gap, and a release saves exactly what the line shows', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const ids = await seedProjects(request, TREE_1);
   await page.goto('/');
+  const restAt = async (name: string) => paintedBoxOf(projectSidebar.row(name));
+  const rest = { A: await restAt('A'), A1: await restAt('A1'), A1a: await restAt('A1a'), B: await restAt('B') };
 
-  // The line goes between A1a and B, at A1a's depth.
+  // The ghost goes between A1a and B, at A1a's depth.
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('B'), 'before', 2);
+  await aim(page, from, projectSidebar.row('B'), 2);
 
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['A1a', 'B']);
+  await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '2');
+  // The line rides the ghost's top edge, and starts where a name at its depth starts.
   await expect(projectSidebar.dropLine).toHaveCount(1);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'before');
-  await expect(projectSidebar.row('B').locator('..').locator('[data-drop-line]')).toHaveCount(1);
-  await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectRowIndentPx(2)}px`);
+  await expect(projectSidebar.ghost.locator('[data-drop-line]')).toHaveCount(1);
+  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', '2');
+  await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectNameIndentPx(2)}px`);
 
-  // Nothing slides aside to make room, and no row is added for a ghost: the
-  // line is the only cue.
-  for (const name of ['A', 'A1', 'A1a', 'B']) {
-    await expect(projectSidebar.row(name).locator('..')).toHaveCSS('transform', 'none');
-  }
+  // B slid a row down to make room, the rows above stayed, and no row was added for the ghost: it is X's own.
+  await expect.poll(async () => (await restAt('B')).y).toBe(rest.B.y + rest.B.height);
+  for (const name of ['A', 'A1', 'A1a'] as const) expect((await restAt(name)).y).toBe(rest[name].y);
   await expect(projectSidebar.dragHandles).toHaveCount(5);
 
   await release(page);
 
-  // X is saved as A1's child, after A1a, where the line showed it.
+  // X is saved as A1's child, after A1a, where the ghost was.
   await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids.A1);
   const x = await fetchProject(request, ids.X);
   const a1a = await fetchProject(request, ids.A1a);
@@ -65,19 +74,19 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   page.on('request', req => {
     if (req.method() === 'PATCH' && req.url().endsWith('/move')) moves.push(req.postDataJSON());
   });
-  const dragX = async (over: string, side: 'before' | 'after', tabs: number) => {
+  const dragX = async (over: string, tabs: number) => {
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
-    await aim(page, from, projectSidebar.row(over), side, tabs);
+    await aim(page, from, projectSidebar.row(over), tabs);
     await release(page);
   };
 
   // Released between A1a and B, at A1a's depth: A1's child, after A1a.
   const first = await seedProjects(request, TREE_1);
   await page.goto('/');
-  await dragX('B', 'before', 2);
+  await dragX('B', 2);
   await expect.poll(() => moves.length).toBe(1);
   expect(moves[0]).toEqual({ parentId: first.A1, prevId: first.A1a, nextId: null });
-  // Saved where the line showed it: A1's child, after A1a.
+  // Saved where the ghost was: A1's child, after A1a.
   await expect.poll(async () => (await fetchProject(request, first.X)).parentId).toBe(first.A1);
   const a1aPosition = (await fetchProject(request, first.A1a)).position!;
   expect((await fetchProject(request, first.X)).position).toBeGreaterThan(a1aPosition);
@@ -86,11 +95,11 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   await resetAndSeedDb();
   const second = await seedProjects(request, TREE_1);
   await page.goto('/');
-  await dragX('A', 'before', 0);
+  await dragX('A', 0);
   await expect.poll(() => moves.length).toBe(2);
   expect(moves[1]).toEqual({ parentId: null, prevId: null, nextId: second.A });
 
-  // Saved where the line showed it: the stored position puts X before A, and
+  // Saved where the ghost was: the stored position puts X before A, and
   // the sidebar shows it first.
   const aPosition = (await fetchProject(request, second.A)).position!;
   await expect.poll(async () => (await fetchProject(request, second.X)).position).toBeLessThan(aPosition);
@@ -121,14 +130,12 @@ test.skip('TREE-1.4: when the dragged project’s subtree holds every project, n
   for (const over of ['X1', 'X2', null]) {
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
     for (const tabs of [-3, 0, 3]) {
-      for (const side of ['before', 'after'] as const) {
-        if (over) {
-          await aim(page, from, projectSidebar.row(over), side, tabs);
-        } else {
-          await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: from.y + (side === 'before' ? -4 : 4) });
-        }
-        await expect(projectSidebar.dropLine).toHaveCount(0);
+      if (over) {
+        await aim(page, from, projectSidebar.row(over), tabs);
+      } else {
+        await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: from.y + 4 });
       }
+      await expect(projectSidebar.dropLine).toHaveCount(0);
     }
     await release(page);
   }
@@ -137,8 +144,7 @@ test.skip('TREE-1.4: when the dragged project’s subtree holds every project, n
   expect(await stored()).toEqual(before);
 });
 
-// Skipped until the drag specs are updated to the ghost: it aims at a row's half and pins the line's `margin-left` at the row's padding. The gap is now the ghost's slot, and the line starts at the name's column (`projectNameIndentPx`).
-test.skip('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
+test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
   page,
   request,
   projectSidebar,
@@ -159,23 +165,30 @@ test.skip('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree p
   const writes = watchWrites(page);
   const before = await fetchProject(request, ids.X);
 
-  // One tab right of T: X would be T's child, and X1 at depth cap + 1. The state
-  // is still offered, and its line is marked invalid. A release writes nothing.
+  // One tab right of T, in X's own gap: X would be T's child, and X1 at depth cap + 1. The state is
+  // still offered, with the ghost at that depth, its line and the carried copy marked invalid. A
+  // release writes nothing.
   const first = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, first, projectSidebar.row(t), 'after', chain.length);
+  await aimAtOwnRow(page, first, chain.length);
+  await expect.poll(() => ghostSlot(projectSidebar, chain)).toEqual([t, null]);
+  await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', `${chain.length}`);
   await expect(projectSidebar.dropLine).toHaveCount(1);
-  await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectRowIndentPx(chain.length)}px`);
+  await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectNameIndentPx(chain.length)}px`);
   await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-invalid', 'true');
+  await expect(dragOverlay(page)).toHaveCSS('outline-style', 'dashed');
   await release(page);
   expect(writes).toEqual([]);
   expect(await fetchProject(request, ids.X)).toEqual(before);
 
-  // Aligned with T: X is S's child, after T, and X1 is at depth cap. The line
-  // isn't marked invalid, and the release saves it.
+  // Aligned with T: X is S's child, after T, and X1 is at depth cap. The ghost, its line and the copy
+  // aren't marked invalid, and the release saves it.
   const second = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, second, projectSidebar.row(t), 'after', chain.length - 1);
+  await aimAtOwnRow(page, second, chain.length - 1);
+  await expect.poll(() => ghostSlot(projectSidebar, chain)).toEqual([t, null]);
+  await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', `${chain.length - 1}`);
   await expect(projectSidebar.dropLine).toHaveCount(1);
   await expect(projectSidebar.dropLine).not.toHaveAttribute('data-drop-invalid', 'true');
+  await expect(dragOverlay(page)).toHaveCSS('outline-style', 'none');
   await release(page);
   await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids[s]);
   expect((await fetchProject(request, ids.X)).position).toBeGreaterThan(
@@ -183,8 +196,7 @@ test.skip('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree p
   );
 });
 
-// Skipped until the drag specs are updated to the ghost: it aims at a row's half and reads the line's side. The gap is now the ghost's slot, the row the copy is nearest, and the line has no side.
-test.skip('TREE-1.8: a project set back down in its own gap, at its own depth, writes nothing', async ({
+test('TREE-1.8: a project set back down in its own gap, at its own depth, writes nothing', async ({
   page,
   request,
   projectSidebar,
@@ -194,31 +206,31 @@ test.skip('TREE-1.8: a project set back down in its own gap, at its own depth, w
   const before = await fetchProject(request, ids.X);
   const writes = watchWrites(page);
 
-  // X's own gap is below B, at the top level: the line is on B's bottom.
+  // X's own gap is below B, at the top level: the ghost is between B and the end of the list.
   const handle = projectSidebar.dragHandle('X');
-  const row = projectSidebar.row('B');
 
   // The cursor leaves X's row for the gap above B, and goes on to X's own gap.
   const from = await pickUp(page, handle);
-  await aim(page, from, row, 'before', 0);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'before');
-  await aim(page, from, row, 'after', 0);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'after');
+  await aim(page, from, projectSidebar.row('B'), 0);
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['A1a', 'B']);
+  await aimAtOwnRow(page, from, 0);
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
+  await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
   await release(page);
 
   // Released before the cursor has left X's row. Picking up drifts the pointer
   // sideways, which on X's own row picks a depth, so it rests back at the start.
   await pickUp(page, handle);
   await hoverTo(page, from);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'after');
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
+  await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
   await release(page);
 
   expect(writes).toEqual([]);
   expect(await fetchProject(request, ids.X)).toEqual(before);
 });
 
-// Skipped until the drag specs are updated to the ghost: it aims at a row's half and reads the line's side. The gap is now the ghost's slot, the row the copy is nearest, and the line has no side.
-test.skip('TREE-1.9: coming back to the dragged project’s own row means its own gap', async ({
+test('TREE-1.9: coming back to the dragged project’s own row means its own gap', async ({
   page,
   request,
   projectSidebar,
@@ -228,13 +240,13 @@ test.skip('TREE-1.9: coming back to the dragged project’s own row means its ow
   const before = await fetchProject(request, ids.X);
   const writes = watchWrites(page);
 
-  // The line shows the gap between A1a and B, then the cursor comes back to
-  // X's own row: the line moves to X's own gap, below B.
+  // The ghost shows the gap between A1a and B, then the cursor comes back to
+  // X's own row: the ghost, and the line with it, go to X's own gap, below B.
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('B'), 'before', 0);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'before');
+  await aim(page, from, projectSidebar.row('B'), 0);
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['A1a', 'B']);
   await hoverTo(page, from);
-  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', 'after');
+  await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
   await expect(projectSidebar.dropLine).toHaveCount(1);
   await release(page);
 
@@ -259,12 +271,10 @@ test.skip('TREE-2.1: the dragged project’s descendants are dimmed for the whol
   const clear = '1';
 
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  for (const side of ['after', 'before'] as const) {
-    await aim(page, from, projectSidebar.row('A'), side, 0);
-    await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
-    await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', dimmed);
-    await expect(projectSidebar.row('A')).toHaveCSS('opacity', clear);
-  }
+  await aim(page, from, projectSidebar.row('A'), 0);
+  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
+  await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', dimmed);
+  await expect(projectSidebar.row('A')).toHaveCSS('opacity', clear);
 
   await cancel(page);
   await expect(projectSidebar.row('X1')).toHaveCSS('opacity', clear);
@@ -272,7 +282,7 @@ test.skip('TREE-2.1: the dragged project’s descendants are dimmed for the whol
 
   // A release ends the drag the same way, here by moving X ahead of A.
   const again = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, again, projectSidebar.row('A'), 'before', 0);
+  await aim(page, again, projectSidebar.row('A'), 0);
   await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
   await release(page);
 
@@ -303,7 +313,7 @@ test.describe('TREE-2.2: a collapsed project opens when a project is dropped int
     await expect(projectSidebar.projectName('T1')).not.toBeVisible();
 
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
-    await aim(page, from, projectSidebar.row('U'), 'before', tabs);
+    await aim(page, from, projectSidebar.row('U'), tabs);
     await release(page);
   }
 
@@ -320,8 +330,7 @@ test.describe('TREE-2.2: a collapsed project opens when a project is dropped int
   });
 });
 
-// Skipped until the drag specs are updated to the ghost: it aims at a row's half, so its release names another gap than it did. The gap is now the ghost's slot, the row the copy is nearest.
-test.skip('TREE-2.3: a collapsed project opened by a drop stays open if the move fails', async ({
+test('TREE-2.3: a collapsed project opened by a drop stays open if the move fails', async ({
   page,
   request,
   projectSidebar,
@@ -340,9 +349,9 @@ test.skip('TREE-2.3: a collapsed project opened by a drop stays open if the move
     route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
   );
 
-  // X is released one tab right of T, as its first child.
+  // X is released one tab right of T, in its own gap, as T's first child.
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('T'), 'after', 1);
+  await aimAtOwnRow(page, from, 1);
   const refused = page.waitForResponse(res => res.url().endsWith('/move'));
   await release(page);
   expect((await refused).status()).toBe(400);

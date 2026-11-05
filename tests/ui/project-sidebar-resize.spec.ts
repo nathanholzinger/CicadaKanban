@@ -73,7 +73,7 @@ test('a project still drags to a new place in a resized sidebar', async ({ page,
   await expect(projectSidebar.locator).toHaveCSS('width', widthPx(SIDEBAR_DEFAULT_WIDTH_PX + 100));
 
   const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('A'), 'before', 0);
+  await aim(page, from, projectSidebar.row('A'), 0);
   await release(page);
 
   await expect(projectSidebar.projectNames('A', 'B', 'X')).toHaveText(['X', 'A', 'B']);
