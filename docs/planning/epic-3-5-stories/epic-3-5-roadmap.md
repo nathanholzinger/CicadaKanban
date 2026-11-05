@@ -1118,7 +1118,7 @@ suppressed".
 
 ---
 
-### Story 8.11 — A project's pickup takes its descendants with it
+### Story 8.11 — A project's pickup takes its descendants with it ✅ (done 2026-11-04)
 **Plan:** [`story-8-11-project-pickup-carries-branch.md`](story-8-11-project-pickup-carries-branch.md)
 
 **Found with Story 8.8** (Nathan, 2026-11-04). Nathan wants the sidebar's
