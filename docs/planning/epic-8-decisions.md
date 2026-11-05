@@ -355,3 +355,154 @@ A5d writes the project tree's API rules out in full. It treats the project page,
   - An override, like a move under a different workflow, leaves the subtree's items holding the old workflow's workphases, so they show in Unsorted. Re-filing them is undesigned (`epic-7-decisions.md`'s Q2, and item-attachment's Open questions).
 
 **Not on this list:** the project cap's value, which Epic 3.5's Story 7 set at 12 for items and projects alike.
+
+## Deferred (not events-specific): the drag's final cues and the zoom-in morph, from Epic 3.5
+
+*Moved from Epic 3.5's roadmap (2026-11-04),* where they were the last two of Story 8's stories. Nathan deferred them to this epic: he's happy with the cues as they look now, and wants their final look settled once the Card's own look is closer to final. Until then the cues are working placeholders, each under the wiki's Open questions. Epic 3.5's Story 8 ends with Story 8.13.
+
+The two entries follow as they stood in the roadmap. "Story N" in them means Epic 3.5's.
+
+### The cues' final look
+**Goal:** settle the final look of the drag's cues, against working
+gestures. The wiki holds each look under board-drag-interaction's Open
+questions, and the sidebar's under project-tree's.
+
+- **The relationship overlays,** and every other "this item relates to
+  these items" cue (wiki board-drag-interaction §4).
+- **The other provisional cues:** the band guides (§5), the over-cap
+  outline (§3.2, §7.2), the hold's cue on the overflow row (§7.3), and the
+  looks of the overflow row and the hierarchy modal (§9). The hold's cue
+  borrows the zoom-in cue's look, so it may wait for the morph, which
+  redesigns that cue.
+- **Whether the cues drawn on an item keep their color** (Nathan,
+  2026-11-03). After the Tags & Type System epic, the user will be able to
+  color Cards, for example by assignee or when an item is overdue, and a
+  colored drag cue could clash with that. Story 8.5 dropped the green ring
+  for this reason and kept the rest for now:
+  - the violet outline on the Card the drag is locked inside;
+  - the zoom-in cue, and the overflow row's hold cue that borrows it;
+  - the ghost's red over-cap outline;
+  - the amber flash on an item a reload stopped (Story 8.4).
+- **The dragged row's own opacity** (Story 8.5, 2026-11-03). It's a
+  tuning value of its own at 0.3, the same as LO for now. Nathan expects
+  to revisit it once the Card's look is final.
+- **Whether the ghost's expansion on drop animates (§5a).** Today it's
+  instant.
+- **The depth cue at the Descendants layer deserves a tuning pass**
+  (carried in from Story 6's hands-on, 2026-09-24). Story 6 ships a simple
+  stand-in (the Phase D hands-on, 2026-09-24): the carried Stub stays
+  pinned to a section row's width, and its visible box steps right by one
+  indent per level, so it shows the depth it will land at. It was built to
+  test placement against, not as the final look. To tune:
+  - **Travel per level.** 12 px is both the visual indent and the pointer
+    travel per level (`DESCENDANTS_INDENT_PX`), so a 6 px sideways wobble
+    while moving vertically changes the depth. It may want its own tunable
+    value, or a dead band before a level changes.
+  - **Pinned vs. following.** Whether the carried copy should also move
+    sideways with the pointer, or stay pinned and only snap.
+  - **The snap itself.** Today it's a 75 ms margin transition. Also how
+    the over-cap state looks on the copy: today it's the ghost row's
+    provisional red dashed outline, reused.
+
+  The ghost row hidden under the carried copy is the morph's, with the
+  blue line.
+
+**Routed to "The cues' final look" by Story 8's plans,** beyond what
+the entry above names. Each plan is in `docs/archive/`.
+- **The project sidebar's cues** (Stories 8.7, 8.11, 8.12):
+  - the drop line, and its red past the cap;
+  - its 14px step per level, against the pointer's travel per level;
+  - the ghost's strength;
+  - the carried copy (`SortableProjectRow.tsx::DragGhost`).
+- **A Stub row's look** (Story 8.6): its padding and color, the type
+  pill's color and text, the carried copy's shadow, and the copy's text
+  sitting 1px right of a row's.
+- **The carried branch** (Story 8.8): the second line's look.
+- **The banner for a drag the board stops** (Story 8.4): today an amber
+  banner with centered text.
+
+### The zoom-in morph
+**Goal:** build the zoom-in morph Epic 3.5's Story 8 was first written
+for, and settle the jumps at a layer change that it's meant to solve. After
+Story 8.1, a zoom into a Card lands in its Descendants layer, so the morph
+ends there.
+
+**Carried in from Story 6's hands-on (2026-09-24):**
+
+- **The zoom-in morph.** Story 6 ships a simple cue for the Column → Card
+  zoom-in (the named card outlined, filling in). The full version, as the
+  PO pictured it: the target card expands, a dashed placeholder Stub grows
+  where the item will go, and the carried copy shrinks into a Stub and
+  drifts toward it, with the pop landing partway through the animation. One
+  constraint carries over: nothing in the animation may change what
+  dnd-kit measures (the carried copy's box, the cards' layout), or the
+  named card changes mid-cue and cancels it.
+- **Current awkward behavior the morph should ideally solve** (found
+  building Story 6's finding 3, 2026-09-24): popping into a Card inserts
+  the carried item's attach-preview ghost row *inside* it and removes the
+  carried item's own row from the column list — if that row sat above the
+  target Card, the target shifts up by a full row height at the exact
+  instant the drag locks in, out from under a cursor that hasn't moved.
+  With the default `popDelayMs` a real hand likely self-corrects before the
+  pop-out clock notices, but it's a visible jump today, and it's what made
+  two `tests/ui/drag-card-zoom-in.spec.ts` cases too flaky to automate
+  meanwhile (skipped, with the full writeup, until this lands or the look
+  is otherwise confirmed fine by hand). *Since the move:* Epic 3.5's Story
+  10 ends with no skipped spec, so it reworks or deletes those two (its
+  item 10), rather than leave them for the morph. The morph should settle it by
+  construction if the target's own position never has to move out from
+  under the cursor mid-cue — worth checking against this specific case
+  once the morph's built, not just against the happy path.
+  *Since Story 8.1:* the zoom lands straight in the Card's section, and
+  the ghost is a row of the section's shuffle (the attach-preview row is
+  gone). The item's row still leaves the column list at the zoom.
+- **The zoomed-into Card snaps to rest** (Story 8.1, Phase 3). While a Card
+  holds the drag, its sortable transition is off (`KanbanCard.tsx`,
+  `lockedHere`), so its section's rows mount, and are measured, where the
+  Card rests. It used to slide back over about 200 ms, with a colour fade.
+  If the snap reads badly hands-on, the slide needs another way to be kept
+  that still leaves the rows measured at rest.
+- **Things jump at a layer change, and then the triggers disagree** (PO,
+  2026-09-24).
+  - **What moves.** Switching context (popping in or out, zooming into a
+    Card, entering a Descendants section) re-lays things out under a cursor
+    that hasn't moved:
+    - the carried copy changes form (Card ↔ Stub) and re-anchors;
+    - the item's row leaves one list and its ghost appears in another;
+    - the rows around it shift to make room.
+
+    The copy and the ghost end up offset from the cursor.
+  - **What reads what.** The triggers split by what they read:
+    - **the cursor:** the pop machine's regions and pop-out clock, and the
+      depth (pointer x);
+    - **the carried copy or its ghost:** dnd-kit's `over` (from the copy's
+      collision box), the lean, the named anchor, and so the zoom-in
+      candidate.
+
+    Once the two are apart, they can point at different things, and which
+    one wins depends on timing. The zoom-in shift above is one case of
+    this.
+  - **Directions to weigh:**
+    - keep the cursor on the copy through every layer change (the Stub form
+      already re-anchors under the cursor at Card → Stub; generalize that);
+    - don't move layout at the instant of a switch (for example, keep the
+      item's old row space until the drop instead of removing it);
+    - have every trigger read one reference point.
+  - Story 6.1's "who decides" table records which trigger reads which
+    point. That's the input to this.
+- **The blue anchor line is partly hidden behind the dragged card.** Since
+  the drop lands where the ghost is and the dragged copy sits over the
+  ghost, the line (above or below the ghost) is often under the copy. The
+  Descendants layer's ghost row has the same problem: it shows the depth
+  the item will land at, but it's hidden under the carried copy.
+
+**Zooming into a Card in a done column** (Nathan, 2026-10-28: here, since
+the side highlight is the zoom-in's cue). The Card zoomed into is the one
+the side highlight names, a neighbor of the ghost. A done list's ghost
+doesn't move, so only the Cards beside it could be named, and today the
+highlight is drawn as if the ghost had slid. What it should show is under
+wiki board-drag-interaction's Open questions.
+
+**The project sidebar's ghost is under its carried copy too** (Story
+8.12), as the board's is. Its copy takes the board's invalid outline over
+the cap for that reason.

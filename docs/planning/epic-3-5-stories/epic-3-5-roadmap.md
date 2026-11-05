@@ -472,21 +472,26 @@ feels. That covers:
 Deliberately late, so all of it is tuned against real, working gestures.
 *(Broadened 2026-09-24 from "visual cue polish" to include feel tuning:
 Story 6's hands-on found feel problems that aren't about any one cue's look.)*
+*(Narrowed 2026-11-04: the cues' final look and the zoom-in morph moved to
+the Dashboard, Navigation & Notifications epic. See the list below.)*
 
 **A series of stories** (Nathan, 2026-10-28). Story 8 is a small epic of
 its own, run as discrete 8.N stories, in this order:
 1. **Story 8.1** folds the Card layer into the Descendants layer. It was
    this roadmap's optional story, and it takes in Story 8.2's fix.
-2. **Stories 8.3–8.6** fix the bugs and build the missed features that
-   earlier stories deferred here.
-3. **The cues' final look,** a story of its own.
-4. **The zoom-in morph,** last. It's what Story 8 was first written for.
+2. **Stories 8.3–8.13** fix the bugs and build the missed features that
+   earlier stories deferred here, and those manual testing found. **Story
+   8.13 is the last** (Nathan, 2026-11-04).
 
-The last two get their numbers when they're picked up. More 8.N stories
-are expected from manual testing, such as one for a Stub in the hierarchy
-modal opening its Sheet on a click. Each is added when it's found, and
-numbered ahead of the last two. Each story gets its plan when it's picked
-up.
+Each story gets its plan when it's picked up.
+
+**Moved to the Dashboard, Navigation & Notifications epic** (Nathan,
+2026-11-04): the two stories that were to end Story 8, **the cues' final
+look** and **the zoom-in morph**, the one Story 8 was first written for.
+He's happy with the cues as they look now, and wants their final look
+settled once the Card's own look is closer to final. Their entries are in
+`epic-8-decisions.md`, "Deferred (not events-specific): the drag's final
+cues and the zoom-in morph, from Epic 3.5".
 
 **How Story 8 runs: code first** (Nathan, 2026-10-28). It's a tuning and
 feel story, so every 8.N departs from the usual order in three ways:
@@ -523,9 +528,18 @@ story-done checklist:
   wiki and the test plans up to it.
 - An audit or a Reconciler run happens when it seems worth it, not for
   every story.
-- **Story 8 ends with a close-out audit and a Reconciler run** over all
-  its stories, by the checklist. Any case still without a test is routed
-  to Story 10 by ID then.
+- **Story 8 ends with a close-out audit and a Reconciler run,** by the
+  checklist. Any case still without a test is routed to Story 10 by ID
+  then. The order (Nathan, 2026-11-04):
+  1. the reconciliation and code quality audit of Stories 8.8, 8.11 and
+     8.12, done 2026-11-04, and their findings fixed: "The fixes from the
+     audit and reconciliation of Stories 8.8, 8.11 and 8.12", below;
+  2. Story 8.13;
+  3. one more round: a reconciliation if needed, and a code quality
+     audit. It covers 8.13 and the code of the fixes from step 1, or all
+     of Story 8's stories again, as Nathan decides then.
+
+  Story 10 starts after that round.
 
 **Carried from Story 8.1 to Story 8's close-out — Test Planner and Test Reconciler.**
 These follow-ups remain here after the 8.1 plan is archived. They are
@@ -1277,137 +1291,68 @@ against the gesture they'll keep.
 
 ---
 
-### Story 8.? — The cues' final look
-**Goal:** settle the final look of the drag's cues, against working
-gestures. A story of its own, just before the morph, and numbered when
-it's picked up (Nathan, 2026-10-28). The wiki holds each look under
-board-drag-interaction's Open questions.
+### The fixes from the audit and reconciliation of Stories 8.8, 8.11 and 8.12
+**Plan:** [`stories-8-8-8-11-8-12-fixes.md`](stories-8-8-8-11-8-12-fixes.md)
 
-- **The relationship overlays,** and every other "this item relates to
-  these items" cue (wiki board-drag-interaction §4).
-- **The other provisional cues:** the band guides (§5), the over-cap
-  outline (§3.2, §7.2), the hold's cue on the overflow row (§7.3), and the
-  looks of the overflow row and the hierarchy modal (§9). The hold's cue
-  borrows the zoom-in cue's look, so it may wait for the morph, which
-  redesigns that cue.
-- **Whether the cues drawn on an item keep their color** (Nathan,
-  2026-11-03). After the Tags & Type System epic, the user will be able to
-  color Cards, for example by assignee or when an item is overdue, and a
-  colored drag cue could clash with that. Story 8.5 dropped the green ring
-  for this reason and kept the rest for now:
-  - the violet outline on the Card the drag is locked inside;
-  - the zoom-in cue, and the overflow row's hold cue that borrows it;
-  - the ghost's red over-cap outline;
-  - the amber flash on an item a reload stopped (Story 8.4).
-- **The dragged row's own opacity** (Story 8.5, 2026-11-03). It's a
-  tuning value of its own at 0.3, the same as LO for now. Nathan expects
-  to revisit it once the Card's look is final.
-- **Whether the ghost's expansion on drop animates (§5a).** Today it's
-  instant.
-- **The depth cue at the Descendants layer deserves a tuning pass**
-  (carried in from Story 6's hands-on, 2026-09-24). Story 6 ships a simple
-  stand-in (the Phase D hands-on, 2026-09-24): the carried Stub stays
-  pinned to a section row's width, and its visible box steps right by one
-  indent per level, so it shows the depth it will land at. It was built to
-  test placement against, not as the final look. To tune:
-  - **Travel per level.** 12 px is both the visual indent and the pointer
-    travel per level (`DESCENDANTS_INDENT_PX`), so a 6 px sideways wobble
-    while moving vertically changes the depth. It may want its own tunable
-    value, or a dead band before a level changes.
-  - **Pinned vs. following.** Whether the carried copy should also move
-    sideways with the pointer, or stay pinned and only snap.
-  - **The snap itself.** Today it's a 75 ms margin transition. Also how
-    the over-cap state looks on the copy: today it's the ghost row's
-    provisional red dashed outline, reused.
+**Runs before Story 8.13.** The code quality audit and the test
+reconciliation of Stories 8.8, 8.11 and 8.12, both 2026-11-04, left
+work for the Coder. This story lands:
+- the audit's Fix Now, #1–#11: two project-write races in the sidebar,
+  stale Unknown-status cards, an item create's unchecked references,
+  the scope script's JSX text, and comments, a title, fixtures and wiki
+  pointers;
+- its one Watch List finding, App's project collection moved into a
+  hook, as a batch that can be dropped;
+- the reconciliation's stamps, after Nathan approves its internal
+  mappings;
+- its test work that needs no drag: the sidebar expansion cases
+  TREE-11.1–TREE-11.8, and the branch, tier and pickup cases' state at
+  hook level.
 
-  The ghost row hidden under the carried copy is the morph's, with the
-  blue line.
+It has no 8.N number, so Story 8.13 stays the last 8.N story. A new
+drag gesture stays Story 10's. Its commits fall in the next round's
+audit (step 3 above).
 
 ---
 
-### Story 8.? — The zoom-in morph
-**Goal:** build the zoom-in morph Story 8 was first written for, and settle
-the jumps at a layer change that it's meant to solve. Last in Story 8, and
-numbered when it's picked up (Nathan, 2026-10-28). After Story 8.1, a zoom
-into a Card lands in its Descendants layer, so the morph ends there.
+### Story 8.13 — The hierarchy modal opens a Stub's Sheet, and a create stops at the cap
+**Plan:** [`story-8-13-modal-sheet-and-create-cap.md`](story-8-13-modal-sheet-and-create-cap.md)
 
-**Carried in from Story 6's hands-on (2026-09-24):**
+**Found in manual testing** (Nathan, 2026-11-04). Two small fixes,
+and the last 8.N story. It runs after the fixes from the audit and
+reconciliation of Stories 8.8, 8.11 and 8.12 (the entry above), since
+it touches files those stories changed.
+- **A click on a Stub in the hierarchy modal opens its Sheet.** The
+  modal stays open under the Sheet, and closing the Sheet returns to it.
+  Today a click there opens nothing (wiki board-drag-interaction §9's
+  Open question).
+- **A create stops at the depth cap.** "Add subproject" on a sidebar row
+  and on the Overview tab, and the add-child in an item's Sheet, show
+  disabled, saying why, at a parent the cap allows no child under.
+  Today they're offered, and the API refuses the create.
 
-- **The zoom-in morph.** Story 6 ships a simple cue for the Column → Card
-  zoom-in (the named card outlined, filling in). The full version, as the
-  PO pictured it: the target card expands, a dashed placeholder Stub grows
-  where the item will go, and the carried copy shrinks into a Stub and
-  drifts toward it, with the pop landing partway through the animation. One
-  constraint carries over: nothing in the animation may change what
-  dnd-kit measures (the carried copy's box, the cards' layout), or the
-  named card changes mid-cue and cancels it.
-- **Current awkward behavior the morph should ideally solve** (found
-  building Story 6's finding 3, 2026-09-24): popping into a Card inserts
-  the carried item's attach-preview ghost row *inside* it and removes the
-  carried item's own row from the column list — if that row sat above the
-  target Card, the target shifts up by a full row height at the exact
-  instant the drag locks in, out from under a cursor that hasn't moved.
-  With the default `popDelayMs` a real hand likely self-corrects before the
-  pop-out clock notices, but it's a visible jump today, and it's what made
-  two `tests/ui/drag-card-zoom-in.spec.ts` cases too flaky to automate
-  meanwhile (skipped, with the full writeup, until this lands or the look
-  is otherwise confirmed fine by hand). The morph should settle it by
-  construction if the target's own position never has to move out from
-  under the cursor mid-cue — worth checking against this specific case
-  once the morph's built, not just against the happy path.
-  *Since Story 8.1:* the zoom lands straight in the Card's section, and
-  the ghost is a row of the section's shuffle (the attach-preview row is
-  gone). The item's row still leaves the column list at the zoom.
-- **The zoomed-into Card snaps to rest** (Story 8.1, Phase 3). While a Card
-  holds the drag, its sortable transition is off (`KanbanCard.tsx`,
-  `lockedHere`), so its section's rows mount, and are measured, where the
-  Card rests. It used to slide back over about 200 ms, with a colour fade.
-  If the snap reads badly hands-on, the slide needs another way to be kept
-  that still leaves the rows measured at rest.
-- **Things jump at a layer change, and then the triggers disagree** (PO,
-  2026-09-24).
-  - **What moves.** Switching context (popping in or out, zooming into a
-    Card, entering a Descendants section) re-lays things out under a cursor
-    that hasn't moved:
-    - the carried copy changes form (Card ↔ Stub) and re-anchors;
-    - the item's row leaves one list and its ghost appears in another;
-    - the rows around it shift to make room.
+**Dropped:** a Stub pulled out of a Card couldn't be moved straight to
+the Done column. Neither Nathan nor the Architect could reproduce it
+(Nathan, 2026-11-04). The plan's Out of scope keeps the one lead.
 
-    The copy and the ghost end up offset from the cursor.
-  - **What reads what.** The triggers split by what they read:
-    - **the cursor:** the pop machine's regions and pop-out clock, and the
-      depth (pointer x);
-    - **the carried copy or its ghost:** dnd-kit's `over` (from the copy's
-      collision box), the lean, the named anchor, and so the zoom-in
-      candidate.
+---
 
-    Once the two are apart, they can point at different things, and which
-    one wins depends on timing. The zoom-in shift above is one case of
-    this.
-  - **Directions to weigh:**
-    - keep the cursor on the copy through every layer change (the Stub form
-      already re-anchors under the cursor at Card → Stub; generalize that);
-    - don't move layout at the instant of a switch (for example, keep the
-      item's old row space until the drop instead of removing it);
-    - have every trigger read one reference point.
-  - Story 6.1's "who decides" table records which trigger reads which
-    point. That's the input to this.
-- **The blue anchor line is partly hidden behind the dragged card.** Since
-  the drop lands where the ghost is and the dragged copy sits over the
-  ghost, the line (above or below the ghost) is often under the copy. The
-  Descendants layer's ghost row has the same problem: it shows the depth
-  the item will land at, but it's hidden under the carried copy.
-
-**Zooming into a Card in a done column** (Nathan, 2026-10-28: here, since
-the side highlight is the zoom-in's cue). The Card zoomed into is the one
-the side highlight names, a neighbor of the ghost. A done list's ghost
-doesn't move, so only the Cards beside it could be named, and today the
-highlight is drawn as if the ghost had slid. What it should show is under
-wiki board-drag-interaction's Open questions.
+### Moved to the Dashboard, Navigation & Notifications epic: the cues' final look and the zoom-in morph
+Story 8's last two stories moved out of this epic (Nathan, 2026-11-04).
+He's happy with the cues as they look now, and wants their final look
+settled once the Card's own look is closer to final. Their entries, with
+everything carried into them, are in `epic-8-decisions.md`, "Deferred
+(not events-specific): the drag's final cues and the zoom-in morph, from
+Epic 3.5". Story 8 ends with Story 8.13.
 
 ---
 
 ### Story 10 — DnD automation catch-up (no skipped Playwright tests)
+**Plan:** [`story-10-dnd-automation-catch-up.md`](story-10-dnd-automation-catch-up.md)
+(2026-11-04). The items below stay here until the plan's Phase 2, the
+inventory, which moves them into the plan. Until then, route new items
+here as before.
+
 **Goal:** bring the drag automation suites up to the test-plan catalogs
 once the gesture has stopped moving, and decide — case by case — what the
 automation suite is *for*: which cases it asserts, which stay manual by
@@ -1888,6 +1833,25 @@ deferral and keep landing with their stories.
       ([`test-reconciliation-story-8-9-final.md`](../../archive/test-reconciliation-story-8-9-final.md))
       is the later word.
 
+    - **From the reconciliation of Stories 8.8, 8.11 and 8.12**
+      (2026-11-04,
+      [`test-reconciliation-stories-8-8-8-11-8-12.md`](../../audits/test-reconciliation-stories-8-8-8-11-8-12.md)),
+      its Gaps' "Story 10 item 10" row: the gesture and layout clauses
+      left once the fixes story
+      ([`stories-8-8-8-11-8-12-fixes.md`](stories-8-8-8-11-8-12-fixes.md))
+      has stamped and tested what needs no drag.
+      - **The board:** DRAG-1.33, DRAG-2.17, DRAG-2.18, DRAG-2.22,
+        DRAG-3.19, DRAG-3.22, DRAG-3.25, DRAG-4.8, DRAG-7.15,
+        DRAG-7.27 and DRAG-8.1–DRAG-8.12.
+      - **The sidebar:** TREE-1.1, TREE-1.2, TREE-1.4–TREE-1.6,
+        TREE-1.8–TREE-1.19, TREE-2.1–TREE-2.13 and TREE-4.7–TREE-4.12.
+        TREE-4.9's reload belongs with its own between-siblings
+        fixture.
+
+      **What each case still misses** is in that story's confirming
+      run, named here at the story's close. Until then, the
+      reconciliation's Coverage Mapping.
+
 11. **Built here: the stopped column drag's banner, DRAG-6.26** (Nathan,
     2026-11-04, from Story 8.9). It's this story's one build item, not
     catch-up on a rule that's already built.
@@ -1912,8 +1876,12 @@ test:e2e` and `npm run test:unit` green; every case routed here (items 1,
 built and no longer Planned; the epic-done checklist's Tests items
 checkable.
 
-**Depends on:** Stories 5–7 and every Story 8.N (the gesture and its
-thresholds stop moving). **Blocks:** the epic's ✅.
+**Depends on:** Stories 5–7 and every Story 8.N, through 8.13, the last
+(the gesture and its thresholds stop moving). Not on the cues' final look
+or the zoom-in morph, which moved to the Dashboard, Navigation &
+Notifications epic (Nathan, 2026-11-04). `drag-card-zoom-in.spec.ts`'s two
+skipped specs, which waited on the morph, are reworked or deleted here
+(item 10). **Blocks:** the epic's ✅.
 
 ---
 

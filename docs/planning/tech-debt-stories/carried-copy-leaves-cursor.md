@@ -10,7 +10,7 @@ Find why the board drag's carried copy sometimes ends up away from the cursor, a
 
 **Not the issue: the offsets the drag has by design.**
 - **The clamp.** While the cursor is outside the context and the pop-out clock runs, the copy is held at the context's edge (wiki board-drag-interaction §2), and it catches up at the pop. Since Story 8.8, a section is shorter by the carried branch, so the copy meets the Card's bottom sooner.
-- **The jump at a layer change.** Rows move under a cursor that hasn't, and the copy re-anchors. It's momentary, and it belongs to Epic 3.5's zoom-in morph story.
+- **The jump at a layer change.** Rows move under a cursor that hasn't, and the copy re-anchors. It's momentary, and it belongs to the zoom-in morph, which moved from Epic 3.5 to the Dashboard, Navigation & Notifications epic (`epic-8-decisions.md`).
 - **The issue is an offset that stays:** the copy stays off the cursor while the cursor moves around inside one context, after any pop has settled.
 
 **When it happens, note:**

@@ -10,8 +10,8 @@
 | TREE-4.4 | The sidebar sorts a project with no position as if its position were 0 | P2 | Automated |
 | TREE-4.5 | A move that reindexes discloses every renumbered sibling, the moved project included | P1 | Automated |
 | TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Automated |
-| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Automated |
-| TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Automated |
+| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Open |
+| TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Open |
 | TREE-4.9 | A release draws the move and its branch at once, and success keeps that placement | P1 | Open |
 | TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Open |
 | TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
@@ -72,7 +72,7 @@
 
 ## TREE-4.7 — The sidebar applies the renumbered pairs, so it shows the server's order without a reload
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4, wiki positioning §8
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §8
 
 *Given* the sidebar showing parent `P` expanded, with children `A` (`1500`) and `B` (`1600`), and top-level project `X`, each of these from that starting state:
 
@@ -80,11 +80,11 @@
 - *when* a project is created under `P`, *then* it's shown last among `P`'s children, after `B`;
 - *when* `X`'s parent is edited to `P`, *then* `X` is shown last among `P`'s children, after `B`.
 
-**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
+**Automation test:** —
 
 ## TREE-4.8 — After a failed write, the sidebar shows the project where it was before the attempt
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §4
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §4
 
 *Given* the sidebar showing top-level projects `A`, `B` and `X`, in that order, where the server refuses the write, each of these from that starting state:
 
@@ -94,7 +94,7 @@
 
 How the user learns that the write failed isn't asserted. That a collapsed project opened by the drop stays open is [TREE-2.3](tree-2-what-the-drag-shows.md)'s.
 
-**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
+**Automation test:** —
 
 ## TREE-4.9 — A release draws the move and its branch at once, and success keeps that placement
 

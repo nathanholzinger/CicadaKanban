@@ -5,8 +5,8 @@
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | TREE-2.1 | The dragged project's descendants are absent for the whole drag, and its own row is the ghost | P2 | Open |
-| TREE-2.2 | A collapsed project opens when a project is dropped into it as its child | P2 | Automated |
-| TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Automated |
+| TREE-2.2 | A collapsed project opens when a project is dropped into it as its child | P2 | Open |
+| TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Open |
 | TREE-2.4 | Legal parents are Full, the cap boundary is Mid, and deeper rows are Low | P1 | Open |
 | TREE-2.5 | Top-level rows take the root's legal-parent answer | P1 | Open |
 | TREE-2.6 | A response landing mid-drag does not redraw the pickup tiers | P1 | Open |
@@ -30,19 +30,19 @@
 
 ## TREE-2.2 — A collapsed project opens when a project is dropped into it as its child
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §11
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §11
 
 *Given* top-level projects `T` and `X`, where `T` is collapsed and its children are `T1` and `T2`, *when* `X` is released one tab right of `T`, as its first child, *then* at release, before the answer, `T` is expanded, showing `X`, `T1` and `T2` under it. *When* `X` is instead released aligned with `T`, as its sibling, *then* `T` stays collapsed.
 
-**Automation test:** `tests/ui/project-tree-drag.spec.ts`
+**Automation test:** —
 
 ## TREE-2.3 — A collapsed project opened by a drop stays open if the move fails
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §4, wiki project-tree §11
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §4, wiki project-tree §11
 
 *Given* top-level projects `T` and `X`, where `T` is collapsed and its children are `T1` and `T2`, *when* `X` is released one tab right of `T`, as its first child, *then* at release `T` opens and shows `X`, `T1` and `T2` under it, before the answer. *When* the server refuses the move, *then* `X` returns top-level, after `T`, where it was, as soon as the failure arrives, while `T` stays expanded with `T1` and `T2` visible ([TREE-4.8](tree-4-sibling-order.md)).
 
-**Automation test:** `tests/ui/project-tree-drag.spec.ts`
+**Automation test:** —
 
 ## TREE-2.4 — Legal parents are Full, the cap boundary is Mid, and deeper rows are Low
 

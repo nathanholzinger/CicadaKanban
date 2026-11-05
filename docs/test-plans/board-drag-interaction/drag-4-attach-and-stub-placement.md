@@ -18,7 +18,7 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 | DRAG-4.1 | Releasing immediately after zooming into a Card attaches as its last child, inheriting its workphase | P0 | Open |
 | DRAG-4.3 | A done Card beside the ghost can be zoomed into and attached to | P1 | Open |
 | DRAG-4.5 | The same aim means two things: a quick release inserts between, a hold attaches | P0 | Open |
-| DRAG-4.8 | Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]` | P0 | Automated |
+| DRAG-4.8 | Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]` | P0 | Open |
 | DRAG-4.9 | Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child | P0 | Automated |
 | DRAG-4.10 | Descendants placement: shallower levels walk Top's ancestors; the shallowest is "before Bottom" | P0 | Automated |
 | DRAG-4.11 | Descendants placement: boundaries and clamping | P1 | Automated |
@@ -73,13 +73,13 @@ Moving the cursor after the zoom chooses another placement at the same Descendan
 
 ## DRAG-4.8 — Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]`
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §1, wiki hierarchy-placement §4, wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki hierarchy-placement §1, wiki hierarchy-placement §4, wiki board-drag-interaction §7.1
 
 *Given* `X` at `P`'s Descendants layer over the tree, *when* the ghost is in the gap between `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *then* exactly four tab states are offered, at depths **0, 1, 2 and 3**, and each commits a different placement ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). None is shallower than `S2`'s depth: that would make `X` an ancestor of `S2`, and an item chooses its parent, never its children. *When* the ghost is in the gap between `S1` and `S1a` (Bottom is Top's child), *then* exactly one state is offered: depth 1, `S1`'s first child, before `S1a`.
 
 The gap is where the rows slide aside to make room, in the same list shuffle as a column's ([DRAG-1.2](drag-1-contexts-and-popping.md)). `X` and its own subtree are never Top or Bottom. Its attached branch is absent from the list, so the side highlight's named neighbor is the row directly beside the ghost (wiki board-drag-interaction §2, wiki board-drag-interaction §7.2).
 
-**Automation test:** `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/workflow/descendantsProjection.test.ts`, `client/src/components/workflow/dragCollision.test.ts`
+**Automation test:** —
 
 ## DRAG-4.9 — Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child
 
