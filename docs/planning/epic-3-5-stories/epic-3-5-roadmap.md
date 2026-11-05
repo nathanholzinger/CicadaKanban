@@ -1215,6 +1215,9 @@ gap. This reverses project-tree §1's "an indicator line, not a ghost".
   project-tree §4). Otherwise a ghost already at the new place jumps back
   to the pickup until the response lands. With it, the drop animation can
   come back, and the copy glides into the ghost's place, as on the board.
+  Folded in after the PO's pass (Nathan, 2026-11-04): the move is drawn
+  by slot, as the board's are. No rank is written into a copy's
+  position (wiki positioning §5).
 - **The line stays, always along the ghost's top edge** (Nathan,
   2026-11-04), since the depth is decided against the project above. Over
   the cap, the line stays red.
@@ -1830,9 +1833,29 @@ deferral and keep landing with their stories.
       TREE-2.11 and TREE-2.12 coverage for the sidebar's branch and line,
       and DRAG-8.10's shared one-row/no-pointer line assertions. The
       create/reparent expansion cases TREE-11.1–TREE-11.8 are Story
-      8.11's, not deferred drag work. TREE-1.1 and TREE-1.11/TREE-3.9
-      remain skipped only until Story 8.12 updates and unskips them;
-      TREE-1.14–TREE-1.16's response windows are revised in that pass.
+      8.11's, not deferred drag work. Story 8.12's handoff reports
+      TREE-1.1 and TREE-1.11/TREE-3.9 unskipped, with TREE-1.8,
+      TREE-1.9, TREE-2.3 and TREE-4.7's drag; confirm their coverage
+      against the revised cases at close-out reconciliation.
+
+    - **From Story 8.12's Planner follow-up:** after reconciliation,
+      fill remaining gesture-dependent TREE-1.17, TREE-1.18 and
+      TREE-1.19 coverage (nearest-row slots, hidden rows and a stable
+      gap through the shuffle), TREE-2.13 (the ghost's top-edge line,
+      name column and onset), and TREE-4.9, TREE-4.10 and TREE-4.11
+      (release-to-answer placement, independent answers and the next
+      pickup's drawn tree). Revised TREE-4.8 needs the intermediate
+      drawn-then-back refusal and rollback before a pending or failed
+      read; the handoff says its existing spec does not delay refusal.
+      TREE-1.14–TREE-1.16 now exercise a parent edit, create or refused
+      drag going back, rather than a successful drag first appearing
+      with its answer. TREE-2.6 likewise uses a parent edit for its
+      tier-lifetime window. TREE-4.12 pins positioning §5's prohibition
+      on client-computed positions; its implementation coverage stays
+      with Story 8.12's Phase 5, and only remaining gesture coverage
+      belongs here. TREE-1.4 and TREE-2.1 remain the reported skips.
+      The copy's hold, pixel step, styling and glide are wiki Open
+      questions, not automation gaps.
 
     - **From Story 8.9's Planner follow-up:** after the confirming and
       close-out reconciliations, fill remaining drag coverage for

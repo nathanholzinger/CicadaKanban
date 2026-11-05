@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.12 — The sidebar's ghost moves to the gap
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built. Nathan approved the gesture as built (Amendment 2) and the specs are updated and unskipped. Phase 4, the Living-docs handoff, is next
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built, committed and approved (Amendment 2). Phase 4 wrote the Living-docs handoff (Amendment 3), and the PO's pass is done (Amendment 4). Phase 5, a move drawn by slot, is folded in and next (Amendment 5)
 
 ## Goal
 
@@ -33,7 +33,10 @@ Give the project sidebar's drag the ghost a Stub has in a Card's descendants sec
 ## Scope
 
 - **Wiki passages:** none ahead of the build. The PO writes the rules once Nathan approves (code first).
-- **Test-plan cases:** for the Test Planner, after the PO's pass. The handoff lists the ones affected.
+- **Test-plan cases (Test Planner, after the PO's pass):**
+  - Revised: **TREE-1.1–TREE-1.6, TREE-1.8–TREE-1.16; TREE-2.1–TREE-2.8, TREE-2.10, TREE-2.12; TREE-3.9; TREE-4.7, TREE-4.8.** Ghost and line wording, own-gap behavior, invalid cues, edit/create/rollback windows, branch restoration, immediate drawing and rollback. TREE-2.6's response setup now uses a parent edit too; TREE-3.9 qualifies its cap agreement to an unchanged pickup tree.
+  - Added, all **Open**: **TREE-1.17–TREE-1.19** (nearest-row slots and both ends, drawn versus hidden rows, stability through the shuffle); **TREE-2.13** (the line's top edge, name column, onset and absence); **TREE-4.9–TREE-4.12** (release-to-answer placement with the branch, independent moves and answers, the next pickup's branch/height/tiers, and slot-based drawing without client-computed positions).
+  - Existing statuses and Automation lines await the Reconciler. **TREE-1.4 and TREE-2.1** retain their skipped-spec route to **Story 10's item 10**. Any remaining gesture-dependent coverage for the new cases and revised TREE-1.14–TREE-1.16, TREE-2.6 and TREE-4.8 is named there too. No tests are mapped by this pass.
 
 ## Inbound deferrals
 
@@ -228,6 +231,28 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **What's left for Story 10,** if anything.
 - **Gate,** if code changed.
 
+**Phase 5: a move drawn by slot** (Amendment 5).
+- **The build:**
+  - `withMoveApplied` changes the moved project's `parentId` only;
+  - `sortedChildrenByParent` takes the moves out and puts each by its slot;
+  - `App.tsx` passes the moves to the sidebar beside the tree, and `flattenTree` and `fullChildrenOf` pass them on.
+- **Comments:**
+  - `hierarchy.ts`: the module header, `withMoveApplied`'s rank sentences, and `sortedChildrenByParent`'s;
+  - `App.tsx`: the `sidebarProjects` comment.
+- **Tests:**
+  - **`lib/hierarchy.test.ts`:**
+    - the order tests read the slot layer;
+    - no node's `position` changes;
+    - the same project moved twice while both moves are out: the later one wins;
+  - **`projectTreeUtils.test.ts`:** `flattenTree` and `fullChildrenOf` with a move out;
+  - **`App.pendingMove.test.tsx`:** it should pass unchanged. It's the check that nothing drawn moved.
+- **The plan:**
+  - the code map's rows for `hierarchy.ts` and `App.tsx`;
+  - in the handoff, "A drawn move uses ranks" and the Architect's "Wiki positioning §5 and the ranks" are marked settled by Amendment 5.
+  - If a test the handoff lists for the Planner is renamed, the handoff says so.
+- **No hands-on.** Nothing drawn changes.
+- **Gate.**
+
 ## Code map
 
 Filled in by the Coder, phase by phase.
@@ -269,10 +294,154 @@ Filled in by the Coder, phase by phase.
 - **The drawn-then-back case** (a refused move drawn at the release, then put back) has no spec. `App.pendingMove.test.tsx` covers it, and so did the Phase 1 probe. A spec would need a delayed refusal. Say if you want one in TREE-4.8.
 - **Gate:** `npm run check` passes. The sidebar specs ran five times over with none failing. `npm run test:e2e`: 215 passed, 22 skipped, none failed, which is Phase 1's 209 and 28 with the six unskipped.
 
+**Amendment 3: Phase 4 wrote the Living-docs handoff (Coder, Nathan, 2026-11-04).** Nothing was built, so the gate was not rerun, and the docs the Coder doesn't own are untouched. One correction to D5, which the handoff carries to the PO:
+- **D5 says what's left of the mid-drag window is a refused move.** It is not the only thing. A drag's own move is drawn at the release, but an edit from the project page's parent dropdown, a create, and the read that follows a refusal are not, so each can still land after a pickup. D5's other claims hold: the user's last drag is already in the tree at the next pickup, and the tiers and branch held at pickup are unchanged. The handoff words §1's last bullet around those causes, and TREE-1.14 to TREE-1.16 around an edit or a refused move going back.
+
+**Amendment 4: the wiki (PO, 2026-11-04).** The handoff's decisions and superseded passages, as it lists them.
+- **The gap is the ghost's slot, now a shared rule,** in hierarchy-placement §1: the ghost is a row standing for the entry, drawn at the gap and at the depth a release there gives, while the rows slide aside in the list's standard shuffle; Top and Bottom are the rows on either side of it; the gap is read from list order, never a row's half, with the board's Why. "Chosen by vertical position" and "how a surface shows the gap is its own" go. Each surface's page says how its ghost takes a slot, and the intro says so.
+- **Board §7.1's gap bullet** keeps the board's own half, the column's shuffle (§2), and cites hierarchy-placement §1. §2's own "Why not the half" stays, since it's the column's rule too. No section number changed.
+- **Project-tree:**
+  - **§1:** "An indicator line, not a ghost" is replaced by the ghost and the slot it takes: the row the drag copy is nearest, below, above or its own; every gap reached from one row; a still cursor holding one gap; a release saving the gap and depth the ghost shows. A new bullet: the list is the rows drawn, a collapsed project once, its hidden rows and the branch not at all. "Resting on" its own row becomes the ghost nearest it. The empty hierarchy leaves the ghost where it is. Past the cap the line and the copy are marked invalid. The last bullet's window is now the changes no drag drew: an earlier create's or parent edit's answer, and a refused move going back with the read that follows (Amendment 3). Its cycle, cap and Why sentences stand.
+  - **§2:** the dragged row is the ghost, at its strength and at the depth; only the ghost is dimmed on a tree well within the cap; the values bullet names the ghost. A new paragraph: the line on the ghost's top edge in every gap, the Why of the top, its start at the ghost's name, full strength, none until the pointer first moves nor in an empty hierarchy. The branch paragraph says the own row stays at the pickup, as the ghost.
+  - **§4:** a new paragraph, a drag's move is drawn at its release with its branch, by the relation it sends; the answer puts the project where it's drawn (positioning §5), so a success doesn't visibly change; moves released one after another each settle by their own answer. A failed move goes back as soon as it fails, without waiting for the read.
+  - **"The look of the drag's cues"** gains the ghost's look, the copy's red outline, its hold to the width and layout at the ghost's depth, the 14px a level, and the glide at a drop and at an end that writes nothing.
+- **Deductions, for Nathan to overrule:**
+  - **The gap's reading is shared,** by the wiki README's convention and as the tiers (8.7) and the branch (8.11) went. The handoff left it to the PO.
+  - **The line's start is a rule** (8.11's D8), as the handoff recommends: it's what tells a gap's depths apart. Worded as "where the ghost's name starts", not in pixels.
+  - **The held copy and the glide are looks,** in the Open questions, as the handoff recommends, since the board's equivalents aren't rules either. So is the copy's name sitting over the ghost's.
+  - **§4 states the answer changes nothing drawn,** from positioning §5's ordinal argument, in place of "replaces the drawn move in one update", which is how the client gets there.
+  - **"Several moves out" is worded as "released one after another"** and left at each settling by its own answer.
+- **Not taken into the wiki:** 8.11's D7, undone here. The scrolled list and two drags in quick succession, which neither the build nor the hands-on ran.
+- **For Nathan: the ranks against positioning §5** (Amendment 1). §5 says the client never computes a position "not even for display", and its Why is that a number held in client state is one something will be tempted to send. `withMoveApplied` puts ranks in the `position` of a copy. The board's `itemListOps.ts::applyPlacements` places by slot and never touches `position`. Options: §5 gains a sentence that a display-only rank is ordinal feedback; or §5 stands and the sidebar's overlay orders by slot as the board's does, a fix for the Architect to place. **The PO recommends the second:** the rule's Why is the very risk, and the board shows it can be met. **Nathan ruled the second (2026-11-04),** since it's how the board's items work: `applyPlacements` places a dragged or dropped item by slot in the columns and in a Card's descendants section, and its module header says `position` is never touched client-side. §5 stands unchanged. The sidebar's `withMoveApplied` is to lay a move over the tree by slot, without writing ranks into `position`, in the same three readings D5 names. For the Architect to place: the roadmap treats it as a defect fixed in Story 8.
+- **For the Test Planner:** the handoff's list stands. The new cases' ground: the ghost and its slot, project-tree §1 and hierarchy-placement §1; the line, §2; the copy's invalid mark, §1; the move at the release and its failure, §4. The copy's hold, its step and the glide are Open questions, so no cases for them.
+- **For the Architect:** the handoff's items stand, and the ranks fix above.
+- **Checks:** `check:docs` passes. Nothing is committed.
+
+**Amendment 5: a move drawn by slot, folded in (Architect, Nathan, 2026-11-04).** This is Amendment 4's ranks fix. Nathan folded it into this story as Phase 5, rather than leave it as a Story 8 defect for later. D5's other rules hold: when a move is drawn, when it leaves, and the three readings that agree.
+- **The parent is laid over, and no position is.**
+  - `withMoveApplied` gives the moved project the release's parent and leaves every `position` as the server sent it.
+  - The board's `itemListOps.ts::withPendingParents` does the same.
+  - `getSubtree`, `classifyTargets` and `getAncestors` read parents only, so they're unchanged.
+- **The order is laid over where siblings are sorted.**
+  - `sortedChildrenByParent` takes the moves out, none by default.
+  - After the sort, each move, in the order sent, takes its project out and puts it back in its parent's children:
+    - after `prevId`;
+    - before `nextId`;
+    - last when it names neither, or the one it names isn't there, as `withMoveApplied` does today.
+  - A parent no node has counts as the top level, as the sort's rule has it.
+  - This is `applyPlacements`' rule: take the item out and put it back by its slot, in the order recorded.
+- **The sidebar takes the moves beside the tree.**
+  - `App.tsx` passes `pendingMoves` with `sidebarProjects`, and `flattenTree` and `fullChildrenOf` pass them to `sortedChildrenByParent`. Those two are the only readers of sibling order.
+  - So D5's three readings still agree. The parent is laid over once, in `App.tsx`, and the order once, in the one sorted index.
+  - The prop's shape is the Coder's call.
+- **Why not `applyPlacements` itself:**
+  - It's items-only, and it lives in the board's directory, which `lib/` mustn't import from.
+  - Moving it would touch the board, which this story leaves alone.
+  - The two spell one slot rule. Sharing it isn't part of this fix.
+- **What it settles:**
+  - Wiki positioning §5 stands, as Nathan ruled. No client copy holds a computed `position`.
+  - The root AGENTS.md needs no change.
+  - The PO's §4 passage stands: a move is drawn "by the relation it sends".
+- **For the Test Planner:** no case changes. What's drawn, and when, is the same.
+
+**Amendment 6: test-plan follow-up (Test Planner, 2026-11-04).** Applied the handoff after the PO's wiki pass, deriving the catalog changes from the settled wiki without reading code or test code.
+- **The ghost and line:** rewrote TREE-1's line-only and row-half wording around the ghost's slot and depth, the top-edge line, own-row return, shuffle and fixed row count. TREE-1.11 and TREE-1.13 now mark the copy as well as the line invalid; their exact styling stays undesigned. TREE-2's ghost, tier and restoration wording follows, and TREE-2.13 covers line onset and alignment across gaps and depths.
+- **The remaining response windows:** TREE-1.14 and TREE-1.15 use parent edits and creates answered after pickup. TREE-1.16 uses a parent edit or an earlier drag being refused, and keeps the moved-out branch hidden until the drag ends. TREE-2.6 uses a parent edit for tier lifetime. No case still treats an unanswered successful drag as absent from the next pickup tree; TREE-4.11 covers that tree explicitly.
+- **The move:** TREE-4.7 and TREE-2.12 draw it and its branch at release. TREE-4.8 and TREE-2.3 require rollback at the failure, not after the read. New TREE-4.9 and TREE-4.10 pin the accepted placement and independent answers, including one failure with another move pending or already successful. TREE-3.9 keeps the shared-cap rule without promising that a pickup state remains legal after a later tree change.
+- **Positions:** read Nathan's ruling added to Amendment 4 during this pass. Positioning §5 stands. New TREE-4.12 requires the drawn move to keep the server-returned position values while ordering by slot; it takes its numeric position from the answer. It covers the rule Nathan kept without depending on how the Architect replaces the ranks.
+- **Shared rules:** the project cases cite hierarchy-placement §1 where they assert ghost-slot placement. The board's gap case DRAG-4.8 already cites that section and still matches it; no board case changes are needed for the shared-rule move.
+- **For the Coder and Reconciler:** the eight new cases are Open with no Automation mapping. Stamp the handoff's tests only where their assertions cover those cases and assess all revised mappings. TREE-4.8's existing undelayed-refusal spec is reported not to prove the drawn-then-back intermediate state; its current Automated status is not a new coverage judgment. The six reported unskips need confirming against their revised cases. TREE-1.4's reported skipped-only mapping still needs its Automated status corrected by the Reconciler; TREE-2.1 remains Open. No existing status or Automation field is changed here.
+- **Routing:** the roadmap's Story 10 item 10 records the reported unskips and names the remaining gesture-dependent cases, including the new IDs. TREE-4.12's implementation coverage belongs with this story's Phase 5, which the Architect added during this pass, with only any remaining gesture-dependent coverage routed to Story 10. Phase 5 changes no expected visible placement in the cases. No copy-hold, pixel step, exact invalid styling or glide case is written: the PO left those in Open questions. No new Pending PO case arose.
+- **Checks:** `npm run check:docs` passes (403 files, zero hits), and `git diff --check` passes. This documentation pass ran no runtime tests.
+
 ## Open questions
 
 - **For Nathan, in Phase 2:** D4's held copy, or a copy that follows the pointer sideways, as today. *Settled in Amendment 2: the held copy stays.*
 
 ## Living-docs handoff
 
-Written by the Coder in Phase 4.
+Written by the Coder in Phase 4, after Nathan approved the gesture (Amendment 2) and the specs were unskipped and committed. No code changed in this phase. The wiki and the test plans are the PO's and the Test Planner's, and none is edited here. Story 8.11's pass left out what this story changes (its Amendment 5), so this handoff covers those passages and cases.
+
+- **Behavior decisions made while building, for the PO to rule on:**
+  - **The ghost** (D1, D2):
+    - **The dragged project's own row is the ghost.** It moves to the gap and is drawn at the depth the project would land at, its own depth before the first move. It is drawn at `projectDraggedOpacity` with no tier, as that row was. The rows between it and the gap slide a row's height aside, and no row is added for it.
+    - **The gap is the ghost's slot: the slot of the row the carried copy is nearest** (board-drag-interaction §2, rules 1 and 2, as on the board).
+      - Nearest a row below the ghost's own slot, the ghost lands after it. Nearest one above, it lands before it. Nearest its own row, it stays in its own gap.
+      - Every gap, the list's two ends included, belongs to exactly one row, and no row has two. A row's half is never read.
+      - The rows the copy is measured against are where they were at pickup, so a still cursor holds one gap.
+      - The list counts the rows drawn: a collapsed project once, its hidden children not at all, and the carried project's branch not at all. The placement still reads the real tree.
+  - **The line** (D3):
+    - **It is always on the ghost's top edge,** between the ghost and the row above, since the depth is decided against the project above (hierarchy-placement §1). It moves with the ghost, and it has no side.
+    - **It starts at the name's column for the projected depth** (8.11's D8), so the ghost's name and the line's start share a column, and the depths of one gap can be told apart. **The PO decides whether that is a rule.** I recommend one sentence in §2, since it is what tells adjacent depths apart and the ghost, the line and the copy all use it.
+    - **It is blue, and red past the cap.** There is none before the first move, and none when the dragged subtree holds every project.
+  - **The carried copy** (D4):
+    - It is held to the list's width: its x stays where it was picked up, and it follows the pointer up and down. It is laid out as the project's row at the projected depth, so its name sits at the ghost's name and the line's start. At pickup it is exactly over the row.
+    - The depth is still the pointer's sideways travel, 14px a level, so the cursor stays on the copy's handle, a level at a time.
+    - **Past the cap it takes the board's dashed red outline** (board-drag-interaction §7.2), as well as the red line. The ghost is not outlined.
+    - Nathan kept the held copy (Amendment 2). I recommend it joins the Open questions' look of the drag's cues, with the board's equivalent, and is not a rule.
+  - **A move is drawn at the release** (D5):
+    - **A release that writes draws the project at its new place at once,** with its branch, by the relation it sends. A collapsed parent opens on the drop (§11).
+    - **The answer replaces the drawn move in one update,** so no frame shows the old place.
+    - **A refused move goes back at the failure,** and the read of the tree follows. It does not wait for that read, which fails too when the server is down.
+    - **Several moves out at once each leave with their own answer.** A second drag released meanwhile loses neither.
+    - **The next pickup reads the tree with the moves laid over,** so its subtree, tiers and branch include the user's last drag.
+    - **What can still land mid-drag** (Amendment 3). §1 says the user's own last move can land mid-drag. A drag's move no longer does. An edit from the project page's parent dropdown, a create, a refused move going back, and the read after a refusal can. §1's last bullet keeps its rules for these. The cycle it describes is reachable by an edit that puts a project under the dragged one.
+  - **Where a drag ends** (D6). A drop glides the copy into the project's new place. An end that writes nothing (Escape, the own gap, a release past the cap) glides it back to the project's own slot, where the ghost returns. The branch is drawn again at every end (hierarchy-placement §8). The board's glide is no wiki rule, so I recommend this one is a look, with the copy's.
+  - **A drawn move uses ranks** (Amendment 1). While a move is out, the new parent's children are ranked 0, 1, 2… in the `position` of a copy that is never stored or sent. Wiki positioning §5 says the client never computes a position "not even for display". A rank is an index in the drawn list, which §5 calls the ordinal feedback. **The PO or the Architect decides whether §5 says so,** or wants the moves threaded through each reader of the tree instead.
+  - **8.11's D7 is undone** (D6), so it goes to neither the wiki nor the test plan. **8.11's D8 is kept** as the line's start (above).
+- **Planned passages now built:** none. None were planned.
+- **Passages superseded,** each for the PO:
+  - **project-tree §1, "An indicator line, not a ghost":** the whole bullet. The dragged project's own row is a ghost that moves to the gap, the rows slide aside to make room, and a line rides the ghost's top edge. The bullet's "the line's position is the gap" and "a release saves exactly the gap and depth the line shows" hold for the ghost too. "The line is the only cue" goes.
+  - **project-tree §1, the cap bullet:** "its line is marked invalid" gains the carried copy, outlined as the board's is. "How the invalid line looks isn't a rule yet" is true of both.
+  - **project-tree §1, "The drag counts the tree as it was at pickup":** "A move is shown when its response arrives (§4), so the user's own last move can land mid-drag" goes. A drag's move is drawn at the release, and the causes that remain are Amendment 3's. The cycle and cap sentences hold for them. Why not stop the drag, as the board does at a reload: the window is one response's time, and a refused drop costs one retry.
+  - **project-tree §1, resting on the dragged project's own row, and the empty hierarchy:** both hold. "Resting" is the copy nearest the row, and the empty hierarchy draws no line and leaves the ghost where it is.
+  - **project-tree §2:**
+    - "The dragged project's own row is drawn at a strength of its own" becomes the ghost, at that strength, at the gap and the depth.
+    - "The rows below move up by the branch's height, and the project's own row stays" no longer holds for the row: it is the ghost, and the rows slide to make room. The branch still leaves the rows.
+    - New: the line along the ghost's top edge, against the project above, starting at the name's column; the copy held to the list's width and stepping with the depth; the copy's outline past the cap.
+  - **project-tree §4, "After a failed write, the sidebar shows the project where it was before the attempt":** a drag's move is drawn at the release and goes back when it fails. A failed create shows no new project and a failed edit leaves the project where it was, as written. New: a move's answer replaces the drawn move in one update.
+  - **project-tree, Open questions, "The look of the drag's cues":** gains the ghost's strength, the copy's look and hold, and the glide, beside the over-cap look and the tiers'.
+  - **hierarchy-placement §1:** "chosen by vertical position" and "how a surface shows the gap is its own". Both surfaces now read the gap as the ghost's slot, from list order, never a row's half. Board-drag-interaction §2 and §7.1 hold that rule for the board, and project-tree §1 would for the sidebar. **The PO decides whether it becomes a shared rule here.** §5 and §8 hold: §8's "wherever the hierarchy then has it" is, on the sidebar, the new place from the release.
+- **Implementation passages to place:** placed by the Coder, in docs the Coder owns:
+  - the module headers of `useProjectDragReorder.ts`, `projectTreeUtils.ts`, `SortableProjectRow.tsx`, `ProjectSidebar.tsx` and `hierarchy.ts`, and the comments in `dragChrome.tsx`, `dragCollision.ts` and `dragRegions.ts` that said the sidebar draws no ghost;
+  - `workflow/AGENTS.md` and the root `AGENTS.md`, neither of which says anything this story makes false.
+
+  Nothing for the PO.
+- **Test-plan cases affected,** for the Test Planner after the PO's pass:
+  - **TREE-1, wording.** Where a case says the line is in or shows a gap, the ghost is in it, with the line on its top edge. That is TREE-1.2, TREE-1.3, TREE-1.5, TREE-1.6 and TREE-1.10, whose rules and hook tests hold, and the TREE-1 row of `INDEX.md`.
+  - **TREE-1.1:** "no row slides aside, and no ghost is shown" is reversed. The ghost is between `A1a` and `B` at `A1a`'s depth, `B` has slid a row down, the rows above have not, and the line is on the ghost's top edge, starting at the name's column. A release saves `A1` as the parent, after `A1a`, where the ghost was. Its spec is updated.
+  - **TREE-1.8 and TREE-1.9:** "until the line shows another gap" and "the line moves to `X`'s own gap" become the ghost and the line with it. Their rules hold. Their specs are updated.
+  - **TREE-1.11:** "its line is marked invalid" gains the carried copy's outline. Its spec is updated (TREE-3.9 is the same test).
+  - **TREE-1.14 to TREE-1.16:** their setups are "the user's earlier saved move whose response is still pending", which no longer lands after a pickup. Reword around Amendment 3: an edit or a create whose answer lands after the pickup (TREE-1.14 and TREE-1.15), and for TREE-1.16 an edit that moves a descendant out, or a refused move going back. Their rules hold. They stay Open, with no test.
+  - **TREE-1.6:** the hook test no longer hands the hook an `over` dnd-kit does not report. It rests on `X`'s own row, as the case says.
+  - **TREE-2.1:** "`X`'s own row stays drawn at `projectDraggedOpacity`" becomes the ghost. "`B` moves up by the height their rows occupied" holds at the pickup. Its spec stays skipped for Story 10.
+  - **TREE-2.3:** `X` is drawn under `T` at the release, `T` is opened, and then `X` goes back when the server refuses. The case's end state holds. Its spec is updated.
+  - **TREE-2.7:** the line is on the ghost now, not beside `S`. It stays at full strength while the ghost it rides, like `S`'s content, is dimmed. Reword; the rule holds.
+  - **TREE-2.12:** the last sentence, "This case does not fix when a successful move changes `X`'s place in the sidebar", goes: it changes it at the release. The first bullet's "drawn under `X` throughout the move" is now exact.
+  - **TREE-4.7:** the first bullet holds. Its drag spec is updated.
+  - **TREE-4.8:** the first bullet gains the drawn-then-back: `X` is drawn under `A` at the release, then shown top-level and last after the refusal. Its spec aims at the gap under `A` now. It does not delay the refusal, so the in-between has no spec.
+  - **New cases for the ghost and the move:**
+    - the ghost moves to the gap, is drawn at the projected depth, adds no row, and the rows slide aside;
+    - the gap is the slot of the row the copy is nearest: below the ghost's slot, above it, its own row, the list's two ends, past a collapsed project, past the hidden branch, and a still cursor holding one gap;
+    - the line is on the ghost's top edge in every gap, starts at the name's column, and is red past the cap; there is none before the first move, or when the subtree holds every project;
+    - the copy is held to the list's width and steps with the depth, its name at the ghost's column; it is outlined past the cap;
+    - a release draws the move at once with its branch, the answer replaces it in one update, a refused move goes back, and two moves out each leave with their own answer;
+    - an end that writes nothing glides the copy back.
+  - **Tests the new cases can cite,** none with a case ID yet:
+    - the gap: `sidebar/projectTreeUtils.test.ts` (`resolveGap`);
+    - the ghost, its slot and the line's state: `sidebar/useProjectDragReorder.test.ts`;
+    - the ghost's row, its line, and the copy: `sidebar/SortableProjectRow.test.tsx`;
+    - a move laid over a tree: `lib/hierarchy.test.ts` (`withMoveApplied`);
+    - a move from its release to its answer: `App.pendingMove.test.tsx`.
+  - **Skipped specs, all in `tests/ui/project-tree-drag.spec.ts`:** TREE-1.4 and TREE-2.1 stay skipped for Story 10, each with its reason. The six specs this story unskipped are TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag, and their case texts above are what follows.
+- **For the Architect:**
+  - **Story 10's item 10** says "TREE-1.1 and TREE-1.11/TREE-3.9 remain skipped only until Story 8.12 updates and unskips them". They are unskipped, with TREE-1.8, TREE-1.9, TREE-2.3 and TREE-4.7's drag. It holds TREE-1.4 and TREE-2.1 for the sidebar now, as before.
+  - **Gesture-dependent coverage no spec has** (Story 8 allows no new drag specs): the copy held at the list's x and stepping with the depth, a refused move drawn then put back, two drags released in quick succession, and a scrolled list. The unit tests cover the move's life from release to answer and two moves out (`App.pendingMove.test.tsx`) and the copy's depth, and Phase 1's probe checked the held x and a refusal in a browser. The Coder ran no scrolled list and no two drags in quick succession, and the hands-on's report doesn't mention either.
+  - **The roadmap's 8.12 entry** has a "Today" paragraph that says the ghost stays at the pickup and that this reverses "an indicator line, not a ghost". That is right as the problem's statement and wrong as live.
+  - **The depth range** (inbound 3). D2 and D4 are the answer, and Nathan's hands-on said the placement feels more intuitive and raised nothing against the range. The Coder ran neither the scrolled list nor the deep stack against it. If it comes back, the roadmap treats it as a defect, fixed in Story 8.
+  - **Wiki positioning §5 and the ranks** (above, for the PO). The root `AGENTS.md` says no project write takes a number, which is still true. Whether it names `withMoveApplied` beside the board's `applyPlacements` is the Architect's call.
+- **Left to the Coder at close:**
+  - **The unit tests take the new cases' IDs** in their titles, and the old ones whose wording moved are retitled: the hook's TREE-1.6 and TREE-2.x describes, and `SortableProjectRow.test.tsx`'s TREE-2.1 and TREE-2.7.
+  - **The gate,** if that changes anything.
+- **Test-plan handoff applied** (Test Planner): Scope and Amendment 6 record the revised cases, eight new Open cases, Reconciler checks and Story 10 routes. TREE-4.12 covers positioning §5 for Phase 5; the visible placement cases need no further change for that implementation fix.
+- **Wiki sections added, changed, moved or removed** (PO, at close): hierarchy-placement §1 (the gap is the ghost's slot, now shared) and its intro; board-drag-interaction §7.1's gap bullet (its shared half moved to hierarchy-placement §1); project-tree §1, §2, §4 and the Open questions' "The look of the drag's cues". Positioning §5 is unchanged: Nathan kept it, and the sidebar's ranks are to go (Amendment 4).

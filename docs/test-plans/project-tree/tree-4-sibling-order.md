@@ -1,6 +1,6 @@
 # TREE-4 — A project's position compares among its siblings
 
-**Next ID:** TREE-4.9
+**Next ID:** TREE-4.13
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -12,6 +12,10 @@
 | TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Automated |
 | TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Automated |
 | TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Automated |
+| TREE-4.9 | A release draws the move and its branch at once, and success keeps that placement | P1 | Open |
+| TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Open |
+| TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
+| TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Open |
 
 ---
 
@@ -72,7 +76,7 @@
 
 *Given* the sidebar showing parent `P` expanded, with children `A` (`1500`) and `B` (`1600`), and top-level project `X`, each of these from that starting state:
 
-- *when* `X` is dragged under `P`, after `B`, and released, *then* `P`'s children read `A, B, X`, and still do after a reload. `X` isn't shown first, as a sort of `1500`, `1600` and `3` would put it;
+- *when* `X` is dragged under `P`, after `B`, and released, *then* `P`'s children read `A, B, X` at release and after the answer, and still do after a reload. `X` isn't shown first, as a sort of `1500`, `1600` and `3` would put it;
 - *when* a project is created under `P`, *then* it's shown last among `P`'s children, after `B`;
 - *when* `X`'s parent is edited to `P`, *then* `X` is shown last among `P`'s children, after `B`.
 
@@ -84,10 +88,44 @@
 
 *Given* the sidebar showing top-level projects `A`, `B` and `X`, in that order, where the server refuses the write, each of these from that starting state:
 
-- *when* `X` is dragged under `A` and released, *then* the sidebar shows `A`, `B` and `X` as before, with `X` top-level and last;
+- *when* `X` is dragged under `A` and released, *then* at release the sidebar draws `X` under `A`, before the refusal arrives. As soon as the move fails, it shows `A`, `B` and `X` as before, with `X` top-level and last, without waiting for the subsequent read of the tree. Holding that read unanswered, or making it fail too, leaves `X` restored rather than retaining the refused placement;
 - *when* a project is created, *then* no new project is shown;
 - *when* `X`'s parent is edited to `A`, *then* `X` is still shown top-level and last.
 
 How the user learns that the write failed isn't asserted. That a collapsed project opened by the drop stays open is [TREE-2.3](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
+
+## TREE-4.9 — A release draws the move and its branch at once, and success keeps that placement
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki project-tree §6, wiki hierarchy-placement §8, wiki positioning §5
+
+*Given* top-level projects `A, B, X`, expanded `A` with children `A1, A2`, and expanded `X` with child `X1`, *when* `X` is released in the gap between `A1` and `A2`, at their depth, *then* before the answer arrives the sidebar reads `A, A1, X, X1, A2, B`, with `X` drawn under `A` and `X1` still under `X`. The placement is after `A1` and before `A2`, the same relation the move sends; no `X` row remains top-level. The branch returns at release, not after the answer. *When* the move succeeds, *then* that same tree stays drawn without a frame restoring the pickup placement, and a reload shows the same hierarchy and order.
+
+**Automation test:** —
+
+## TREE-4.10 — Moves released one after another settle independently by their own answers
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4
+
+*Given* expanded top-level `P` with child `A`, expanded top-level `Q` with child `B`, and top-level leaves `X` and `Y`, *when* `X` is released under `P`, after `A`, then `Y` is released under `Q`, after `B`, before either answer arrives, *then* `P`'s children read `A, X` and `Q`'s read `B, Y` immediately. *When* either move succeeds first, *then* the other move stays drawn at its released place while its own answer is outstanding. Once both succeed, the same two child lists remain, regardless of answer order.
+
+*Given* the same two releases, *when* `X`'s move fails while `Y`'s is unanswered, *then* `X` returns top-level at its place before the attempt, while `Y` stays after `B` under `Q`. *When* `Y` then succeeds, *then* it stays there. If `Y` succeeds before `X` fails, its saved placement likewise survives `X`'s rollback and the following read. An answer settles its own move, without dropping another move still awaiting its answer or undoing one that succeeded.
+
+**Automation test:** —
+
+## TREE-4.11 — The next pickup counts earlier drag moves before their answers arrive
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §4, wiki project-tree §2, wiki hierarchy-placement §6, wiki hierarchy-placement §7, wiki hierarchy-placement §8
+
+*Given* project cap `PCAP >= 4`, top-level leaf `P`, top-level `X` with child `X1`, and unrelated chain ending at `S` at absolute depth `PCAP - 3` with child `T` at `PCAP - 2`, *when* `X` is released as `P`'s child and `P` is picked up before that move's answer, *then* the pickup tree already has `X` and `X1` beneath `P`. Both are hidden in `P`'s carried branch and excluded from placement; its line reads "+ 1 child, 2 total descendants". `P`'s subtree height is 2, not its saved leaf height 0. `S` is Full, since putting `P` under it reaches exactly `PCAP`; `T` is Mid, since it would put the deepest descendant at `PCAP + 1` but its parent `S` is legal. Waiting for the first move's answer is unnecessary for the new drag to count that move's hierarchy, branch and tiers.
+
+**Automation test:** —
+
+## TREE-4.12 — A drawn move changes order by slot without computing any position
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki positioning §5, wiki project-tree §4, wiki project-tree §6
+
+*Given* expanded parent `P` with children `A` at position `10` and `B` at `20`, and top-level `X` at `30` with child `X1` at `7`, *when* `X` is released under `P`, after `A`, while the answer is outstanding, *then* the sidebar draws `A, X, B` as `P`'s children, with `X1` still under `X`, by the chosen slot. The client's position values stay `A = 10`, `B = 20`, `X = 30` and `X1 = 7`; no tree used for display substitutes ranks or any other client-computed positions. The move sends the parent and named-neighbor relation, with no position. *When* the server answers with `X.position = 15` and no reindex, *then* `X` takes `15`, the other three values stay unchanged, and the drawn tree and order do not move.
+
+**Automation test:** —

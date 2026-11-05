@@ -791,10 +791,10 @@ in any gap among the Card's Stubs, not three fixed options.
 [`../hierarchy-placement/`](../hierarchy-placement/)'s gap and depth**,
 with Card `P`'s descendants section as the hierarchy. On the board:
 
-- **The gap is the ghost's two neighbors**, in the same list shuffle as a
-  column's (§2): Top is the row above the ghost, and Bottom the row below.
-  The gap is wherever the rows slide aside to make room, never a
-  which-half-of-a-row reading.
+- **The gap is the ghost's slot**
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §1), in the same
+  list shuffle as a column's (§2): Top is the row above the ghost, and
+  Bottom the row below.
 - **The root is Card `P`**, so the shallowest level is *`P`'s own
   children* ([`../hierarchy-placement/`](../hierarchy-placement/) §3). An
   item can never be tabbed out of `P` — leaving `P` is a zoom-out (§8),

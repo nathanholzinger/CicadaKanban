@@ -33,10 +33,17 @@ items a board shows is
 against the whole project tree, and a release saves the placement as a
 move (§6). What the sidebar adds:
 
-- **An indicator line, not a ghost.** Rows don't slide aside to make
-  room. The sidebar draws a line at the gap, and the line's position is
-  the gap. A release saves exactly the gap and depth the line shows, so
-  the line is the only cue, and it always matches the save.
+- **The dragged project's own row is its ghost, and moves to the gap**
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §1). It takes
+  the slot of the row the drag copy is nearest: a row below the ghost's
+  own slot puts it in the gap after that row, one above in the gap
+  before it, and its own row in its own gap. So every gap, the list's
+  two ends included, is reached from one row. The rows sliding aside
+  never move the gap, so a still cursor holds one. A release saves
+  exactly the gap and depth the ghost shows.
+- **The list is the rows drawn.** A collapsed project counts once, and
+  the rows it hides and the dragged project's branch (§2) not at all.
+  Placement still reads the real tree (below).
 - **The root is the top of the tree**, above every project
   ([`../hierarchy-placement/`](../hierarchy-placement/) §3). Its children
   are the top-level projects, those with no parent, so no project can be
@@ -46,9 +53,9 @@ move (§6). What the sidebar adds:
   real tree. Tabbed right of a collapsed Top, a project goes ahead of
   Top's real first child; aligned with it, after Top's whole subtree,
   shown or not.
-- **Resting on the dragged project's own row means its own gap,** with
-  its depth range. The rows of its branch aren't drawn while it's
-  dragged (§2), and none of them is ever Top or Bottom
+- **Nearest the dragged project's own row, the ghost is in its own
+  gap,** with its depth range. The rows of its branch aren't drawn while
+  it's dragged (§2), and none of them is ever Top or Bottom
   ([`../hierarchy-placement/`](../hierarchy-placement/) §4), as on the
   board ([`../board-drag-interaction/`](../board-drag-interaction/)
   §7.2).
@@ -56,24 +63,27 @@ move (§6). What the sidebar adds:
   every project**, since that subtree is never a candidate: for example, a
   sidebar with one top-level project. It offers one state, at the top
   level ([`../hierarchy-placement/`](../hierarchy-placement/) §2). No line
-  is drawn, since the one state is where the project already is, and a
-  release writes nothing.
+  is drawn, and the ghost stays where it is, since the one state is
+  where the project already is, and a release writes nothing.
 - **A tab state that would put the dragged project's subtree past the
-  project cap (§3) is still offered, its line is marked invalid, and a
-  release in it writes nothing**
+  project cap (§3) is still offered, its line and the drag copy are
+  marked invalid, and a release in it writes nothing**
   ([`../hierarchy-placement/`](../hierarchy-placement/) §6). Every other
-  tab state in the range is valid. How the invalid line looks isn't a
+  tab state in the range is valid. How the invalid state looks isn't a
   rule yet (Open questions).
 - **A project set back down in its own gap, at its own depth, writes
   nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
 - **The drag counts the tree as it was at pickup,** for the whole drag:
   the dragged project's subtree, whose rows are left out of placement,
-  and the subtree's height, which the cap reads. A move is shown when
-  its response arrives (§4), so the user's own last move can land
-  mid-drag. If it puts a project under the dragged one, that project's
-  row stays a place to drop, and a release that would make a cycle, or
-  put the grown subtree past the cap, is refused by the server (§3), and
-  nothing changes. It's the one place a cycle is reachable by a drag
+  and the subtree's height, which the cap reads. A drag's own move is
+  drawn at its release (§4), so the next pickup counts it. What can
+  still land mid-drag is a change no drag drew: the answer to an
+  earlier create (§5) or parent edit (§7), and a refused move going back
+  (§4), with the read of the tree that follows it. If one puts a project
+  under the dragged one, that project's row stays a place to drop, and a
+  release that would make a cycle, or put the grown subtree past the
+  cap, is refused by the server (§3), and nothing changes. It's the one
+  place a cycle is reachable by a drag
   ([`../hierarchy-placement/`](../hierarchy-placement/) §4). Why not
   stop the drag, as the board does at a reload: the window is one
   response's time, and a refused drop costs one retry.
@@ -93,14 +103,16 @@ placing a project beside a row always gives it that row's parent.
   plus 1 plus the dragged subtree's height is over it (§3), so Mid is
   the one depth of rows just past the cap, and the rows under them are
   Low. On a tree well within the cap, every row is Full, and only the
-  dragged project's own row is dimmed.
+  ghost is dimmed.
 - **The dragged project's descendants aren't drawn** (below). They'd be
   Low, and none of them is a place to drop (§1).
-- **The dragged project's own row** is drawn at a strength of its own.
+- **The dragged project's own row is its ghost** (§1), drawn at a
+  strength of its own, at the depth a release in its gap gives the
+  project.
 - **The sidebar's values:** Mid is drawn at `projectAnchorOpacity`,
-  about 0.6, Low at `projectNeitherOpacity`, about 0.3, and the dragged
-  row at `projectDraggedOpacity`, about 0.3. All three are tunable, and
-  apart from the board's.
+  about 0.6, Low at `projectNeitherOpacity`, about 0.3, and the ghost at
+  `projectDraggedOpacity`, about 0.3. All three are tunable, and apart
+  from the board's.
 
 Example, with the cap at 12: a chain of projects runs from `P1`, at the
 top level, down to `P12`, and `X`, with one child, is dragged. `P1` to
@@ -110,11 +122,21 @@ drawn.
 The tiers are settled. Their final look isn't a rule yet (Open
 questions).
 
+**A line rides the ghost's top edge,** between it and the row above, in
+every gap, the gap above the first row included. **Why the top:** the
+depth is decided against the project above, Top
+([`../hierarchy-placement/`](../hierarchy-placement/) §1). The line
+starts where the ghost's name starts, at the depth a release would give
+the project, so each depth of a gap starts at a column of its own. It
+keeps full strength, though the ghost it rides is dimmed. No line is
+drawn until the pointer first moves, nor in an empty hierarchy (§1).
+
 **A pickup takes the dragged project's whole subtree out of the rows,**
 as its branch ([`../hierarchy-placement/`](../hierarchy-placement/)
 §8). Projects have no Free links, so every descendant goes with it, and
-so does one under a collapsed project, which no row drew. The rows below
-move up by the branch's height, and the project's own row stays.
+so does one under a collapsed project, which no row drew. At the pickup,
+the rows below move up by the branch's height, and the project's own
+row stays, as the ghost.
 - **The drag copy's second line** counts the project's children and its
   whole subtree, the rows under a collapsed project included. In a
   narrow sidebar it's cut short.
@@ -180,10 +202,18 @@ pairs, then the written project's position, before it orders anything
 ([`../positioning/`](../positioning/) §8), so it shows the order the
 server saved without a reload.
 
+**A drag's move is drawn at its release,** at the project's new place
+with its branch, before the server answers, by the relation the move
+sends (§6). The answer puts the project where it's already drawn
+([`../positioning/`](../positioning/) §5), so a move that succeeds
+doesn't visibly change. Moves released one after another each settle
+by their own answer.
+
 **After a failed write, the sidebar shows the project where it was
 before the attempt.** A failed create shows no new project, and a failed
-move or edit leaves the project where it was. How the user learns that
-a write failed isn't a rule yet (Open questions).
+edit leaves the project where it was. A failed move goes back as soon
+as it fails, without waiting for the tree to be read again. How the user
+learns that a write failed isn't a rule yet (Open questions).
 
 ## 5. Creating a project
 
@@ -387,10 +417,19 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   dropdown back on the stored parent, and reaches the user only as a
   console error.
 - **The look of the drag's cues (§1, §2).** How an over-cap tab state
-  looks, the tiers' final look, and the drag copy's second line's. Today
-  the tiers are drawn as the board's are, by opacity alone, the line
-  past the cap is red, and the second line has the board's placeholder
-  look.
+  looks, the tiers' and the ghost's final look, and the drag copy's,
+  with its second line. Today:
+  - the tiers and the ghost are drawn as the board's are, by opacity
+    alone;
+  - past the cap the line is red, and the copy has the board's dashed
+    red outline;
+  - the copy is held to the sidebar's width, following the pointer only
+    up and down, and is laid out as the project's row at the ghost's
+    depth, its name over the ghost's. A level is about 14px of indent,
+    and of the pointer's sideways travel;
+  - the copy glides into the project's new place at a drop, and back to
+    its own slot, where the ghost returns, at an end that writes nothing;
+  - the second line has the board's placeholder look.
 - **A project that uses no workflow (§10).** It shows "Set up a
   Workflow", and has no board
   ([`../boards-columns-unsorted/`](../boards-columns-unsorted/), Open

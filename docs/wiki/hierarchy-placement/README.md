@@ -21,18 +21,28 @@ sidebar both place by them, draw their entries by §7's tiers and carry
 a branch by §8, and §6's depth cap holds for every write that gives an
 item or a project a parent, whatever the surface. An *entry* is one
 row of the hierarchy: an item, shown as a Stub in a Card's section, or
-a project in the sidebar. Each feature's own page says how it shows the
-gap, what its root is, and any rule of its own, and marks as Planned any
-rule here that it's still to be built to.
+a project in the sidebar. Each feature's own page says how its ghost
+takes a slot, what its root is, and any rule of its own, and marks as
+Planned any rule here that it's still to be built to.
 
 ---
 
 ## 1. Gap and depth
 
 With full context of the hierarchy, a release resolves to a **gap**
-between two rendered entries, chosen by vertical position: **Top**, the
-entry the dragged one will sit directly under, and **Bottom**, the entry
-it will sit directly above. How a surface shows the gap is its own.
+between two rendered entries: **Top**, the entry the dragged one will
+sit directly under, and **Bottom**, the entry it will sit directly
+above.
+
+**The gap is where the dragged entry's ghost is.** The ghost is a row
+standing for the entry, drawn in the list at the gap, at the depth a
+release there gives it, while the rows slide aside to make room in the
+list's standard shuffle. Top is the row above the ghost, and Bottom the
+row below. The gap is read from list order, never from which half of a
+row the carried copy is over. **Why:** a half reading can land a
+release a slot away from the ghost. Each surface's page says how its
+ghost takes a slot, and what else it draws at the gap.
+
 **Horizontal offset** then picks a depth from a range of discrete tab
 states, depth increasing as you tab **right** (deeper):
 
