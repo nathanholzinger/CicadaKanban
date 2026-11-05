@@ -3,7 +3,7 @@ import { db } from '../db/index.js';
 import { items, workphases, activityLog, projects, itemTypes, agents } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { existsById, getByIdOrNotFound, referenceShapeError } from '../lib/getOrNotFound.js';
 import { hierarchyDepth, parentRefusal, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, withReindexDisclosure, type ReindexedPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
@@ -99,6 +99,14 @@ router.post('/', (req, res) => {
     return;
   }
 
+  // A reference field is a string, or null or left out where it may be, before any row is looked up
+  // (wiki row-references §1).
+  const parentShapeError = referenceShapeError('parentId', parentId, { nullable: true, optional: true });
+  if (parentShapeError) {
+    res.status(400).json({ error: parentShapeError });
+    return;
+  }
+
   // The parent is a legal one for a new item, which has height 0 (wiki item-attachment §7).
   // A non-existent parentId would otherwise be stored silently, leaving an attached
   // child invisible on every board (no parent card to nest under). An empty string names
@@ -110,6 +118,11 @@ router.post('/', (req, res) => {
   }
 
   const parent = parentId ? (getParent(parentId) ?? null) : null;
+  const projectShapeError = referenceShapeError('projectId', projectId, { nullable: true, optional: true });
+  if (projectShapeError) {
+    res.status(400).json({ error: projectShapeError });
+    return;
+  }
   // A create that leaves its project out, or names null, takes its parent's. An empty string
   // names no project, so it is refused below, not read as left out (wiki row-references §1).
   const resolvedProjectId = projectId ?? parent?.projectId;
@@ -133,6 +146,16 @@ router.post('/', (req, res) => {
 
   // A type or an agent that names no row is the same opaque FK-violation 500, and an empty
   // string names no row either.
+  for (const [field, value] of [
+    ['type', type],
+    ['agentId', agentId],
+  ] as const) {
+    const shapeError = referenceShapeError(field, value, { nullable: true, optional: true });
+    if (shapeError) {
+      res.status(400).json({ error: shapeError });
+      return;
+    }
+  }
   if (type !== undefined && type !== null && !existsById(itemTypes, type)) {
     res.status(400).json({ error: 'type does not reference an existing item type' });
     return;
@@ -253,6 +276,11 @@ router.put('/:id', (req, res) => {
 
   // An agent that names no row would otherwise surface as an opaque FK-violation 500. An empty
   // string names no row either, as it doesn't for a parent, an anchor or a workphase.
+  const agentShapeError = referenceShapeError('agentId', agentId, { nullable: true, optional: true });
+  if (agentShapeError) {
+    res.status(400).json({ error: agentShapeError });
+    return;
+  }
   if (agentId !== undefined && agentId !== null && !existsById(agents, agentId)) {
     res.status(400).json({ error: 'agentId does not reference an existing agent' });
     return;

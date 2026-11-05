@@ -155,6 +155,35 @@ describe('POST /api/items', () => {
     expect(created.body).toMatchObject({ type: type.id, agentId: agent.id });
   });
 
+  // A reference that isn't a string can't name a row. better-sqlite3 throws on binding most of them (a
+  // 500), and flattens an array to the one id it holds, so that creates the item (wiki row-references §1).
+  it.each(['parentId', 'projectId', 'type', 'agentId', 'workphaseId'])(
+    'returns 400, and creates nothing, when %s is not a string',
+    async field => {
+      const project = await createProject();
+      const workflow = await createWorkflow(project.id);
+      const phase = await createWorkphase(workflow.id);
+      const parent = await createItem({ projectId: project.id, workphaseId: phase.id, title: 'P' });
+      const named = {
+        parentId: parent.id,
+        projectId: project.id,
+        type: (await createItemType()).id,
+        agentId: (await createAgent()).id,
+        workphaseId: phase.id,
+      };
+      const before = countItems();
+      // The array holds an id the field would name, which is the value that would pass the lookup.
+      for (const value of [true, false, 7, 0, {}, [], [named[field as keyof typeof named]]]) {
+        const res = await request(app)
+          .post('/api/items')
+          .send({ title: 'T', projectId: project.id, [field]: value });
+        expect(res.status, JSON.stringify(value)).toBe(400);
+        expect(res.body.error, JSON.stringify(value)).toContain(field);
+      }
+      expect(countItems()).toBe(before);
+    },
+  );
+
   it('ATT-10.5: a create whose projectId is an empty string is refused, with a parent or without, and nothing is stored', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'P' });
@@ -387,6 +416,22 @@ describe('PUT /api/items/:id', () => {
     const cleared = await request(app).put(`/api/items/${item.id}`).send({ assigneeType: null, agentId: null });
     expect(cleared.status).toBe(200);
     expect(cleared.body.agentId).toBeNull();
+  });
+
+  // As a create's agentId: a value that isn't a string can't name an agent, and an array holding an agent's
+  // id would otherwise pass the lookup (wiki row-references §1).
+  it('returns 400, and changes nothing, when agentId is not a string', async () => {
+    const project = await createProject();
+    const agent = await createAgent();
+    const item = await createItem({ projectId: project.id, title: 'Keep Me' });
+    const before = (await request(app).get(`/api/items/${item.id}`)).body;
+
+    for (const value of [true, false, 7, 0, {}, [], [agent.id]]) {
+      const res = await request(app).put(`/api/items/${item.id}`).send({ title: 'Changed', agentId: value });
+      expect(res.status, JSON.stringify(value)).toBe(400);
+      expect(res.body.error, JSON.stringify(value)).toContain('agentId');
+      expect((await request(app).get(`/api/items/${item.id}`)).body).toEqual(before);
+    }
   });
 });
 

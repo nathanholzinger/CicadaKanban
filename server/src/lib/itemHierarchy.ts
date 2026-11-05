@@ -230,6 +230,8 @@ export function resolveCreate(
   req: CreateRequest,
 ): { attached: boolean; workphaseId: string | null } | { error: string } {
   const { parent, projectId, workphaseId: named } = req;
+  const shapeError = referenceShapeError('workphaseId', named, { nullable: true, optional: true });
+  if (shapeError) return { error: shapeError };
   if (named !== undefined && named !== null && !existsById(workphases, named)) {
     return { error: MISSING_WORKPHASE_ERROR };
   }

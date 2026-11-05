@@ -261,6 +261,8 @@ Filled in by the Coder.
 | `useProjectCollection.ts::writeInTurn` | D1: a project's write is sent when its earlier one is answered, whether that succeeded or failed. A write with none out is sent at once, so a release still sends in the same tick. Kept in `writeTails`, a map of each project's last write still out |
 | `itemListOps.ts::getUnknownStatusItemsFrom` | D4: Unsorted's Unknown-status list, through `selectBoardItems`: a workphase that's none or not the workflow's, with the project filter, no Stubs, and the pending placements. `useItemManagement.ts::getUnknownStatusItems` exposes it, closing over the filter and placements |
 | `itemListOps.ts::hasUnknownStatusItem` | D4's flag: any live item, Attached and other projects' included, whose workphase is none or not the workflow's. `BoardView.tsx` ORs it with `board.unsorted.uncovered.length > 0` for `needsAttention` |
+| `routes/items.ts` `POST /`, `PUT /:id` | D5: `parentId`, `projectId`, `type` and `agentId` each take `referenceShapeError` (nullable, optional) before their lookup, in the order the lookups already ran. `PUT`'s `agentId` takes it too, the ride-along |
+| `itemHierarchy.ts::resolveCreate` | D5: `workphaseId` takes `referenceShapeError` before its lookup, as `validateHierarchyRequest` does |
 | `useProjectCollection.ts::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
 | `useProjectCollection.ts::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
 
@@ -293,6 +295,12 @@ Filled in by the Coder.
   - **The bucket,** in `UnsortedBucket.test.tsx`: ATT-9.3's test keeps its assertion, now with the real selector supplying the list, since the bucket no longer sees the Stub. Two more: the title as it is now, and the bucket closing when its only item is deleted or given a status.
   - **A surface spec,** `tests/ui/unsorted-unknown-status.spec.ts`, untagged: a rename, a delete and a status, each at once with no reload. **The Sheet has no status field,** so the status goes through its Parent control, an attach under a parent in a column, which the item takes the workphase of and nests in. All three fail against the old bucket and pass with the fix.
 - **The gate:** `npm run check` passes (438 server, 849 client, 245 script tests). `npm run test:e2e`: 218 passed, 22 skipped.
+
+**Amendment 4: Batch 4 built (Coder, 2026-11-05).** #4, by D5, and the ride-along.
+- **The ride-along was needed.** `PUT /items/:id`'s `agentId` probed as a 500 for `true`, `false`, `{}` and `[]`, and an array holding a real agent's id got a 200 (it passed the lookup). `7` and `0` were already a 400, as a lookup that finds no row. So `PUT` takes the same check as the create.
+- **Where each check sits:** just before its own lookup, so a request with two bad fields still meets the first refusal it met before. Every message and every omitted, null or inherited meaning is as it was. The new message is `<field> must be a string or null`.
+- **Tests,** in `server/tests/routes/items.test.ts`, untagged (Open questions, for the Planner): one refusal test for each of the create's five fields, `parentId`, `projectId`, `type`, `agentId` and `workphaseId`, with `workflows.test.ts`'s values and an array holding a real id. Each asserts the 400, that the message names the field, and that nothing was created. And one for `PUT`'s `agentId`, which also asserts the item is unchanged. The five create tests failed against the old routes. The `PUT` test was not run against them: the probe above is its failing evidence.
+- **The gate:** `npm run check` passes (444 server, 849 client, 245 script tests). `npm run test:e2e`: 218 passed, 22 skipped.
 
 ## Open questions
 
