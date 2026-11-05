@@ -492,10 +492,11 @@ describe('a read of the whole tree after a write: applied only when no write has
   });
 });
 
-describe('TREE-1.14, TREE-1.15: a move refused after an earlier edit landed leaves that edit', () => {
+describe('TREE-1.14: a move refused after an earlier edit landed leaves that edit', () => {
   it('returns X to its top-level place with Y still its child, each at its saved position', async () => {
     // X, Y and B are top-level. Y's edit under X was answered after X was picked up, and X is then released as
-    // Y's child, which the server refuses: Y is X's descendant now.
+    // Y's child, which the server refuses as a cycle: Y is X's descendant now. It is not TREE-1.15's refusal,
+    // which is a move that the grown height takes past the cap; that needs the real drag.
     vi.mocked(fetchProjects).mockResolvedValue(treeOf(['X', null, 1], ['Y', null, 2], ['B', null, 3]));
     localStorage.setItem('activeProjectId', 'Y');
     vi.spyOn(console, 'error').mockImplementation(() => {});

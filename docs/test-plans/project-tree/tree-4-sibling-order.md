@@ -11,11 +11,11 @@
 | TREE-4.5 | A move that reindexes discloses every renumbered sibling, the moved project included | P1 | Automated |
 | TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Automated |
 | TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Open |
-| TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Open |
+| TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Automated |
 | TREE-4.9 | A release draws the move and its branch at once, and success keeps that placement | P1 | Open |
-| TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Open |
+| TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Automated |
 | TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
-| TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Open |
+| TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Automated |
 
 ---
 
@@ -84,7 +84,7 @@
 
 ## TREE-4.8 — After a failed write, the sidebar shows the project where it was before the attempt
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §4
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §4
 
 *Given* the sidebar showing top-level projects `A`, `B` and `X`, in that order, where the server refuses the write, each of these from that starting state:
 
@@ -94,7 +94,7 @@
 
 How the user learns that the write failed isn't asserted. That a collapsed project opened by the drop stays open is [TREE-2.3](tree-2-what-the-drag-shows.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`, `client/src/App.pendingMove.test.tsx`
 
 ## TREE-4.9 — A release draws the move and its branch at once, and success keeps that placement
 
@@ -106,13 +106,13 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.10 — Moves released one after another settle independently by their own answers
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4
 
 *Given* expanded top-level `P` with child `A`, expanded top-level `Q` with child `B`, and top-level leaves `X` and `Y`, *when* `X` is released under `P`, after `A`, then `Y` is released under `Q`, after `B`, before either answer arrives, *then* `P`'s children read `A, X` and `Q`'s read `B, Y` immediately. *When* either move succeeds first, *then* the other move stays drawn at its released place while its own answer is outstanding. Once both succeed, the same two child lists remain, regardless of answer order.
 
 *Given* the same two releases, *when* `X`'s move fails while `Y`'s is unanswered, *then* `X` returns top-level at its place before the attempt, while `Y` stays after `B` under `Q`. *When* `Y` then succeeds, *then* it stays there. If `Y` succeeds before `X` fails, its saved placement likewise survives `X`'s rollback and the following read. An answer settles its own move, without dropping another move still awaiting its answer or undoing one that succeeded.
 
-**Automation test:** —
+**Automation test:** `client/src/App.pendingMove.test.tsx`
 
 ## TREE-4.11 — The next pickup counts earlier drag moves before their answers arrive
 
@@ -124,8 +124,8 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.12 — A drawn move changes order by slot without computing any position
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki positioning §5, wiki project-tree §4, wiki project-tree §6
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki positioning §5, wiki project-tree §4, wiki project-tree §6
 
 *Given* expanded parent `P` with children `A` at position `10` and `B` at `20`, and top-level `X` at `30` with child `X1` at `7`, *when* `X` is released under `P`, after `A`, while the answer is outstanding, *then* the sidebar draws `A, X, B` as `P`'s children, with `X1` still under `X`, by the chosen slot. The client's position values stay `A = 10`, `B = 20`, `X = 30` and `X1 = 7`; no tree used for display substitutes ranks or any other client-computed positions. The move sends the parent and named-neighbor relation, with no position. *When* the server answers with `X.position = 15` and no reindex, *then* `X` takes `15`, the other three values stay unchanged, and the drawn tree and order do not move.
 
-**Automation test:** —
+**Automation test:** `client/src/App.pendingMove.test.tsx`, `client/src/lib/hierarchy.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts`

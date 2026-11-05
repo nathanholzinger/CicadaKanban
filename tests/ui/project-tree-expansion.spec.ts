@@ -25,9 +25,14 @@ const open = (sidebar: ProjectSidebarPage, name: string) =>
 const collapsed = (sidebar: ProjectSidebarPage, name: string) =>
   expect(sidebar.row(name).getByTitle('Expand')).toBeVisible();
 
-// The rows named `names` that the sidebar shows, in order, and no other of them.
+// The rows named `names` that the sidebar shows, in order, and no other of them. It looks only at the names
+// it is given, so a row left out of the list is not asserted hidden: `hidden` says so.
 const shows = (sidebar: ProjectSidebarPage, ...names: string[]) =>
   expect(sidebar.projectNames(...names)).toHaveText(names);
+
+// No row for any of `names` is in the sidebar.
+const hidden = (sidebar: ProjectSidebarPage, ...names: string[]) =>
+  Promise.all(names.map(name => expect(sidebar.projectName(name)).toHaveCount(0)));
 
 // The sidebar's Add subproject dialog, for the project's row: its control shows on hover.
 async function createFromSidebar(page: Page, sidebar: ProjectSidebarPage, parent: string, name: string) {
@@ -109,6 +114,7 @@ test('TREE-11.2: a chevron collapse hides the subtree until opening or reload', 
   // P collapsed: it stays, C and G are hidden, Q1 stays. The links and positions are the saved ones.
   await projectSidebar.toggle('P');
   await shows(projectSidebar, 'P', 'Q', 'Q1');
+  await hidden(projectSidebar, 'C', 'G');
   await collapsed(projectSidebar, 'P');
   expect(await saved()).toEqual(before);
 
@@ -121,6 +127,7 @@ test('TREE-11.2: a chevron collapse hides the subtree until opening or reload', 
   await projectSidebar.toggle('P');
   await projectSidebar.toggle('Q');
   await shows(projectSidebar, 'P', 'Q');
+  await hidden(projectSidebar, 'C', 'G', 'Q1');
   await page.reload();
   await shows(projectSidebar, ...everyRow);
   await open(projectSidebar, 'P');
@@ -150,6 +157,7 @@ test('TREE-11.3: a successful create opens its collapsed parent from either crea
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P', 'Q');
+  await hidden(projectSidebar, 'C', 'N', 'Q1');
   creates.release();
   await shows(projectSidebar, 'P', 'C', 'N', 'Q');
   await open(projectSidebar, 'P');
@@ -163,6 +171,7 @@ test('TREE-11.3: a successful create opens its collapsed parent from either crea
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P', 'Q');
+  await hidden(projectSidebar, 'C', 'N', 'N2', 'Q1');
   creates.release();
   await shows(projectSidebar, 'P', 'C', 'N', 'N2', 'Q');
   await open(projectSidebar, 'P');
@@ -185,10 +194,12 @@ test('TREE-11.4: a failed create leaves its parent collapsed', async ({ page, re
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C', 'N');
   creates.release();
   await expect(page.getByText(CREATE_FAILED)).toBeVisible();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C', 'N');
   await page.getByRole('button', { name: 'Cancel' }).click();
 
   // And through the project page's subprojects list.
@@ -196,10 +207,12 @@ test('TREE-11.4: a failed create leaves its parent collapsed', async ({ page, re
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C', 'N');
   creates.release();
   await expect(page.getByText(CREATE_FAILED)).toBeVisible();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C', 'N');
 
   // Neither request reached the server: no N exists, and C is still the only child.
   const names = (await (await request.get(`${API}/projects`)).json()).map((p: { name: string }) => p.name);
@@ -230,6 +243,7 @@ test('TREE-11.5: a successful parent change opens the collapsed new parent', asy
   // P stays collapsed while the edit is unanswered.
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'X', 'P', 'Q');
+  await hidden(projectSidebar, 'C', 'Q1');
   edits.release();
 
   // It opens on the success, with C then X under it. Q, which the edit is not under, stays collapsed.
@@ -256,12 +270,14 @@ test('TREE-11.6: a failed parent change leaves the new parent collapsed', async 
   await edits.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'X', 'P');
+  await hidden(projectSidebar, 'C');
   edits.release();
 
   // P stays collapsed after the failure, X is top-level where it was, and no row for it appears under P.
   await expect(parentSelect(page)).toBeEnabled();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'X', 'P');
+  await hidden(projectSidebar, 'C');
   expect(await fetchProject(request, ids.X)).toEqual(before);
   await projectSidebar.toggle('P');
   await shows(projectSidebar, 'X', 'P', 'C');
@@ -290,6 +306,7 @@ test('TREE-11.7: a rename or an edit keeping the same parent leaves that parent 
   await expect(heading('X renamed')).toBeVisible();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'X', 'X renamed');
 
   // An edit that names P, the parent X already has.
   const edit = page.waitForResponse(
@@ -299,6 +316,7 @@ test('TREE-11.7: a rename or an edit keeping the same parent leaves that parent 
   expect((await edit).status()).toBe(200);
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
+  await hidden(projectSidebar, 'X renamed');
   expect((await fetchProject(request, ids.X)).parentId).toBe(ids.P);
 
   // A rename of P itself.
@@ -309,6 +327,7 @@ test('TREE-11.7: a rename or an edit keeping the same parent leaves that parent 
   await expect(heading('P renamed')).toBeVisible();
   await collapsed(projectSidebar, 'P renamed');
   await shows(projectSidebar, 'P renamed');
+  await hidden(projectSidebar, 'X renamed');
 });
 
 test('TREE-11.8: a top-level create or parent change opens no unrelated project', async ({
@@ -330,7 +349,8 @@ test('TREE-11.8: a top-level create or parent change opens no unrelated project'
   await projectSidebar.toggle('Q');
   await shows(projectSidebar, 'P', 'Q');
 
-  // A new top-level project starts open, with no parent to open: P and Q stay collapsed.
+  // A new top-level project has no parent to open: P and Q stay collapsed, and N is shown. That a leaf starts
+  // open isn't visible, so TREE-11.1 is where a new project's opening is observed.
   await projectSidebar.newProjectButton.click();
   await page.getByPlaceholder('Project name').fill('N');
   await page.getByRole('button', { name: 'Create project' }).click();

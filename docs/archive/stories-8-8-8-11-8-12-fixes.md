@@ -366,6 +366,12 @@ Filled in by the Coder.
 - **Not done,** and for the Reconciler: TREE-2.9's rendered line plus shortened list moving as one at the surface, and TREE-2.4's opacity-only styling, which are Story 10's.
 - **The gate:** `npm run check` passes (444 server, 876 client, 258 script tests). `npm run test:e2e`: 226 passed, 22 skipped.
 
+**Amendment 9: Planner follow-up to the confirming reconciliation (2026-11-05).** Applied the case-text part of Test Quality Concern 3 after the Coder's follow-up for concerns 2, 3 and 8.
+- **TREE-11.8** now covers only the rule in its title: a top-level create or parent change opens no unrelated project. Removed the duplicate requirement that new leaf `N` starts open, and pointed to TREE-11.1 for new-project expansion. The rule remains in the catalog under TREE-11.1 and in wiki project-tree §11; no wiki change or new ID is needed.
+- **The Coder reports** direct hidden-row assertions for TREE-11.2, TREE-11.4, TREE-11.6 and TREE-11.7, and for the held intervals of TREE-11.3 and TREE-11.5. The cycle-refusal App test now carries only TREE-1.14; TREE-1.15's cap-refusal coverage remains Story 10's. These are handoff facts, not a Planner review of test code.
+- **Verification reported by the Coder:** `npm run check` exits 0 and the expansion spec passes 160 of 160 with `--repeat-each=20`; the full E2E suite was not rerun. Nothing in that handoff was committed.
+- **For the next narrow confirming run:** assess the revised TREE-11.8 and the new hidden-row assertions against the cases, and confirm the cycle-test stamp correction. The Planner leaves all statuses and Automation fields unchanged; TREE-11.2, TREE-11.4, TREE-11.6, TREE-11.7 and TREE-11.8 remain Open pending that coverage judgment. The existing confirming report records the earlier source snapshot and is not rewritten by this pass.
+
 ## Open questions
 
 - **For Nathan, before Batch 7:** the reconciliation's Proposed Internal Mappings. Approval lets a named internal test count for the part of a case it asserts. It closes nothing that's still missing a clause.
@@ -390,5 +396,5 @@ Written by the Coder, before close.
 - **Planned passages now built:** none.
 - **Passages superseded:** none.
 - **Implementation passages to place:**
-- **Test-plan cases affected:**
+- **Test-plan cases affected:** TREE-11.8's duplicate new-project expansion clause is removed by Amendment 9; TREE-11.1 retains that rule. Statuses and Automation fields await the next confirming run.
 - **Wiki sections added, changed, moved or removed** (PO, at close):
