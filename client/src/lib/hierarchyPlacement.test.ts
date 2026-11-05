@@ -51,7 +51,7 @@ describe('flattenHierarchy', () => {
 
   // The dragged item's whole subtree is removed from the Top/Bottom
   // candidates before any gap is computed.
-  it('DRAG-4.8: excludes the given ids, and never walks into their children', () => {
+  it('DRAG-4.8: leaves the excluded entries, and their descendants, out of the rows', () => {
     const rows = flattenHierarchy('P', childrenOf, new Set(['S1']));
     expect(rows.map(r => r.id)).toEqual(['S2']);
   });

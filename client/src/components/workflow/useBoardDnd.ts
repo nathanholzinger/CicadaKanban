@@ -640,8 +640,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
 
-    // What the carried item takes with it, a Card's children as well as a Stub's branch: read
-    // from the board's own placement-aware children, as the lists draw them.
+    // What the carried item takes with it, a Card's children as well as a Stub's branch: read from
+    // the board's own placement-aware children, as the lists draw them (wiki board-drag-interaction §7.2).
     const branch = carriedBranchOf(activeId, descendantsChildrenOf(deps.getAttachedChildren));
 
     // `renderedIsStub` reads the item as drawn (above) — never dnd-kit's own

@@ -10,6 +10,7 @@ import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from 
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { makeItem } from '../../test/itemFixture';
+import { columnData, itemRowData } from './dragCollision';
 import { DEFAULT_DRAG_TUNING } from './dragTuning';
 import { NO_PLACEMENTS, getAttachedChildrenFrom, type Placement, type Placements } from './itemListOps';
 import { useBoardDnd, type BoardDndDeps } from './useBoardDnd';
@@ -22,7 +23,7 @@ const boardWithCap = (itemDepthCap: number): BoardWithDetails =>
 const board = boardWithCap(4);
 
 const columnDrop = {
-  active: { id: 'a', data: { current: { type: 'column' } } },
+  active: { id: 'a', data: { current: columnData() } },
   over: { id: 'b' },
 } as unknown as DragEndEvent;
 const pickupOf = (id: string): DragStartEvent =>
@@ -252,9 +253,7 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
       rect: { top: 100, height: 24 },
       data: {
         current: {
-          type: 'item',
-          role: 'stub',
-          sectionCardId: 'p',
+          ...itemRowData('stub', undefined, 'p'),
           sortable: { containerId: 'section', index: rowsOf.indexOf(id), items: rowsOf },
         },
       },

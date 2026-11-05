@@ -515,7 +515,7 @@ describe('carriedBranchOf, over the board’s attached children', () => {
 
     expect(branch.ids.has('F')).toBe(false);
     expect(branch.ids.has('FS')).toBe(false);
-    // The two attached children and the three rows under them, nothing of the Free child's.
+    // The two attached children and the two rows under them, nothing of the Free child's.
     expect([branch.children, branch.descendants]).toEqual([2, 4]);
   });
 

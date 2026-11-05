@@ -351,7 +351,8 @@ export type SectionEntry = { kind: 'item'; row: HierarchyRow } | { kind: 'overfl
 // whose children are all Free has none, as `rows` holds attached children only.
 // `branchIds` (`lib/hierarchyPlacement.ts::carriedBranchOf`) are rows the carried item takes with
 // it: none is drawn, and none is counted, so the overflow row of a carried row, or of the carried
-// item whose children all travel, goes with them. The rows that stay keep their places and counts.
+// item whose children all travel, goes with them. The rows that stay keep their places and counts
+// (wiki hierarchy-placement §8).
 export function sectionEntries(
   rows: readonly HierarchyRow[],
   sectionLevels: number,

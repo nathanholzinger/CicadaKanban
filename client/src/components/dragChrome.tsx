@@ -139,8 +139,7 @@ interface ItemRowOptions {
 // (`itemRowData` — every row registers `type: 'item'`) and its transform, the
 // drop-target attributes and overlay, the pending marker, and the dimming
 // while this row is the one being dragged. The row draws `DropSideIndicator`
-// for `dropSide` itself. The one export that is neither a component nor a
-// constant: it belongs next to the indicator.
+// for `dropSide` itself. A hook, not a component: it belongs next to the indicator.
 // eslint-disable-next-line react-refresh/only-export-components -- Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
   const { parentId, sectionCardId, isOverlay = false, overlayForm = 'short-card' } = options;
@@ -195,7 +194,7 @@ export function DropSideIndicator({ side }: { side: DropSide | null }) {
 }
 
 // The carried copy's second line: "+ 2 children, 5 total descendants". When every descendant is a
-// child it names the children alone.
+// child it names the children alone (wiki hierarchy-placement §8).
 // eslint-disable-next-line react-refresh/only-export-components -- the wording lives beside the line it goes on; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function carriedBranchLabel({ children, descendants }: Pick<CarriedBranch, 'children' | 'descendants'>): string {
   const kids = `+ ${children} ${children === 1 ? 'child' : 'children'}`;
@@ -204,8 +203,8 @@ export function carriedBranchLabel({ children, descendants }: Pick<CarriedBranch
 
 // The carried copy's second line, its branch's counts: one row tall, hung under the box it is
 // positioned against, so what dnd-kit measures of the copy stays one box. It covers what is below the
-// copy and takes no pointer. Its look is a placeholder, the overflow row's text over a fill,
-// not yet tuned. The board's copy draws it in either form, the sidebar's in its one.
+// copy and takes no pointer (wiki hierarchy-placement §8). Its look is a placeholder, the overflow
+// row's text over a fill, not yet tuned. The board's copy draws it in either form, the sidebar's in its one.
 export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'children' | 'descendants'> }) {
   return (
     <div

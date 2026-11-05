@@ -65,10 +65,11 @@ export interface PendingMove {
 // `moves` are sent and not yet answered. Each, in the order sent, takes its node out of the
 // children it sits in and puts it back in its new parent's, by its slot: after `prevId`, before
 // `nextId`, or last when it names neither or the one it names isn't a child there. A parent no node
-// has counts as the top level, as above. This is the rule the board's `applyPlacements` places an
-// item by, and it never reads or writes a `position`. `nodes` already carry the move's parent
-// (`withMoveApplied`), which the readers of `parentId` need; the order is what only this index
-// holds. A move for a node that isn't in `nodes` (deleted since) is skipped.
+// has counts as the top level, as above. Beside a sibling that is there, this is the slot the board's
+// `applyPlacements` gives an item, and, as there, no `position` is changed. They part when the sibling
+// isn't there: the board falls back to the item's sorted place, and this puts it last. `nodes` already
+// carry the move's parent (`withMoveApplied`), which the readers of `parentId` need; the order is what
+// only this index holds. A move for a node that isn't in `nodes` (deleted since) is skipped.
 export function sortedChildrenByParent<T extends TreeNode & Positioned>(
   nodes: readonly T[],
   moves: readonly PendingMove[] = [],

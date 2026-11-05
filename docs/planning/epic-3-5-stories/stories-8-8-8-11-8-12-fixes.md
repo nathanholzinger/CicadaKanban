@@ -313,6 +313,18 @@ Filled in by the Coder.
 - **Checked on real files:** the removal-site path read four of this repo's `.tsx` files, whole, without error, and a file against itself gave no site.
 - **The gate:** `npm run check` passes (444 server, 849 client, 258 script tests). No E2E: tooling only.
 
+**Amendment 6: Batch 6 built (Coder, 2026-11-05).** #6–#11, comments and test setup only. No behavior changed, and no expectation of a test changed.
+- **#6:** `lib/hierarchy.ts`'s comment on `sortedChildrenByParent` now says what it shares with the board's `applyPlacements`: the slot beside a sibling that is there, and no `position` changed. It names where they part: the board falls back to the item's sorted place when the sibling isn't there, and the sidebar's puts it last. I took out "never reads", which the sort does.
+- **#7:** `hierarchyPlacement.test.ts`'s title is now "DRAG-4.8: leaves the excluded entries, and their descendants, out of the rows", keeping its prefix.
+- **#8:** `dragChrome.tsx`'s comment on `useItemRow` says it is a hook that belongs next to the indicator, and no longer calls it the one export that isn't a component or a constant.
+- **#9:** `itemListOps.test.ts`: "the two rows under them", not three. The comment sat at line 518 by now.
+- **#10:** `useBoardDnd.test.ts`'s column drop uses `columnData()` and its Stub `over` uses `itemRowData('stub', undefined, 'p')`, keeping the sortable metadata beside it. The empty active data the lagging-registration tests use is as it was. All 143 tests of the three touched test files pass unchanged.
+- **#11:** one pointer for each rule, at the site that enforces it, after reading each section:
+  - the branch filter in `itemListOps.ts::sectionEntries`: wiki hierarchy-placement §8;
+  - the count wording in `dragChrome.tsx::carriedBranchLabel`, and the line's place outside the box in `CarriedBranchLine`: wiki hierarchy-placement §8, each;
+  - the pickup's read of the branch from the board's own children in `useBoardDnd.ts`: wiki board-drag-interaction §7.2, which states it. §5a only says the copy shows the count, which is the line's rule above.
+- **The gate:** `npm run check` passes (444 server, 849 client, 258 script tests). No E2E: comments and test setup only.
+
 ## Open questions
 
 - **For Nathan, before Batch 7:** the reconciliation's Proposed Internal Mappings. Approval lets a named internal test count for the part of a case it asserts. It closes nothing that's still missing a clause.
