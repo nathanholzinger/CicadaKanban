@@ -4,22 +4,14 @@
 // (`parentPutUnder`).
 // Placement itself is the shared `lib/hierarchyPlacement.ts`, the same rule
 // as a board Card's Descendants layer. This module is the adapter around it:
-// the gap a hovered row names (`resolveGap`), the real tree's `childrenOf`
+// the gap the ghost's slot is (`resolveGap`), the real tree's `childrenOf`
 // (`fullChildrenOf`), and a resolved `{ parentId, anchor }` turned back into
 // `onReorderProject`'s prevId/nextId pair, or into no write at all for a
 // set-down in the project's own slot (`releaseOf`).
 
 import type { Project } from '../../types';
 import { sortedChildrenByParent } from '../../lib/hierarchy';
-import {
-  flattenHierarchyOf,
-  gapIndexFor,
-  ownSlotOf,
-  type AnchorRelation,
-  type DropSide,
-  type Projection,
-  type Row,
-} from '../../lib/hierarchyPlacement';
+import { flattenHierarchyOf, ownSlotOf, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
 
 export interface FlatItem {
   id: string;
@@ -94,31 +86,20 @@ export function fullChildrenOf(projects: readonly Project[]): (parentId: string 
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
 }
 
-// The gap is `over` row + side, one of n + 1 (`gapIndexFor`), so a project
-// can land after the last row at its own depth, not only before it.
-//
-// `overId` inside `exclude` (the active item's own row, the one row of the
-// dragged block that is drawn) resolves to the gap the whole dragged block
-// collapses to, rather than to no projection (wiki project-tree §1). A
-// subtree is always contiguous in DFS order, so every row inside it maps to
-// exactly one gap — the one immediately after the nearest eligible row that
-// precedes the block (equivalently, immediately before whichever eligible
-// row follows it; both give the same index once the block is removed from
-// `rows`). No eligible predecessor (the block sits at the very top) falls
-// back to gap 0.
-export function resolveGap(
-  flatItems: readonly FlatItem[],
-  rows: readonly Row[],
-  exclude: ReadonlySet<string>,
-  overId: string,
-  side: DropSide,
-): number {
-  if (!exclude.has(overId)) return gapIndexFor(rows, overId, side);
-  const overIdx = flatItems.findIndex(i => i.id === overId);
-  for (let i = overIdx - 1; i >= 0; i--) {
-    if (!exclude.has(flatItems[i].id)) return gapIndexFor(rows, flatItems[i].id, 'after');
-  }
-  return 0;
+// The gap is the ghost's slot (wiki board-drag-interaction §2), one of n + 1
+// among the rows without the dragged subtree. `drawn` is the list the sortable
+// context holds, in the order it was drawn at pickup, the dragged project's own
+// row included, and `overId` is the row dnd-kit says the copy is nearest. The
+// ghost takes that row's slot, the standard sortable shuffle: from a row below
+// the ghost's own slot it lands after it, from one above it lands before it,
+// and from its own row it stays. Either way the gap is that row's place in
+// `drawn`, because the ghost's own row is one of the rows `drawn` counts and
+// `rows` doesn't: no side of the row is read, and no row has two gaps. An id
+// `drawn` doesn't have names no row, and reads as below everything, the
+// conservative end.
+export function resolveGap(drawn: readonly { id: string }[], overId: string): number {
+  const at = drawn.findIndex(r => r.id === overId);
+  return at === -1 ? drawn.length - 1 : at;
 }
 
 // `onReorderProject`'s prevId/nextId pair, straight off the one relation

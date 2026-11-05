@@ -82,33 +82,57 @@ describe('flattenTree', () => {
   });
 });
 
-// Shared fixture: A(depth0) -> [B(depth1), C(depth1)], D(depth0)
-const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
-
+// The gap is the ghost's slot: the dragged project's own row is one of the rows drawn, and the gap is
+// the place of the row the copy is nearest, among the rows without the dragged one.
 describe('resolveGap', () => {
-  const rows = toRows(items);
+  // A, B, X, C, D, drawn in that order, with X the dragged project: its gap is among A, B, C and D.
+  const drawn = ['A', 'B', 'X', 'C', 'D'].map(id => ({ id }));
+  // The two rows a gap sits between, among the rows without X; null at either end of the list.
+  const between = (gap: number) => {
+    const rows = drawn.filter(r => r.id !== 'X').map(r => r.id);
+    return [rows[gap - 1] ?? null, rows[gap] ?? null];
+  };
 
-  it('an eligible over id resolves the ordinary before/after gap', () => {
-    expect(resolveGap(items, rows, new Set(), 'B', 'before')).toBe(1);
-    expect(resolveGap(items, rows, new Set(), 'C', 'after')).toBe(3);
+  it('puts the ghost after a row below its own slot, and before a row above it', () => {
+    expect(between(resolveGap(drawn, 'C'))).toEqual(['C', 'D']);
+    expect(between(resolveGap(drawn, 'D'))).toEqual(['D', null]);
+    expect(between(resolveGap(drawn, 'B'))).toEqual(['A', 'B']);
+    expect(between(resolveGap(drawn, 'A'))).toEqual([null, 'A']);
   });
 
-  // Dragging A, hovering over its own dimmed descendant B resolves to the
-  // single gap the whole A/B/C block collapsed to — never a dead zone.
-  it('an excluded (dimmed descendant) over id resolves to the gap the whole dragged block collapsed to', () => {
-    const excludeA = new Set(['A', 'B', 'C']);
-    const rowsWithoutA = toRows(items, excludeA);
-    expect(resolveGap(items, rowsWithoutA, excludeA, 'B', 'before')).toBe(0);
-    expect(resolveGap(items, rowsWithoutA, excludeA, 'C', 'after')).toBe(0);
+  it('leaves the ghost in its own gap when the copy is nearest its own row', () => {
+    expect(between(resolveGap(drawn, 'X'))).toEqual(['B', 'C']);
   });
 
-  it('falls back to gap 0 when the dragged block has no eligible predecessor', () => {
-    // Drag D, which is first and has a descendant — no row precedes it, so
-    // nothing eligible comes before the block.
-    const soloItems = [flat('D', 0, null), flat('D1', 1, 'D')];
-    const excludeD = new Set(['D', 'D1']);
-    const rowsWithoutD = toRows(soloItems, excludeD);
-    expect(resolveGap(soloItems, rowsWithoutD, excludeD, 'D1', 'before')).toBe(0);
+  it('gives every gap exactly one row to be nearest, the list’s two ends included', () => {
+    const gaps = drawn.map(r => resolveGap(drawn, r.id));
+    expect(gaps).toEqual([0, 1, 2, 3, 4]);
+    expect(between(0)).toEqual([null, 'A']);
+    expect(between(4)).toEqual(['D', null]);
+  });
+
+  it('reads the order it is given, so the same row is the same gap however the rows have slid', () => {
+    expect(resolveGap(drawn, 'C')).toBe(3);
+    expect(resolveGap(drawn, 'B')).toBe(1);
+    expect(resolveGap(drawn, 'C')).toBe(3);
+  });
+
+  it('counts a collapsed project once, and the children it hides not at all', () => {
+    // T is collapsed, so T1 and T2 are not drawn: U is the row after T, and the gap above it is T's.
+    const tree = [flat('T', 0, null, { hasChildren: true, collapsed: true }), flat('U', 0, null), flat('X', 0, null)];
+    expect(resolveGap(tree, 'U')).toBe(1);
+    expect(resolveGap(tree, 'X')).toBe(2);
+  });
+
+  it('counts the dragged project’s branch not at all, since it is not drawn', () => {
+    // X carries X1, which is not a row: the rows drawn are A, X and B.
+    const tree = [flat('A', 0, null), flat('X', 0, null), flat('B', 0, null)];
+    expect(resolveGap(tree, 'B')).toBe(2);
+    expect(resolveGap(tree, 'A')).toBe(0);
+  });
+
+  it('reads an id that names no row as below everything', () => {
+    expect(resolveGap(drawn, 'nowhere')).toBe(4);
   });
 });
 
@@ -125,15 +149,16 @@ describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
   // no next row to read a first child off of. `computeProjection` must still
   // resolve `child` as the anchor, using `fullChildrenOf`, not the rows.
   it('a collapsed Top still resolves Top + 1 to its real first child', () => {
-    const root = makeProject('root');
+    const root = makeProject('root', { position: 1 });
     const child = makeProject('child', { parentId: 'root' });
-    const sibling = makeProject('sibling');
-    const flatCollapsed = flattenTree([root, child, sibling], new Set()); // root collapsed
-    expect(flatCollapsed.map(i => i.id)).toEqual(['root', 'sibling']); // child never rendered
+    const sibling = makeProject('sibling', { position: 2 });
+    const dragged = makeProject('dragged', { position: 3 });
+    const flatCollapsed = flattenTree([root, child, sibling, dragged], new Set()); // root collapsed
+    expect(flatCollapsed.map(i => i.id)).toEqual(['root', 'sibling', 'dragged']); // child never rendered
 
-    const rows = toRows(flatCollapsed);
-    const childrenOfReal = fullChildrenOf([root, child, sibling]);
-    const gap = resolveGap(flatCollapsed, rows, new Set(), 'sibling', 'before'); // between root (Top) and sibling (Bottom)
+    const rows = toRows(flatCollapsed, new Set(['dragged']));
+    const childrenOfReal = fullChildrenOf([root, child, sibling, dragged]);
+    const gap = resolveGap(flatCollapsed, 'sibling'); // the ghost takes sibling's slot: between root (Top) and sibling (Bottom)
     const result = computeProjection(rows, gap, 0, 14, INDENT_WIDTH, null, childrenOfReal, new Set()); // one tab right of root
 
     expect(result).toEqual({

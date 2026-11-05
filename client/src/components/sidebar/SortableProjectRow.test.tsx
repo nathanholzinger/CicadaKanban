@@ -4,7 +4,7 @@ import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 import type { ComponentProps } from 'react';
 import { makeProject } from '../../test/projectFixture';
-import { GHOST_ROW, tierClass } from '../dragChrome';
+import { GHOST_ROW, INVALID_PLACEMENT_CLASS, tierClass } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { DragGhost, SortableProjectRow } from './SortableProjectRow';
 import {
@@ -14,6 +14,25 @@ import {
   projectNameIndentPx,
   projectRowIndentPx,
 } from './projectTreeUtils';
+import type { GhostState } from './useProjectDragReorder';
+
+// The strategy's transform for the row, when a test sets one: where a row sits in a drag is what the
+// sortable context says, which a row alone in a context never gets.
+const sortable = vi.hoisted(() => ({
+  transform: null as { x: number; y: number; scaleX: number; scaleY: number } | null,
+}));
+vi.mock('@dnd-kit/sortable', async importOriginal => {
+  const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
+  return {
+    ...actual,
+    useSortable: (args: Parameters<typeof actual.useSortable>[0]) => {
+      const result = actual.useSortable(args);
+      return sortable.transform ? { ...result, transform: sortable.transform } : result;
+    },
+  };
+});
+
+const GHOST: GhostState = { depth: 0, line: false, invalid: false };
 
 function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {}) {
   render(
@@ -29,11 +48,8 @@ function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {
             collapsed: false,
           }}
           selectedProjectId={null}
-          isActive={false}
+          ghost={null}
           tier={null}
-          indicatorSide={null}
-          indicatorDepth={0}
-          indicatorInvalid={false}
           expandedIds={new Set()}
           onToggleExpand={vi.fn()}
           onSelectProject={vi.fn()}
@@ -73,7 +89,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
   });
 
   it('TREE-2.1, TREE-2.8: draws the dragged row at the ghost’s strength, and it has no tier', () => {
-    const box = renderRow({ isActive: true });
+    const box = renderRow({ ghost: GHOST });
     expect(box).not.toHaveAttribute('data-drop-tier');
     for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
   });
@@ -83,11 +99,58 @@ describe('SortableProjectRow, drawn by its tier', () => {
     expect(box.classList).not.toContain('pointer-events-none');
   });
 
-  it('TREE-2.7: draws the drop line outside the box the tier dims, so the line keeps its own strength', () => {
-    const box = renderRow({ tier: 'neither', indicatorSide: 'before' });
+  it('TREE-2.7: draws the drop line outside the box the ghost dims, so the line keeps its own strength', () => {
+    const box = renderRow({ ghost: { ...GHOST, line: true } });
     const line = document.querySelector('[data-drop-line]')!;
     expect(line).not.toBeNull();
     expect(box.contains(line)).toBe(false);
+  });
+});
+
+// The dragged project's own row is the ghost: it carries what makes it one, is drawn at the depth it
+// would land at, and holds the line on its top edge. No other row does.
+describe('SortableProjectRow, the ghost', () => {
+  const wrapperOf = (box: HTMLElement) => box.parentElement!;
+
+  it('is marked with the depth it is drawn at, and no other row is', () => {
+    renderRow();
+    expect(document.querySelector('[data-drag-ghost]')).toBeNull();
+
+    cleanup();
+    renderRow({ ghost: { ...GHOST, depth: 2 } });
+    expect(document.querySelector('[data-drag-ghost]')).toHaveAttribute('data-drag-ghost', '2');
+  });
+
+  it('is marked at depth 0 too, the top level', () => {
+    renderRow({ ghost: GHOST });
+    expect(document.querySelector('[data-drag-ghost]')).toHaveAttribute('data-drag-ghost', '0');
+  });
+
+  it('is drawn at the depth it would land at, whatever its own depth is', () => {
+    const box = renderRow({ ghost: { ...GHOST, depth: 3 } });
+    expect(box.style.paddingLeft).toBe(`${projectRowIndentPx(3)}px`);
+  });
+
+  it('keeps its own depth when it is not the ghost', () => {
+    const box = renderRow();
+    expect(box.style.paddingLeft).toBe(`${projectRowIndentPx(0)}px`);
+  });
+
+  it('takes the strategy’s transform, which moves it to the gap, as every other row does', () => {
+    sortable.transform = { x: 0, y: 64, scaleX: 1, scaleY: 1 };
+    try {
+      const box = renderRow({ ghost: GHOST });
+      expect(wrapperOf(box).style.transform).toContain('translate3d(0px, 64px');
+    } finally {
+      sortable.transform = null;
+    }
+  });
+
+  it('sits above the rows it slides past, so the row above never covers its line', () => {
+    const box = renderRow({ ghost: GHOST });
+    expect(wrapperOf(box).classList).toContain('z-10');
+    cleanup();
+    expect(wrapperOf(renderRow()).classList).not.toContain('z-10');
   });
 });
 
@@ -97,13 +160,13 @@ describe('SortableProjectRow, where its drop line starts', () => {
   const lineIn = () => document.querySelector<HTMLElement>('[data-drop-line]')!;
 
   it('starts at the name’s column for the depth the line shows, whatever the row’s own depth is', () => {
-    renderRow({ indicatorSide: 'before', indicatorDepth: 2 });
+    renderRow({ ghost: { depth: 2, line: true, invalid: false } });
     expect(lineIn().style.marginLeft).toBe(`${projectNameIndentPx(2)}px`);
     expect(projectNameIndentPx(2)).toBeGreaterThan(projectRowIndentPx(2));
   });
 
   it('starts the line past the cap at the same column', () => {
-    renderRow({ indicatorSide: 'after', indicatorDepth: 3, indicatorInvalid: true });
+    renderRow({ ghost: { depth: 3, line: true, invalid: true } });
     expect(lineIn()).toHaveAttribute('data-drop-invalid', 'true');
     expect(lineIn().style.marginLeft).toBe(`${projectNameIndentPx(3)}px`);
   });
@@ -117,12 +180,84 @@ describe('SortableProjectRow, where its drop line starts', () => {
   });
 });
 
-// The carried copy says what the pickup took with it on a second line, hung under its box.
+// The line rides the ghost's top edge: between the ghost and the row above it, in one place in every gap.
+describe('SortableProjectRow, the drop line on the ghost', () => {
+  const lineIn = () => document.querySelector<HTMLElement>('[data-drop-line]');
+
+  it('is drawn on the ghost’s top edge, never its bottom', () => {
+    renderRow({ ghost: { ...GHOST, line: true } });
+    expect(lineIn()!.classList).toContain('-top-px');
+    expect(lineIn()!.classList).not.toContain('-bottom-px');
+  });
+
+  it('holds the depth it is drawn at', () => {
+    renderRow({ ghost: { depth: 2, line: true, invalid: false } });
+    expect(lineIn()).toHaveAttribute('data-drop-line', '2');
+  });
+
+  it('is not drawn while the ghost has no gap yet, or no row to be placed against', () => {
+    renderRow({ ghost: { ...GHOST, line: false } });
+    expect(lineIn()).toBeNull();
+  });
+
+  it('is not drawn on a row that is not the ghost', () => {
+    renderRow();
+    expect(lineIn()).toBeNull();
+  });
+
+  it('is blue inside the cap, and red past it', () => {
+    renderRow({ ghost: { ...GHOST, line: true } });
+    expect(lineIn()!.classList).toContain('bg-blue-500');
+    expect(lineIn()).not.toHaveAttribute('data-drop-invalid');
+
+    cleanup();
+    renderRow({ ghost: { ...GHOST, line: true, invalid: true } });
+    expect(lineIn()!.classList).toContain('bg-red-500/70');
+    expect(lineIn()!.classList).not.toContain('bg-blue-500');
+  });
+});
+
+// The carried copy is the project's row at the depth it would land at, held to the list's width by the
+// overlay. It says what the pickup took with it on a second line, hung under its box.
 describe('DragGhost, the carried copy', () => {
-  const ghost = () => document.querySelector(`[${DRAG_OVERLAY_ATTR}]`)!;
+  const ghost = () => document.querySelector<HTMLElement>(`[${DRAG_OVERLAY_ATTR}]`)!;
+
+  it('is laid out as the row at its depth: the row’s padding, and the room of the handle and chevron before the name', () => {
+    render(<DragGhost name="Q3 plan" depth={2} />);
+
+    expect(ghost().style.paddingLeft).toBe(`${projectRowIndentPx(2)}px`);
+    expect(ghost().classList).toContain(ROW_GAP_CLASS);
+    const [handle, chevron, name] = Array.from(ghost().children);
+    expect(handle.classList).toContain(ROW_HANDLE_WIDTH_CLASS);
+    expect(chevron.classList).toContain(ROW_CHEVRON_WIDTH_CLASS);
+    expect(name).toHaveTextContent('Q3 plan');
+  });
+
+  it('steps with the depth', () => {
+    render(<DragGhost name="Q3 plan" depth={0} />);
+    expect(ghost().style.paddingLeft).toBe(`${projectRowIndentPx(0)}px`);
+    cleanup();
+    render(<DragGhost name="Q3 plan" depth={4} />);
+    expect(ghost().style.paddingLeft).toBe(`${projectRowIndentPx(4)}px`);
+  });
+
+  it('draws its edge as a ring, which takes no room, so the name is not pushed in', () => {
+    render(<DragGhost name="Q3 plan" depth={0} />);
+    expect(ghost().classList).toContain('ring-1');
+    expect(ghost().classList).not.toContain('border');
+  });
+
+  it('takes the board’s invalid outline past the cap, and none inside it', () => {
+    render(<DragGhost name="Q3 plan" depth={1} invalid />);
+    for (const cls of classesOf(INVALID_PLACEMENT_CLASS)) expect(ghost().classList).toContain(cls);
+
+    cleanup();
+    render(<DragGhost name="Q3 plan" depth={1} />);
+    for (const cls of classesOf(INVALID_PLACEMENT_CLASS)) expect(ghost().classList).not.toContain(cls);
+  });
 
   it('says the branch’s counts on a second line inside the copy, out of its box', () => {
-    render(<DragGhost name="Q3 plan" branch={{ children: 2, descendants: 5 }} />);
+    render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 2, descendants: 5 }} />);
 
     const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;
     expect(line).toHaveAttribute('data-carried-branch');
@@ -135,17 +270,17 @@ describe('DragGhost, the carried copy', () => {
   });
 
   it('says one child as “+ 1 child”', () => {
-    render(<DragGhost name="Q3 plan" branch={{ children: 1, descendants: 1 }} />);
+    render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 1, descendants: 1 }} />);
 
     expect(screen.getByText('+ 1 child')).toBeInTheDocument();
   });
 
   it('has no line without a branch', () => {
-    render(<DragGhost name="Q3 plan" />);
+    render(<DragGhost name="Q3 plan" depth={0} />);
     expect(document.querySelector('[data-carried-branch]')).toBeNull();
 
     cleanup();
-    render(<DragGhost name="Q3 plan" branch={null} />);
+    render(<DragGhost name="Q3 plan" depth={0} branch={null} />);
     expect(document.querySelector('[data-carried-branch]')).toBeNull();
   });
 });

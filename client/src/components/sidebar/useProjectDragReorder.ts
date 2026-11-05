@@ -1,14 +1,15 @@
 // The project sidebar's drag reorder — the same placement rule as a board
-// Card's Descendants layer (`lib/hierarchyPlacement.ts`,
-// wiki hierarchy-placement §1): the rows a gap is computed against, the live
-// projection, the drop line drawn at the gap (wiki project-tree §1), and on
-// release the reorder, sent as the sibling to insert beside (prevId/nextId),
-// never a computed position. A set-down in the project's own slot sends
-// nothing (`projectTreeUtils.ts::releaseOf`). Every row is drawn by what it can be to the
-// carried project, on the board's rule (`lib/dragTargets.ts`), at the sidebar's own strengths.
-// The carried project takes its descendants with it, its branch (`lib/hierarchyPlacement.ts::carriedBranchOf`,
-// as a board item does): the hook says which rows are drawn without them (`drawnItems`), and the
-// counts the carried copy says.
+// Card's Descendants layer (`lib/hierarchyPlacement.ts`, wiki hierarchy-placement §1), and the
+// same ghost: the dragged project's own row moves to the gap and the rows slide aside (dnd-kit's
+// sortable shuffle, wiki board-drag-interaction §2). The gap is the ghost's slot, read from list
+// order (`projectTreeUtils.ts::resolveGap`), never a row's half. The hook gives the ghost's state
+// (`ghost`): its depth and the drop line that rides its top edge (wiki project-tree §1). On release
+// it sends the reorder as the sibling to insert beside (prevId/nextId), never a computed position,
+// and a set-down in the project's own slot sends nothing (`projectTreeUtils.ts::releaseOf`). Every
+// row is drawn by what it can be to the carried project, on the board's rule
+// (`lib/dragTargets.ts`), at the sidebar's own strengths. The carried project takes its descendants
+// with it, its branch (`lib/hierarchyPlacement.ts::carriedBranchOf`, as a board item does): the hook
+// says which rows are drawn without them (`drawnItems`), and the counts the carried copy says.
 
 import { useState, type CSSProperties } from 'react';
 import {
@@ -26,12 +27,10 @@ import {
   carriedBranchOf,
   computeProjection,
   toRows,
-  type AnchorRelation,
   type CarriedBranch,
   type Projection,
 } from '../../lib/hierarchyPlacement';
 import { tierVars } from '../dragChrome';
-import { resolveDropSide } from '../workflow/dragCollision';
 import { loadDragTuning } from '../workflow/dragTuning';
 import { fullChildrenOf, releaseOf, resolveGap, INDENT_WIDTH, type FlatItem } from './projectTreeUtils';
 
@@ -59,6 +58,16 @@ interface Drawn {
    * it moves out stays hidden, and a project it moves under the carried one is not in the branch.
    */
   branch: CarriedBranch | null;
+}
+
+// What the dragged project's own row, the ghost, is drawn as.
+export interface GhostState {
+  /** The depth it is drawn at: the projection's while one is live, its own before the first. */
+  depth: number;
+  /** The drop line rides its top edge. None before the first move, and when no row is left to place against. */
+  line: boolean;
+  /** The line's tab state would put the dragged subtree past the project cap. */
+  invalid: boolean;
 }
 
 // Every row is placed among siblings, so naming one as the line's anchor gives the carried
@@ -110,30 +119,28 @@ export function useProjectDragReorder(
   const { subtreeIds: exclude, height: subtreeHeight } = drawn?.subtree ?? NO_SUBTREE;
   const branch = drawn?.branch ?? null;
   // The rows the sidebar draws: every rendered row but the carried project's branch, from the
-  // pickup to the drag's end. Placement doesn't read them (below): the branch comes right after the
-  // project's own row, so the indexes the gap and the release read are the same with or without it.
+  // pickup to the drag's end. The project's own row is among them, and it is the ghost. Placement
+  // doesn't read them (below): the branch comes right after the project's own row, so the indexes
+  // the gap and the release read are the same with or without it.
   const drawnItems = branch ? flatItems.filter(i => !branch.ids.has(i.id)) : flatItems;
   // The project and its whole subtree are never a Top/Bottom candidate:
   // `rows`, what a gap is computed against, is every rendered row (a collapsed
-  // subtree already left `flatItems`) without them.
+  // subtree already left `flatItems`) without them, so one fewer than `drawnItems`.
   const rows = toRows(flatItems, exclude);
   // A Top's first-child lookup must see the *real* tree, not the render
   // list (which a collapsed project already left out).
   const childrenOf = fullChildrenOf(projects);
-  // Where the drop line draws: "before" the row the gap sits above, or —
-  // the gap past the last row — "after" the last row. None when there is no
-  // gap (nothing is `over`) or no eligible row is left to draw it against.
-  const dropLine: AnchorRelation | null =
-    gap === null || rows.length === 0
-      ? null
-      : gap < rows.length
-        ? { anchorId: rows[gap].id, side: 'before' }
-        : { anchorId: rows[rows.length - 1].id, side: 'after' };
 
   // The projection's depth (the top level is 0) is the dropped project's parent's
   // depth in the cap's count (a root is 1), so it is the cap's `targetDepth` as it stands.
   const overCap =
     depthCap !== null && projected !== null && !isWithinDepthCap(projected.depth, subtreeHeight, depthCap);
+
+  // The line is drawn once there is a gap (something is `over`) and a row to place against, which
+  // is none only when the dragged subtree holds every project.
+  const ghost: GhostState | null = activeItem
+    ? { depth: projected?.depth ?? activeItem.depth, line: gap !== null && rows.length > 0, invalid: overCap }
+    : null;
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(String(active.id));
@@ -142,18 +149,16 @@ export function useProjectDragReorder(
     setGap(null);
   }
 
-  function handleDragMove({ delta, over, active }: DragMoveEvent) {
+  function handleDragMove({ delta, over }: DragMoveEvent) {
     if (!over || !activeItem) {
       setProjected(null);
       setGap(null);
       return;
     }
 
-    // dnd-kit reports the active row itself as `over` while the pointer rests
-    // on it, the only row of the dragged block that is drawn. `exclude` holds
-    // it, so `resolveGap` reads it as the project's own gap (wiki project-tree §1).
-    const side = resolveDropSide(active.rect.current.translated, over.rect);
-    const g = resolveGap(flatItems, rows, exclude, String(over.id), side);
+    // dnd-kit reports the active row itself as `over` while the copy rests on its own slot, and
+    // `resolveGap` reads that as the project's own gap (wiki project-tree §1).
+    const g = resolveGap(drawnItems, String(over.id));
     const proj = computeProjection(rows, g, activeItem.depth, delta.x, INDENT_WIDTH, null, childrenOf, exclude);
     setProjected(proj);
     setGap(g);
@@ -185,7 +190,8 @@ export function useProjectDragReorder(
   return {
     sensors,
     activeItem,
-    rowIds: rows.map(r => r.id),
+    /** The sortable context's items: the rows drawn, in order, the dragged project's own among them. */
+    rowIds: drawnItems.map(r => r.id),
     /** The rows to draw: `flatItems` without the carried project's branch. */
     drawnItems,
     /** What the carried project takes with it, for its copy's second line; null when it has no descendants. */
@@ -194,11 +200,14 @@ export function useProjectDragReorder(
     tiers: drawn?.tiers ?? NO_TIERS,
     /** The custom properties the tier classes read, on whatever holds the rows. Undefined outside a drag. */
     tierVars: drawn?.vars,
-    dropLine,
-    /** The drop line's tab state would put the dragged subtree past the project cap. */
-    dropInvalid: overCap,
-    /** The depth the drop line indents to — the projection's while one is live. */
+    /** How the dragged project's row is drawn; null outside a drag. */
+    ghost,
+    /** The ghost's gap, among the rows without the dragged subtree; null before the first move. */
+    gap,
+    /** The live projection's depth, which the ghost, its line and the copy are drawn at; null before the first move. */
     projectedDepth: projected?.depth ?? null,
+    /** The line's tab state would put the dragged subtree past the project cap. */
+    dropInvalid: overCap,
     handleDragStart,
     handleDragMove,
     handleDragEnd,

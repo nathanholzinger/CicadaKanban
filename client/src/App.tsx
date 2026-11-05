@@ -23,7 +23,7 @@ import { useCollapsedProjects } from './components/sidebar/useCollapsedProjects'
 import AgentsModal from './components/AgentsModal';
 import NotificationsBell from './components/NotificationsBell';
 import { browserStorage, readStored, removeStored, writeStored } from './lib/browserStorage';
-import { findNearestAncestor, getAncestors } from './lib/hierarchy';
+import { findNearestAncestor, getAncestors, withMoveApplied, type PendingMove } from './lib/hierarchy';
 import { applyWriteResponse } from './lib/positionedWrite';
 
 const ACTIVE_PROJECT_STORAGE_KEY = 'activeProjectId';
@@ -34,6 +34,9 @@ export default function App() {
   const [showAgentsModal, setShowAgentsModal] = useState(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  // The sidebar's moves that are sent and not yet answered, oldest first. Each is drawn at once, laid over
+  // `projects` where the sidebar reads them, and leaves with its own answer.
+  const [pendingMoves, setPendingMoves] = useState<PendingMove[]>([]);
   // The cap the sidebar offers tab states against; null until the server's is read.
   const [projectDepthCap, setProjectDepthCap] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
@@ -138,19 +141,31 @@ export default function App() {
     prevId: string | null,
     nextId: string | null,
   ) {
+    // The move is drawn at the release, by the relation it sends, until its own answer lands: a second
+    // move released meanwhile loses neither.
+    const pending: PendingMove = { id, parentId, prevId, nextId };
+    setPendingMoves(prev => [...prev, pending]);
+    const settle = () => setPendingMoves(prev => prev.filter(move => move !== pending));
     try {
       const updated = await moveProject(id, { parentId, prevId, nextId });
+      // One update: the answer's positions replace the drawn move, so no frame shows the old place.
       setProjects(prev => applyWriteResponse(prev, updated));
+      settle();
     } catch (err) {
-      // The list only changes on success, so the project still shows where it was;
+      // The move goes back with its answer, the project at the place it had before the attempt;
       // the refetch resyncs the tree (wiki project-tree §4).
       console.error('Failed to reposition project:', err);
+      settle();
       fetchProjects()
         .then(setProjects)
         .catch(refetchErr => console.error('Failed to refresh projects after failed reorder:', refetchErr));
     }
   }
 
+  // What the sidebar draws: the tree with every move still out laid over it, once, so its rows, the real
+  // tree's children and what the next pickup reads (its subtree and tiers) are one tree. No move out is
+  // the same array.
+  const sidebarProjects = pendingMoves.reduce((tree, move) => withMoveApplied(tree, move), projects);
   const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null;
   const projectSubprojects = projects.filter(p => p.parentId === selectedProjectId);
   const projectAncestors = selectedProject ? getAncestors(selectedProject, projects) : [];
@@ -202,7 +217,7 @@ export default function App() {
       {/* Body: sidebar + main */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ProjectSidebar
-          projects={projects}
+          projects={sidebarProjects}
           projectDepthCap={projectDepthCap}
           selectedProjectId={selectedProjectId}
           collapsedIds={collapsedProjects.collapsedIds}

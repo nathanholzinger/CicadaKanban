@@ -30,7 +30,7 @@ describe('the carried copy carries DRAG_OVERLAY_ATTR', () => {
   });
 
   it("in the sidebar: the project's ghost does", () => {
-    const { container } = render(<DragGhost name="Project" />);
+    const { container } = render(<DragGhost name="Project" depth={0} />);
 
     expect(container.querySelector(`[${DRAG_OVERLAY_ATTR}]`)).not.toBeNull();
   });

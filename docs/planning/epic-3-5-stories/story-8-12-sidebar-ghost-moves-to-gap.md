@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.12 — The sidebar's ghost moves to the gap
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** planning. It runs next, after Story 8.11 closes
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phase 1 built (D1–D6, Amendment 1), for Nathan to commit and try hands-on (Phase 2)
 
 ## Goal
 
@@ -234,8 +234,29 @@ Filled in by the Coder, phase by phase.
 
 | Symbol | Carries |
 |---|---|
+| `projectTreeUtils.ts::resolveGap` | The gap is the ghost's slot: `over`'s place in the drawn list, the dragged project's own row included (D2). Replaces the row-and-half reading; `resolveDropSide` and `gapIndexFor` left the sidebar's drag. |
+| `useProjectDragReorder.ts` (`rowIds`, `ghost`, `gap`) | `rowIds` are the rows drawn, the dragged project's own among them (D1). `ghost` is `GhostState`: the depth it is drawn at, whether the line rides it, whether it is past the cap. `gap` is the ghost's gap among the rows without the dragged subtree. `dropLine` is gone. |
+| `SortableProjectRow.tsx::SortableProjectRow` | Takes the strategy's transform in every state, the dragged row's included (D1). Drawn at `ghost.depth`; carries the line on its top edge (D3). Test surfaces: `data-drag-ghost` (the depth it is drawn at) and `data-drop-line` (the depth the line is drawn at), `data-drop-invalid` as before. |
+| `SortableProjectRow.tsx::DragGhost` | The copy laid out as the row at a depth: the row's padding, then the handle's and the chevron's room, so its name sits at `projectNameIndentPx` (D4). Its edge is a ring, so it takes no room. Over the cap it takes `INVALID_PLACEMENT_CLASS` (D3). |
+| `ProjectSidebar.tsx::HOLD_COPY_X` | The overlay's modifier, on the `DragOverlay` alone: x stays at the pickup, y follows the pointer (D4). The default drop animation is back (D6). |
+| `lib/hierarchy.ts::PendingMove`, `withMoveApplied` | A sent move laid over the tree by its relation (D5): table-generic, beside `sortedChildrenByParent`. See Amendment 1. |
+| `App.tsx` (`pendingMoves`, `sidebarProjects`, `handleReorderProject`) | The moves out, oldest first; the tree the sidebar reads has them laid over once; each leaves with its own answer, in the update that folds the answer or on its failure (D5). |
+| `useProjectDragReorder.test.ts`, `projectTreeUtils.test.ts`, `SortableProjectRow.test.tsx`, `lib/hierarchy.test.ts`, `App.pendingMove.test.tsx` | The gap, the hook, the row and the copy, the overlay, and the move in `App.tsx` (Phase 1's tests). |
+| `tests/ui/project-tree-drag.spec.ts`, `tests/ui/project-tree-sidebar.spec.ts` | TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-2.3 and TREE-4.7's drag are skipped until Phase 3 updates them. TREE-1.4 and TREE-2.1 stay skipped for Story 10. |
 
 ## Amendments
+
+**Amendment 1: Phase 1 built (Coder).** D1–D6 are built as planned. What the plan left to the Coder, and what the build found:
+- **The gap function needs no dragged id.** `resolveGap(drawn, overId)` is `over`'s index in the drawn list. The ghost takes `over`'s slot, so that index is the gap among the rows without the ghost whether `over` is below the ghost's slot, above it, or the ghost itself. Every gap has exactly one row it belongs to. An id that names no row reads as below everything.
+- **The overlay (D5) writes ranks.** `withMoveApplied` puts the moved project under the release's parent, beside the sibling it names (last when it names none), and ranks the new parent's children 0, 1, 2… in that order, so `sortedChildrenByParent` and every reader of `parentId` agree. The ranks sit on a copy that is never stored or sent, and the answer replaces them. **For the PO or the Architect:** wiki positioning §5 says the client never computes a position value "not even for display". A rank is an index in the drawn list, the ordinal feedback that section describes, but it is held in the `position` field of the copy. The alternative is threading the moves through `flattenTree`, `fullChildrenOf`, `getSubtree` and `classifyTargets` separately, which is the disagreement D5 names. Say if §5 wants a word on this.
+- **A refused move leaves at the failure, not with the refetch.** `handleReorderProject` clears it when the request fails and starts the refetch after. With the server stopped, the refetch fails too, and a move that waited for it would stay drawn. Phase 2's "goes back when the request fails" is that.
+- **The test surfaces.** The ghost's row carries `data-drag-ghost` with its depth. The line carries `data-drop-line` with its depth (it has no side), and `data-drop-invalid`. The ghost's row sits above the rows it slides past (`z-10`), so the row above never covers the line.
+- **The copy's edge is a ring, not a border,** so its name is not pushed in by the border's width and sits exactly at `projectNameIndentPx` over the ghost's.
+- **Skipped specs, worded without IDs.** The plan suggests the reason "updated in Story 8.12's Phase 3", which `check:docs` rejects in a code comment, so the reasons state the fact. TREE-1.1 and TREE-1.11/TREE-3.9 already had a reason that said the ghost was still to come, and it now says the specs are what's left. TREE-1.8, TREE-1.9, TREE-2.3 and TREE-4.7's drag ("a drag of X under P, after B") are skipped as well: each aims at a row's half or reads the line's side. TREE-4.8 still passes, since a refused move goes back either way.
+- **The E2E helper's 60ms guard stays.** A copy already at its place, a set-down in the project's own slot, goes at once, so the guard after the wait for the copy is still needed. Its comment now says that.
+- **Comments that said the sidebar draws no ghost** are corrected: `dragChrome.tsx`, `dragCollision.ts::namedAnchorFor` and `dragRegions.ts` besides the ones the plan lists.
+- **Checked in a browser** (a throwaway Playwright probe, deleted): the ghost moves to the gap and the rows slide; the line is at `projectNameIndentPx` on the ghost's top edge; the copy stays at the list's left edge and its width; a still cursor holds one gap; a release draws the project at its new place at once, with the answer 900ms out; a refusal puts it back; Escape glides the copy home in about 300ms.
+- **Gate:** `npm run check` passes (438 server, 778 client, 245 script tests). `npm run test:e2e`: 209 passed, 28 skipped, none failed. That is 8.11's 213 passed and 24 skipped, less the four specs skipped here (TREE-1.8, TREE-1.9, TREE-2.3, TREE-4.7's drag). The board's drag specs are unchanged.
 
 ## Open questions
 

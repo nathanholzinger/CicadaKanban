@@ -2,8 +2,9 @@
 // the drag itself is `sidebar/useProjectDragReorder.ts`), and a handle on its
 // right edge that sets its width (`sidebar/useSidebarResize.ts`). Which projects
 // are collapsed is `App.tsx`'s (`sidebar/useCollapsedProjects.ts`): a write there can open one.
+// A move sent and not yet answered is already in the `projects` it is given (`App.tsx`).
 
-import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter, type Modifier } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Project } from '../types';
 import { flattenTree } from './sidebar/projectTreeUtils';
@@ -11,6 +12,12 @@ import { useProjectDragReorder, type ReorderProject } from './sidebar/useProject
 import { useSidebarResize } from './sidebar/useSidebarResize';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 import { PlusIcon, ICON_BUTTON_SM } from './icons';
+
+// The carried copy is held to the list's width: its x stays where it was picked up, and it follows the
+// pointer up and down. On the overlay alone, so the drag's own `delta.x`, which the depth reads, is the
+// pointer's travel, and the box dnd-kit hits against moves with the pointer.
+const HOLD_COPY_X: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+const COPY_MODIFIERS = [HOLD_COPY_X];
 
 interface ProjectSidebarProps {
   projects: Project[];
@@ -81,11 +88,8 @@ export default function ProjectSidebar({
                     key={item.id}
                     item={item}
                     selectedProjectId={selectedProjectId}
-                    isActive={item.id === drag.activeItem?.id}
+                    ghost={item.id === drag.activeItem?.id ? drag.ghost : null}
                     tier={drag.tiers.get(item.id) ?? null}
-                    indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
-                    indicatorDepth={drag.projectedDepth ?? item.depth}
-                    indicatorInvalid={drag.dropInvalid}
                     expandedIds={expandedIds}
                     onToggleExpand={onToggleCollapse}
                     onSelectProject={onSelectProject}
@@ -96,10 +100,18 @@ export default function ProjectSidebar({
               </div>
             </SortableContext>
 
-            {/* No drop animation: a move is drawn when its response lands, so the project's row is where it was
-                picked up, and a copy gliding to it would read as the drop landing there. The line is the cue. */}
-            <DragOverlay dropAnimation={null}>
-              {drag.activeItem && <DragGhost name={drag.activeItem.project.name} branch={drag.branch} />}
+            {/* The default drop animation: a move is drawn at the release, so the project's row is at its new
+                place when the copy glides to it, and an end that writes nothing glides the copy back to the
+                project's own slot, where the ghost returns. */}
+            <DragOverlay modifiers={COPY_MODIFIERS}>
+              {drag.activeItem && drag.ghost && (
+                <DragGhost
+                  name={drag.activeItem.project.name}
+                  depth={drag.ghost.depth}
+                  invalid={drag.ghost.invalid}
+                  branch={drag.branch}
+                />
+              )}
             </DragOverlay>
           </DndContext>
         )}

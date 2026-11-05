@@ -1,7 +1,7 @@
 // Tree math over flat { id, parentId } collections — a subtree and its height,
-// ancestors, depth, the depth-cap rule, the sorted children index and reparent
-// dropdown options — and the sibling order, shared by the project hierarchy and
-// the item hierarchy.
+// ancestors, depth, the depth-cap rule, the sorted children index, a move laid
+// over it before its answer lands, and reparent dropdown options — and the
+// sibling order, shared by the project hierarchy and the item hierarchy.
 
 import { flattenHierarchyOf } from './hierarchyPlacement';
 
@@ -61,6 +61,38 @@ export function sortedChildrenByParent<T extends TreeNode & Positioned>(nodes: r
   }
   for (const list of childrenOf.values()) list.sort(byPositionThenCreatedAt);
   return childrenOf;
+}
+
+// A move that was sent and not yet answered, as its request carries it: the parent, and the
+// sibling to insert beside (`prevId` after it, `nextId` before it), never a position.
+export interface PendingMove {
+  id: string;
+  parentId: string | null;
+  prevId: string | null;
+  nextId: string | null;
+}
+
+// `nodes` as they will be once `move` lands, so a surface can draw the move at once. By
+// relation: the moved node goes under `move.parentId` beside the sibling it names, or last when it
+// names none (the only child of an empty parent), and a sibling that isn't there any more counts as
+// none. The new parent's children are then ranked in that order, 0, 1, 2…, for
+// `sortedChildrenByParent` to read. A rank is the ordinal feedback of wiki positioning §5, an index
+// in the list drawn: it sits on a copy that is never stored, sent or compared with a real position,
+// since a write names a neighbor and the server resolves the number, and the answer replaces these
+// nodes. Several moves are laid over in the order they were sent. A node that isn't in `nodes`
+// (deleted since) is skipped.
+export function withMoveApplied<T extends TreeNode & Positioned>(nodes: readonly T[], move: PendingMove): T[] {
+  const moved = nodes.find(n => n.id === move.id);
+  if (!moved) return [...nodes];
+  const siblings = (sortedChildrenByParent(nodes).get(move.parentId) ?? []).filter(n => n.id !== move.id);
+  const anchorAt = siblings.findIndex(n => n.id === (move.prevId ?? move.nextId));
+  const at = anchorAt === -1 ? siblings.length : move.prevId ? anchorAt + 1 : anchorAt;
+  const rank = new Map([...siblings.slice(0, at), moved, ...siblings.slice(at)].map((n, i) => [n.id, i]));
+  return nodes.map(n => {
+    const position = rank.get(n.id);
+    if (position === undefined) return n;
+    return n.id === move.id ? { ...n, parentId: move.parentId, position } : { ...n, position };
+  });
 }
 
 export interface Subtree {

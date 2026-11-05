@@ -1,7 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core';
-import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
 import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
@@ -15,16 +14,10 @@ function tree(...rows: Array<readonly [id: string, parentId: string | null]>): P
   return rows.map(([id, parentId], i) => makeProject(id, { parentId, position: i + 1, createdAt: i }));
 }
 
-const ROW_HEIGHT = 32;
-const OVER_TOP = 100;
-// How far the carried copy's centre sits from the hovered row's: clear of the
-// tie band either way.
-const LEAN_PX = 10;
-
-// The sidebar's drag as dnd-kit reports it to the hook: pick a project up,
-// hover the carried copy over the top or bottom half of a row with the pointer
-// at `depth` (the absolute depth its offset picks), and release. `collapsed`
-// names the projects whose children the sidebar doesn't draw.
+// The sidebar's drag as dnd-kit reports it to the hook: pick a project up, rest the carried copy
+// nearest a row, which is the row whose slot the ghost takes, with the pointer at `depth` (the
+// absolute depth its offset picks), and release. `collapsed` names the projects whose children
+// the sidebar doesn't draw.
 function sidebarDrag(projects: Project[], collapsed: readonly string[] = [], depthCap: number | null = null) {
   const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
   const expand = vi.fn<(id: string) => void>();
@@ -44,17 +37,21 @@ function sidebarDrag(projects: Project[], collapsed: readonly string[] = [], dep
       activeId = id;
       act(() => result.current.handleDragStart({ active: { id } } as unknown as DragStartEvent));
     },
-    hover(over: string, side: DropSide, depth: number) {
+    hover(over: string, depth: number) {
       const seedDepth = flatItems.find(i => i.id === activeId)!.depth;
-      const top = side === 'before' ? OVER_TOP - LEAN_PX : OVER_TOP + LEAN_PX;
       overId = over;
       act(() =>
         result.current.handleDragMove({
           delta: { x: (depth - seedDepth) * INDENT_WIDTH, y: 0 },
-          over: { id: over, rect: { top: OVER_TOP, height: ROW_HEIGHT } },
-          active: { id: activeId, rect: { current: { translated: { top, height: ROW_HEIGHT } } } },
+          over: { id: over },
         } as unknown as DragMoveEvent),
       );
+    },
+    // The two rows the ghost sits between, among the rows without the dragged project; null at either end of the list.
+    slot() {
+      const rows = result.current.drawnItems.filter(i => i.id !== activeId).map(i => i.id);
+      const { gap } = result.current;
+      return gap === null ? null : [rows[gap - 1] ?? null, rows[gap] ?? null];
     },
     release() {
       act(() => result.current.handleDragEnd({ over: { id: overId } } as unknown as DragEndEvent));
@@ -75,8 +72,8 @@ describe('TREE-1.2: a gap offers the depths from Bottom’s to Top’s + 1, and 
   ] as const)('between A1a and B, depth %i saves X under %s after %s', (depth, parentId, prevId, nextId) => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
-    drag.hover('B', 'before', depth);
-    expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'before' });
+    drag.hover('B', depth);
+    expect(drag.slot()).toEqual(['A1a', 'B']);
     expect(drag.hook.projectedDepth).toBe(depth);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', parentId, prevId, nextId);
@@ -85,9 +82,9 @@ describe('TREE-1.2: a gap offers the depths from Bottom’s to Top’s + 1, and 
   it('none is shallower than B’s depth or deeper than A1a’s + 1', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
-    drag.hover('B', 'before', -4);
+    drag.hover('B', -4);
     expect(drag.hook.projectedDepth).toBe(0);
-    drag.hover('B', 'before', 9);
+    drag.hover('B', 9);
     expect(drag.hook.projectedDepth).toBe(3);
   });
 
@@ -95,7 +92,7 @@ describe('TREE-1.2: a gap offers the depths from Bottom’s to Top’s + 1, and 
     for (const depth of [-3, 0, 1, 2, 6]) {
       const drag = sidebarDrag(TREE_1);
       drag.pickUp('X');
-      drag.hover('A1a', 'before', depth);
+      drag.hover('A1a', depth);
       expect(drag.hook.projectedDepth).toBe(2);
       drag.release();
       expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'A1', null, 'A1a');
@@ -112,7 +109,8 @@ describe('TREE-1.3: the boundaries', () => {
     for (const depth of [-2, 1, 5]) {
       const drag = sidebarDrag(BOUNDARY_TREE);
       drag.pickUp('X');
-      drag.hover('A', 'before', depth);
+      drag.hover('A', depth);
+      expect(drag.slot()).toEqual([null, 'A']);
       expect(drag.hook.projectedDepth).toBe(0);
       drag.release();
       expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', null, null, 'A');
@@ -127,7 +125,8 @@ describe('TREE-1.3: the boundaries', () => {
     ] as const) {
       const drag = sidebarDrag(BOUNDARY_TREE);
       drag.pickUp('X');
-      drag.hover('B1', 'after', depth);
+      drag.hover('B1', depth);
+      expect(drag.slot()).toEqual(['B1', null]);
       expect(drag.hook.projectedDepth).toBe(depth);
       drag.release();
       expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', parentId, prevId, null);
@@ -137,9 +136,9 @@ describe('TREE-1.3: the boundaries', () => {
   it('an offset past either end clamps to the nearest depth, and the top level is the floor', () => {
     const drag = sidebarDrag(BOUNDARY_TREE);
     drag.pickUp('X');
-    drag.hover('B1', 'after', 9);
+    drag.hover('B1', 9);
     expect(drag.hook.projectedDepth).toBe(2);
-    drag.hover('B1', 'after', -9);
+    drag.hover('B1', -9);
     expect(drag.hook.projectedDepth).toBe(0);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', null, 'B', null);
@@ -147,27 +146,27 @@ describe('TREE-1.3: the boundaries', () => {
 });
 
 describe('TREE-1.4: when the dragged project’s subtree holds every project, one depth is offered, the top level', () => {
-  it.each(['before', 'after'] as const)('hovering a row of X’s subtree, %s, at any offset', side => {
-    const drag = sidebarDrag(tree(['X', null], ['X1', 'X'], ['X2', 'X']));
+  // Every project is X's, and its children are not drawn while it is carried: its own row is the only one.
+  const everyProject = () => tree(['X', null], ['X1', 'X'], ['X2', 'X']);
+
+  it('resting on its own row, at any offset, offers the top level', () => {
+    const drag = sidebarDrag(everyProject());
     drag.pickUp('X');
-    for (const over of ['X', 'X1', 'X2']) {
-      for (const depth of [-3, 0, 4]) {
-        drag.hover(over, side, depth);
-        expect(drag.hook.projectedDepth).toBe(0);
-      }
+    expect(drag.hook.drawnItems.map(i => i.id)).toEqual(['X']);
+    for (const depth of [-3, 0, 4]) {
+      drag.hover('X', depth);
+      expect(drag.hook.projectedDepth).toBe(0);
     }
   });
 
-  it('draws no line, since no row is left to draw it against, and a release sends nothing', () => {
-    for (const over of ['X', 'X1', 'X2']) {
-      const drag = sidebarDrag(tree(['X', null], ['X1', 'X'], ['X2', 'X']));
-      drag.pickUp('X');
-      drag.hover(over, 'after', 0);
-      expect(drag.hook.dropLine).toBeNull();
-      drag.release();
-      expect(drag.onReorderProject).not.toHaveBeenCalled();
-      expect(drag.expand).not.toHaveBeenCalled();
-    }
+  it('draws no line, since no row is left to place against, and a release sends nothing', () => {
+    const drag = sidebarDrag(everyProject());
+    drag.pickUp('X');
+    drag.hover('X', 0);
+    expect(drag.hook.ghost).toEqual({ depth: 0, line: false, invalid: false });
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+    expect(drag.expand).not.toHaveBeenCalled();
   });
 });
 
@@ -178,7 +177,8 @@ describe('TREE-1.5: a collapsed project hides its subtree from view, not from pl
   it('tabbed once right of T, X goes ahead of T’s first child, which isn’t shown', () => {
     const drag = sidebarDrag(projects, ['T']);
     drag.pickUp('X');
-    drag.hover('U', 'before', 1);
+    drag.hover('U', 1);
+    expect(drag.slot()).toEqual(['T', 'U']);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'T', null, 'T1');
   });
@@ -186,44 +186,50 @@ describe('TREE-1.5: a collapsed project hides its subtree from view, not from pl
   it('aligned with T, X goes after T’s whole subtree, before U', () => {
     const drag = sidebarDrag(projects, ['T']);
     drag.pickUp('X');
-    drag.hover('U', 'before', 0);
+    drag.hover('U', 0);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', null, 'T', null);
   });
+
+  it('counts T once in the list the gap is read from, and T’s children not at all', () => {
+    const drag = sidebarDrag(projects, ['T']);
+    drag.pickUp('X');
+    expect(drag.hook.rowIds).toEqual(['T', 'U', 'X']);
+    drag.hover('X', 0);
+    expect(drag.hook.gap).toBe(2);
+    expect(drag.slot()).toEqual(['U', null]);
+  });
 });
 
-describe('TREE-1.6: resting on a row of the dragged project’s own subtree means its own gap', () => {
+describe('TREE-1.6: the dragged project’s own subtree is never a place to drop', () => {
   const projects = tree(['A', null], ['X', null], ['X1', 'X'], ['X2', 'X'], ['B', null]);
 
-  it.each(['X1', 'X2'])('resting on %s, the line is in X’s own gap, between A and B, offering two depths', over => {
+  it('has no row of its own in the list: only X’s own row stands for it, in X’s own gap, between A and B', () => {
     const drag = sidebarDrag(projects);
     drag.pickUp('X');
-    for (const side of ['before', 'after'] as const) {
-      drag.hover(over, side, 0);
-      expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'before' });
-      expect(drag.hook.projectedDepth).toBe(0);
-      drag.hover(over, side, 5);
-      expect(drag.hook.projectedDepth).toBe(1);
-    }
+    expect(drag.hook.rowIds).toEqual(['A', 'X', 'B']);
+    drag.hover('X', 0);
+    expect(drag.slot()).toEqual(['A', 'B']);
+    expect(drag.hook.projectedDepth).toBe(0);
+    drag.hover('X', 5);
+    expect(drag.hook.projectedDepth).toBe(1);
   });
 
   it('released there as A’s first child, X is saved there', () => {
     const drag = sidebarDrag(projects);
     drag.pickUp('X');
-    drag.hover('X1', 'after', 1);
+    drag.hover('X', 1);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'A', null, null);
   });
 
   it('no depth in any gap makes X a child of X1 or X2', () => {
     const drag = sidebarDrag(projects);
-    for (const over of ['A', 'X', 'X1', 'X2', 'B']) {
-      for (const side of ['before', 'after'] as const) {
-        for (const depth of [-3, 0, 1, 2, 6]) {
-          drag.pickUp('X');
-          drag.hover(over, side, depth);
-          drag.release();
-        }
+    for (const over of ['A', 'X', 'B']) {
+      for (const depth of [-3, 0, 1, 2, 6]) {
+        drag.pickUp('X');
+        drag.hover(over, depth);
+        drag.release();
       }
     }
     const writes = drag.onReorderProject.mock.calls;
@@ -239,9 +245,10 @@ describe('TREE-1.8: a project set back down in its own gap, at its own depth, wr
   it('sends nothing when the cursor leaves X’s row and comes back to its own gap', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
-    drag.hover('B', 'before', 0);
-    drag.hover('B', 'after', 0);
-    expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'after' });
+    drag.hover('B', 0);
+    expect(drag.slot()).toEqual(['A1a', 'B']);
+    drag.hover('X', 0);
+    expect(drag.slot()).toEqual(['B', null]);
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
     expect(drag.expand).not.toHaveBeenCalled();
@@ -250,31 +257,35 @@ describe('TREE-1.8: a project set back down in its own gap, at its own depth, wr
   it('sends nothing when X is released before the cursor has left its row', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
-    drag.hover('X', 'before', 0);
-    expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'after' });
+    drag.hover('X', 0);
+    expect(drag.slot()).toEqual(['B', null]);
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
   });
 
-  it('a nested project’s own gap is the same one from either neighbor', () => {
+  it('a nested project’s own gap is its own row’s, and a neighbor’s row is the neighbor’s gap', () => {
     // X is A's last child, after A1: the gap between A1 and B, at depth 1.
     const projects = tree(['A', null], ['A1', 'A'], ['X', 'A'], ['B', null]);
-    for (const [over, side] of [
-      ['A1', 'after'],
-      ['B', 'before'],
-    ] as const) {
-      const drag = sidebarDrag(projects);
-      drag.pickUp('X');
-      drag.hover(over, side, 1);
-      drag.release();
-      expect(drag.onReorderProject).not.toHaveBeenCalled();
-    }
+    const own = sidebarDrag(projects);
+    own.pickUp('X');
+    own.hover('X', 1);
+    expect(own.slot()).toEqual(['A1', 'B']);
+    own.release();
+    expect(own.onReorderProject).not.toHaveBeenCalled();
+
+    // Nearest B, the ghost is after B, not in its own gap: the same depth is a write there.
+    const next = sidebarDrag(projects);
+    next.pickUp('X');
+    next.hover('B', 1);
+    expect(next.slot()).toEqual(['B', null]);
+    next.release();
+    expect(next.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'B', null, null);
   });
 
-  it('a project with children, resting on one of them, is set down in its own gap too', () => {
+  it('a project with children, resting on its own row, is set down in its own gap too', () => {
     const drag = sidebarDrag(tree(['A', null], ['X', null], ['X1', 'X'], ['B', null]));
     drag.pickUp('X');
-    drag.hover('X1', 'after', 0);
+    drag.hover('X', 0);
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
   });
@@ -282,45 +293,42 @@ describe('TREE-1.8: a project set back down in its own gap, at its own depth, wr
   it('still writes at another depth in its own gap, or at its own depth in another gap', () => {
     const own = sidebarDrag(TREE_1);
     own.pickUp('X');
-    own.hover('B', 'after', 1);
+    own.hover('X', 1);
     own.release();
     expect(own.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'B', null, null);
 
     const elsewhere = sidebarDrag(TREE_1);
     elsewhere.pickUp('X');
-    elsewhere.hover('B', 'before', 0);
+    elsewhere.hover('B', 0);
     elsewhere.release();
     expect(elsewhere.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', null, 'A', null);
   });
 });
 
 describe('TREE-1.9: coming back to the dragged project’s own row means its own gap', () => {
-  it.each(['before', 'after'] as const)(
-    'the cursor leaves for the gap above B and comes back to the %s half of X’s row: the line is in X’s own gap, and a release sends nothing',
-    side => {
-      const drag = sidebarDrag(TREE_1);
-      drag.pickUp('X');
-      drag.hover('B', 'before', 0);
-      expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'before' });
-      drag.hover('X', side, 0);
-      expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'after' });
-      drag.release();
-      expect(drag.onReorderProject).not.toHaveBeenCalled();
-    },
-  );
+  it('the cursor leaves for the gap above B and comes back to X’s row: the ghost is in X’s own gap, and a release sends nothing', () => {
+    const drag = sidebarDrag(TREE_1);
+    drag.pickUp('X');
+    drag.hover('B', 0);
+    expect(drag.slot()).toEqual(['A1a', 'B']);
+    drag.hover('X', 0);
+    expect(drag.slot()).toEqual(['B', null]);
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+  });
 });
 
 describe('TREE-1.10: on the dragged project’s own row, the cursor picks among its own gap’s depths', () => {
   it('resting on X’s own row, an offset still picks a depth of that gap: tabbed right, X is B’s first child', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
-    drag.hover('X', 'after', 0);
+    drag.hover('X', 0);
     expect(drag.hook.projectedDepth).toBe(0);
-    drag.hover('X', 'after', 1);
+    drag.hover('X', 1);
     // Still X's own gap, below B, one level in.
-    expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'after' });
+    expect(drag.slot()).toEqual(['B', null]);
     expect(drag.hook.projectedDepth).toBe(1);
-    drag.hover('X', 'after', 6);
+    drag.hover('X', 6);
     expect(drag.hook.projectedDepth).toBe(1);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'B', null, null);
@@ -335,9 +343,11 @@ describe('TREE-1.11: a tab state that would put the dragged subtree past the pro
     // Cap 4: X under P3 is at depth 4, and X1 at 5.
     const drag = sidebarDrag(capChain, [], 4);
     drag.pickUp('X');
-    drag.hover('P3', 'after', 3);
+    drag.hover('X', 3);
+    expect(drag.slot()).toEqual(['P3', null]);
     expect(drag.hook.projectedDepth).toBe(3);
     expect(drag.hook.dropInvalid).toBe(true);
+    expect(drag.hook.ghost).toEqual({ depth: 3, line: true, invalid: true });
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
     expect(drag.expand).not.toHaveBeenCalled();
@@ -347,10 +357,115 @@ describe('TREE-1.11: a tab state that would put the dragged subtree past the pro
     // X aligned with P3 is P2's child, at depth 3, and X1 at 4.
     const drag = sidebarDrag(capChain, [], 4);
     drag.pickUp('X');
-    drag.hover('P3', 'after', 2);
+    drag.hover('X', 2);
     expect(drag.hook.dropInvalid).toBe(false);
+    expect(drag.hook.ghost?.invalid).toBe(false);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'P2', 'P3', null);
+  });
+});
+
+// The ghost is the dragged project's own row: it is one of the rows the sortable context holds, and it
+// moves to the gap, which is the slot of the row the copy is nearest.
+describe('the ghost', () => {
+  // A, B, C and X at the top level, X last.
+  const flat = tree(['A', null], ['B', null], ['C', null], ['X', null]);
+
+  it('is none outside a drag, and the dragged project’s own row from the pickup to the drag’s end', () => {
+    const drag = sidebarDrag(flat);
+    expect(drag.hook.ghost).toBeNull();
+    drag.pickUp('X');
+    expect(drag.hook.ghost).not.toBeNull();
+    drag.release();
+    expect(drag.hook.ghost).toBeNull();
+
+    drag.pickUp('X');
+    act(() => drag.hook.handleDragCancel());
+    expect(drag.hook.ghost).toBeNull();
+  });
+
+  it('is among the sortable context’s rows, which are the rows drawn, in order', () => {
+    const drag = sidebarDrag(flat);
+    expect(drag.hook.rowIds).toEqual(['A', 'B', 'C', 'X']);
+    drag.pickUp('X');
+    expect(drag.hook.rowIds).toEqual(['A', 'B', 'C', 'X']);
+  });
+
+  it('is drawn at its own depth, and has no gap or line, until the first move', () => {
+    const drag = sidebarDrag(tree(['A', null], ['X', 'A']));
+    drag.pickUp('X');
+    expect(drag.hook.ghost).toEqual({ depth: 1, line: false, invalid: false });
+    expect(drag.hook.gap).toBeNull();
+    expect(drag.slot()).toBeNull();
+  });
+
+  it('takes the slot of the row the copy is nearest: after a row below its own slot, before one above it', () => {
+    const drag = sidebarDrag(flat);
+    drag.pickUp('B');
+    drag.hover('C', 0);
+    expect(drag.slot()).toEqual(['C', 'X']);
+    drag.hover('A', 0);
+    expect(drag.slot()).toEqual([null, 'A']);
+    drag.hover('B', 0);
+    expect(drag.slot()).toEqual(['A', 'C']);
+  });
+
+  it('offers every gap, the list’s first and last included, and the line is on the ghost in each', () => {
+    const drag = sidebarDrag(flat);
+    drag.pickUp('B');
+    const slots = ['A', 'B', 'C', 'X'].map(over => {
+      drag.hover(over, 0);
+      expect(drag.hook.ghost?.line).toBe(true);
+      return drag.slot();
+    });
+    expect(slots).toEqual([
+      [null, 'A'],
+      ['A', 'C'],
+      ['C', 'X'],
+      ['X', null],
+    ]);
+  });
+
+  it('is drawn at the projection’s depth, and its line with it', () => {
+    const drag = sidebarDrag(TREE_1);
+    drag.pickUp('X');
+    drag.hover('B', 2);
+    expect(drag.hook.ghost).toEqual({ depth: 2, line: true, invalid: false });
+    drag.hover('B', 0);
+    expect(drag.hook.ghost).toEqual({ depth: 0, line: true, invalid: false });
+  });
+
+  it('keeps one gap under a still cursor, and the same row is the same gap however often it is hovered', () => {
+    const drag = sidebarDrag(flat);
+    drag.pickUp('X');
+    drag.hover('B', 0);
+    const gap = drag.hook.gap;
+    for (const over of ['B', 'B', 'X', 'B', 'C', 'B']) {
+      drag.hover(over, 0);
+      if (over === 'B') expect(drag.hook.gap).toBe(gap);
+    }
+  });
+
+  it('draws no line, and holds no gap, when nothing is over any row', () => {
+    const drag = sidebarDrag(flat);
+    drag.pickUp('X');
+    drag.hover('B', 0);
+    expect(drag.hook.ghost?.line).toBe(true);
+    act(() => drag.hook.handleDragMove({ delta: { x: 0, y: 0 }, over: null } as unknown as DragMoveEvent));
+    expect(drag.hook.gap).toBeNull();
+    expect(drag.hook.ghost).toEqual({ depth: 0, line: false, invalid: false });
+  });
+
+  it('counts a collapsed project once, and the carried project’s branch not at all, past both', () => {
+    // T is collapsed, so T1 isn't drawn, and X carries X1, which isn't either.
+    const projects = tree(['T', null], ['T1', 'T'], ['U', null], ['X', null], ['X1', 'X'], ['Y', null]);
+    const drag = sidebarDrag(projects, ['T']);
+    drag.pickUp('X');
+    expect(drag.hook.rowIds).toEqual(['T', 'U', 'X', 'Y']);
+    drag.hover('Y', 0);
+    expect(drag.slot()).toEqual(['Y', null]);
+    drag.hover('U', 0);
+    expect(drag.slot()).toEqual(['T', 'U']);
   });
 });
 
@@ -381,6 +496,7 @@ describe('the carried project’s branch', () => {
     const drag = sidebarDrag(projects);
     drag.pickUp('X');
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'Y']);
+    expect(drag.hook.rowIds).toEqual(['A', 'X', 'Y']);
     expect(drag.hook.activeItem?.id).toBe('X');
   });
 
@@ -412,15 +528,15 @@ describe('the carried project’s branch', () => {
     const drag = sidebarDrag(projects);
 
     drag.pickUp('X');
-    drag.hover('Y', 'after', 0);
+    drag.hover('Y', 0);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledTimes(1);
     expect(drag.hook.branch).toBeNull();
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'X1', 'X1a', 'X2', 'Y']);
 
     drag.pickUp('X');
-    drag.hover('A', 'after', 0);
-    drag.hover('X', 'before', 0);
+    drag.hover('A', 0);
+    drag.hover('X', 0);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledTimes(1);
     expect(drag.hook.branch).toBeNull();
@@ -437,7 +553,7 @@ describe('the carried project’s branch', () => {
     // Cap 4: X under P3 is at depth 4, and X1 at 5.
     const drag = sidebarDrag(tree(['P1', null], ['P2', 'P1'], ['P3', 'P2'], ['X', null], ['X1', 'X']), [], 4);
     drag.pickUp('X');
-    drag.hover('P3', 'after', 3);
+    drag.hover('X', 3);
     expect(drag.hook.dropInvalid).toBe(true);
     expect(idsOf(drag.hook.drawnItems)).toEqual(['P1', 'P2', 'P3', 'X']);
     drag.release();
@@ -585,8 +701,7 @@ describe('the tier each row is drawn at', () => {
     act(() =>
       result.current.handleDragMove({
         delta: { x: 2 * INDENT_WIDTH, y: 0 },
-        over: { id: 'P2', rect: { top: OVER_TOP, height: ROW_HEIGHT } },
-        active: { id: 'X', rect: { current: { translated: { top: OVER_TOP + LEAN_PX, height: ROW_HEIGHT } } } },
+        over: { id: 'X' },
       } as unknown as DragMoveEvent),
     );
     expect(result.current.projectedDepth).toBe(2);
@@ -642,7 +757,8 @@ describe('before the sidebar has the project cap', () => {
   it('marks nothing invalid while the cap is unknown', () => {
     const drag = sidebarDrag(capChain);
     drag.pickUp('X');
-    drag.hover('P3', 'after', 3);
+    drag.hover('X', 3);
     expect(drag.hook.dropInvalid).toBe(false);
+    expect(drag.hook.ghost?.invalid).toBe(false);
   });
 });

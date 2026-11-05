@@ -91,9 +91,9 @@ export async function cancel(page: Page) {
 }
 
 // dnd-kit stops the click that follows a drag from reaching the page for 50ms after the drag ends
-// (`AbstractPointerSensor`'s document click listener). The board's copy outlives that, gliding to its
-// drop, but the project sidebar's goes at release, so a click right after the wait for the copy would be
-// swallowed. A little past the 50ms.
+// (`AbstractPointerSensor`'s document click listener). A copy that glides to its drop outlives that, but
+// one that is already at its place, such as the project sidebar's set down in its own slot, goes at
+// once, so a click right after the wait for the copy would be swallowed. A little past the 50ms.
 const POST_DRAG_CLICK_GUARD_MS = 60;
 
 async function settled(page: Page) {

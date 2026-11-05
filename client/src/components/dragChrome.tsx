@@ -33,11 +33,11 @@ import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 // the card dnd-kit says is `over`, so every row asks whether it's the one
 // named.
 //
-// Deliberately separate from the sidebar's indicator
-// (`useProjectDragReorder.ts::dropLine`): the sidebar draws no ghost, so it
-// draws one line at the projected gap; the board draws on whichever row
-// the ghost's named neighbor is. Only the line's look (`DROP_LINE_SHAPE` and
-// `DROP_INDICATOR_LINE`) is shared.
+// Deliberately separate from the sidebar's line (`SortableProjectRow.tsx`):
+// a release there names the gap and the depth, not a side, so its line rides
+// the ghost's own top edge, in one place in every gap; the board draws on
+// whichever row the ghost's named neighbor is. Only the line's look
+// (`DROP_LINE_SHAPE` and `DROP_INDICATOR_LINE`) is shared.
 function useLiveDropSide(itemId: string): DropSide | null {
   const { active, over } = useDndContext();
   if (!active || active.id === itemId || !isItemData(active.data.current)) return null;

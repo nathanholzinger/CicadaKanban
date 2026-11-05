@@ -285,10 +285,11 @@ export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): 
 // so they all name the same row. No `over`, no anchor.
 //
 // Deliberately separate from `projectTreeUtils.ts::resolveGap`: the sidebar
-// draws no ghost, so it maps an `over` inside the dragged block to the gap
-// the block collapses to; the board names the ghost's neighbor in dnd-kit's
-// shuffled order. Same outcome — a row of the dragged subtree is never Top
-// or Bottom — from different inputs.
+// has the same ghost and shuffle, but a release there names the gap and the
+// depth, so it reads the ghost's slot, `over`'s place in the list, and no
+// neighbor; the board names the ghost's neighbor in dnd-kit's shuffled order.
+// Same outcome — a row of the dragged subtree is never Top or Bottom — from
+// different inputs.
 export function namedAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over | null): AnchorRelation | null {
   return over ? dropAnchorFor(active, over) : null;
 }

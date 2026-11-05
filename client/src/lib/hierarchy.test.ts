@@ -8,6 +8,7 @@ import {
   isWithinDepthCap,
   buildParentOptions,
   sortedChildrenByParent,
+  withMoveApplied,
   type Positioned,
   type TreeNode,
 } from './hierarchy';
@@ -140,6 +141,105 @@ describe('sortedChildrenByParent', () => {
     const given = [node('b', null, 2), node('a', null, 1)];
     sortedChildrenByParent(given);
     expect(given.map(n => n.id)).toEqual(['b', 'a']);
+  });
+});
+
+// A move sent and not yet answered, drawn at once by the relation it sends: under a parent, beside a named
+// sibling, never by a position.
+describe('withMoveApplied', () => {
+  // Top level: p1, p2, p3. p1 has the children a, b, c; p2 has d, which has e. p3 has none.
+  const nodes = [
+    node('p1', null, 1),
+    node('a', 'p1', 1),
+    node('b', 'p1', 2),
+    node('c', 'p1', 3),
+    node('p2', null, 2),
+    node('d', 'p2', 1),
+    node('e', 'd', 1),
+    node('p3', null, 3),
+  ];
+  const move = (id: string, parentId: string | null, prevId: string | null, nextId: string | null) => ({
+    id,
+    parentId,
+    prevId,
+    nextId,
+  });
+  // The tree as the sidebar reads it: parent id to its children, in order.
+  const childrenAfter = (list: NamedNode[], parentId: string | null) =>
+    sortedChildrenByParent(list)
+      .get(parentId)
+      ?.map(n => n.id);
+
+  it('puts the node under the parent it names, after the sibling it goes after', () => {
+    const after = withMoveApplied(nodes, move('p3', 'p1', 'a', null));
+    expect(childrenAfter(after, 'p1')).toEqual(['a', 'p3', 'b', 'c']);
+    expect(after.find(n => n.id === 'p3')?.parentId).toBe('p1');
+    expect(childrenAfter(after, null)).toEqual(['p1', 'p2']);
+  });
+
+  it('puts it before the sibling it goes before', () => {
+    expect(childrenAfter(withMoveApplied(nodes, move('p3', 'p1', null, 'b')), 'p1')).toEqual(['a', 'p3', 'b', 'c']);
+    expect(childrenAfter(withMoveApplied(nodes, move('p3', 'p1', null, 'a')), 'p1')).toEqual(['p3', 'a', 'b', 'c']);
+  });
+
+  it('puts it last when it names no neighbor, and the only child of a parent that has none', () => {
+    expect(childrenAfter(withMoveApplied(nodes, move('p3', 'p1', null, null)), 'p1')).toEqual(['a', 'b', 'c', 'p3']);
+    expect(childrenAfter(withMoveApplied(nodes, move('a', 'p3', null, null)), 'p3')).toEqual(['a']);
+  });
+
+  it('takes the top level, ahead of the first project, and behind the last', () => {
+    expect(childrenAfter(withMoveApplied(nodes, move('d', null, null, 'p1')), null)).toEqual(['d', 'p1', 'p2', 'p3']);
+    expect(childrenAfter(withMoveApplied(nodes, move('d', null, 'p3', null)), null)).toEqual(['p1', 'p2', 'p3', 'd']);
+    expect(withMoveApplied(nodes, move('d', null, 'p3', null)).find(n => n.id === 'd')?.parentId).toBeNull();
+  });
+
+  it('moves within its own parent', () => {
+    expect(childrenAfter(withMoveApplied(nodes, move('a', 'p1', 'c', null)), 'p1')).toEqual(['b', 'c', 'a']);
+    expect(childrenAfter(withMoveApplied(nodes, move('c', 'p1', null, 'a')), 'p1')).toEqual(['c', 'a', 'b']);
+  });
+
+  it('takes the node’s whole subtree with it', () => {
+    const after = withMoveApplied(nodes, move('d', 'p3', null, null));
+    expect(childrenAfter(after, 'p3')).toEqual(['d']);
+    expect(childrenAfter(after, 'd')).toEqual(['e']);
+    expect(childrenAfter(after, 'p2')).toBeUndefined();
+    expect(getSubtree('p3', after).descendantIds).toEqual(new Set(['d', 'e']));
+  });
+
+  it('reads a neighbor that is not there as none: the node goes last', () => {
+    expect(childrenAfter(withMoveApplied(nodes, move('p3', 'p1', 'gone', null)), 'p1')).toEqual(['a', 'b', 'c', 'p3']);
+    expect(childrenAfter(withMoveApplied(nodes, move('p3', 'p1', null, 'gone')), 'p1')).toEqual(['a', 'b', 'c', 'p3']);
+  });
+
+  it('leaves the other parents’ children in the order and the positions they had', () => {
+    const after = withMoveApplied(nodes, move('p3', 'p1', 'a', null));
+    for (const id of ['p1', 'p2', 'd', 'e']) {
+      expect(after.find(n => n.id === id)).toEqual(nodes.find(n => n.id === id));
+    }
+  });
+
+  it('does not change the nodes it is given, and returns them whole when the moved node is gone', () => {
+    const given = nodes.map(n => ({ ...n }));
+    withMoveApplied(given, move('p3', 'p1', 'a', null));
+    expect(given).toEqual(nodes);
+    expect(withMoveApplied(nodes, move('gone', 'p1', null, null))).toEqual(nodes);
+  });
+
+  it('lays several moves over in the order they were sent, the later against the earlier', () => {
+    const first = withMoveApplied(nodes, move('p3', 'p1', 'a', null));
+    const second = withMoveApplied(first, move('p2', 'p1', 'p3', null));
+    expect(childrenAfter(second, 'p1')).toEqual(['a', 'p3', 'p2', 'b', 'c']);
+    expect(getSubtree('p1', second).descendantIds).toEqual(new Set(['a', 'p3', 'p2', 'b', 'c', 'd', 'e']));
+  });
+
+  it('is a read the next pickup agrees with: the ancestors follow the new parent', () => {
+    const after = withMoveApplied(nodes, move('d', 'p3', null, null));
+    expect(
+      getAncestors(
+        after.find(n => n.id === 'e')!,
+        after,
+      ).map(n => n.id),
+    ).toEqual(['p3', 'd']);
   });
 });
 

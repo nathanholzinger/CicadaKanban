@@ -138,8 +138,8 @@ export const DRAG_REGION_ATTR = 'data-drag-region';
 // cards (`CardListRegion.cardCount`).
 export const DRAG_CARD_COUNT_ATTR = 'data-drag-card-count';
 // The DragOverlay's carried copy, on a Card and on the sidebar's project ghost
-// alike. The E2E helper's "drag finished" wait counts it down to 0: a Card's copy
-// outlives the drag by dnd-kit's drop animation, and the sidebar's goes at release.
+// alike. The E2E helper's "drag finished" wait counts it down to 0: a copy outlives
+// the drag by dnd-kit's drop animation, on either surface.
 // Spelled here once, so a rename on one surface can't leave the wait passing at once.
 export const DRAG_OVERLAY_ATTR = 'data-drag-overlay';
 
