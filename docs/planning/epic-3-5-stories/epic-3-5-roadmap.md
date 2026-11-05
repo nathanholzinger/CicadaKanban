@@ -1168,6 +1168,18 @@ them:
 
 **It runs after Story 8.8 closes,** on 8.8's settled pieces.
 
+**Folded in from the hands-on** (Nathan, 2026-11-04). Three fixes older
+than the story, planned as its D7–D9:
+- a drop's copy no longer flies back to the pickup;
+- the drop line starts where a name at its depth starts, so a child's
+  line no longer reads as a sibling's;
+- every project starts open, and one put under a collapsed project opens
+  it, so a new subproject isn't hidden. This one isn't a drag change.
+
+A report that a gap sometimes offers only "child of the row above" is
+retested after the line's fix, and becomes a story of its own if it
+outlasts it.
+
 ---
 
 ### Story 8.? — The cues' final look
