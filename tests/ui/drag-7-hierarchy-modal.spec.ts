@@ -776,7 +776,11 @@ test('DRAG-7.26: the modal closes when the reloaded board leaves its Card with n
   await expect(article(page, 'A')).toBeVisible();
 });
 
-test('DRAG-7.28: a click on a row in the modal opens nothing', async ({ page, request, projectSidebar }) => {
+test('DRAG-7.28: a click on a row in the modal opens that item’s Sheet above it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
   const name = 'Hierarchy Modal Row Click Project';
   const { r, r1 } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
@@ -790,9 +794,51 @@ test('DRAG-7.28: a click on a row in the modal opens nothing', async ({ page, re
 
   await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
 
-  // No Sheet, the modal as it was, and nothing written.
-  await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+  // R1's Sheet, the modal as it was under it, and nothing written.
+  await expect(itemPanel(page)).toHaveClass(/translate-x-0/);
+  await expect(itemPanel(page).getByRole('heading', { name: 'R1', exact: true })).toBeVisible();
   await expect(modal).toBeVisible();
   expect(await boxOf(modal)).toEqual(placed);
   expect(await settledWrites(page, writes)).toEqual([]);
+});
+
+test('closing the Sheet over the hierarchy modal, by Escape, its X or its backdrop, returns to the modal as it was', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Sheet Close Project';
+  const { r, r1 } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const placed = await boxOf(modal);
+  const sheet = itemPanel(page);
+  const openSheet = async () => {
+    await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
+    await expect(sheet.getByRole('heading', { name: 'R1', exact: true })).toBeVisible();
+  };
+  const backToModal = async () => {
+    await expect(sheet).toHaveClass(/translate-x-full/);
+    await expect(modal).toBeVisible();
+    expect(await boxOf(modal)).toEqual(placed);
+  };
+
+  // Escape closes the Sheet only, and the next Escape closes the modal.
+  await openSheet();
+  await page.keyboard.press('Escape');
+  await backToModal();
+  await openSheet();
+  await sheet.getByRole('button', { name: 'Close panel' }).click();
+  await backToModal();
+  await openSheet();
+  // The backdrop is the strip left of the Sheet's panel, which draws over the modal's own backdrop.
+  await page.mouse.click(5, 300);
+  await backToModal();
+
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
 });

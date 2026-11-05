@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import HierarchyModal from './HierarchyModal';
 import { DragSessionContext, type DescendantsProjection, type DragSession } from './workflow/DragSessionContext';
@@ -48,7 +48,12 @@ function sessionOf(activeItem = D, projection: DescendantsProjection | null = PR
 
 const CURSOR: Point = { x: 400, y: 300 };
 
-function modal(session: DragSession | null, anchor: Point | null, onPlaced = vi.fn()) {
+function modal(
+  session: DragSession | null,
+  anchor: Point | null,
+  onPlaced = vi.fn(),
+  { onCardClick = vi.fn(), sheetOpen = false, onClose = vi.fn() } = {},
+) {
   return (
     <DndContext>
       <DragSessionContext.Provider value={session}>
@@ -58,7 +63,9 @@ function modal(session: DragSession | null, anchor: Point | null, onPlaced = vi.
           getAttachedChildren={attachedChildren}
           anchor={anchor}
           onPlaced={onPlaced}
-          onClose={() => {}}
+          onCardClick={onCardClick}
+          sheetOpen={sheetOpen}
+          onClose={onClose}
         />
       </DragSessionContext.Provider>
     </DndContext>
@@ -131,6 +138,35 @@ describe('the hierarchy modal opened without a drag to place it', () => {
     expect(dialog.style.left).toBe('');
     expect(dialog.parentElement).toHaveClass('flex', 'items-center', 'justify-center');
     expect(onPlaced).not.toHaveBeenCalled();
+  });
+});
+
+describe('the hierarchy modal’s rows and its Sheet', () => {
+  it('DRAG-7.28: a click on a row opens that row’s Sheet', () => {
+    const onCardClick = vi.fn();
+    render(modal(null, null, vi.fn(), { onCardClick }));
+
+    const row = screen.getByRole('dialog').querySelector(`[data-item-id="${D.id}"]`)!;
+    fireEvent.click(within(row as HTMLElement).getByRole('button'));
+
+    expect(onCardClick).toHaveBeenCalledTimes(1);
+    expect(onCardClick).toHaveBeenCalledWith(D.id);
+  });
+
+  it('Escape closes the modal with no Sheet open, and leaves it for the Sheet with one open', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(modal(null, null, vi.fn(), { onClose }));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    rerender(modal(null, null, vi.fn(), { onClose, sheetOpen: true }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    // The X is held off the same way.
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

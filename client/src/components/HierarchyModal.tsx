@@ -4,7 +4,9 @@
 // its list carries the Descendants region key, so the cursor and the carried copy are read
 // against its rows, and the Card's own section draws static under the backdrop
 // (`KanbanCard.tsx`, `StubRows.tsx::SectionRows`). A drag in it is placed by gap and depth as in
-// the section; leaving its box pops out of the layer and closes it (`useBoardDnd.ts`).
+// the section; leaving its box pops out of the layer and closes it (`useBoardDnd.ts`). A click on
+// a row opens that item's Sheet, which draws above the modal and leaves it open: Escape closes the
+// Sheet first, then the modal.
 //
 // Opened by a click it is centered. Opened by a hold during a drag it is placed under the cursor
 // (`workflow/modalPlacement.ts`): once mounted it measures itself, moves so that the spot the
@@ -43,6 +45,10 @@ interface HierarchyModalProps {
   anchor: Point | null;
   /** Called once, when a modal opened by a hold is placed, with its Card and what the cursor reads against it. */
   onPlaced: (cardId: string, reading: ModalReading) => void;
+  /** Opens a row's Sheet, which draws above the modal. */
+  onCardClick: (itemId: string) => void;
+  /** True while a Sheet is open over it: Escape, the X and a click outside close the Sheet's layer, not this one. */
+  sheetOpen: boolean;
   onClose: () => void;
 }
 
@@ -130,6 +136,8 @@ export default function HierarchyModal({
   getAttachedChildren,
   anchor,
   onPlaced,
+  onCardClick,
+  sheetOpen,
   onClose,
 }: HierarchyModalProps) {
   const session = useDragSession();
@@ -167,9 +175,10 @@ export default function HierarchyModal({
   return (
     <ModalShell
       // Escape, the X and a click outside close it only with no drag running: Escape during a
-      // drag cancels the drag and leaves the modal open.
+      // drag cancels the drag and leaves the modal open. With a Sheet open over it the same
+      // Escape closes the Sheet, and the modal stays for the next one.
       onClose={() => {
-        if (!session) onClose();
+        if (!session && !sheetOpen) onClose();
       }}
       ariaLabel={`Hierarchy of ${card.title}`}
       title={card.title}
@@ -195,6 +204,7 @@ export default function HierarchyModal({
             itemTypes={itemTypes}
             projection={session && lockedHere ? session.projection : null}
             activeId={session?.activeItem.id}
+            onCardClick={onCardClick}
           />
         </SortableContext>
       </div>

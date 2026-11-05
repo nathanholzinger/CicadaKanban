@@ -454,6 +454,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                             getAttachedChildren={getAttachedChildren}
                             anchor={hierarchyModalOpen.anchor}
                             onPlaced={readModalPlacement}
+                            onCardClick={setSelectedItemId}
+                            sheetOpen={selectedItemId !== null}
                             onClose={closeHierarchyModal}
                           />
                         )}

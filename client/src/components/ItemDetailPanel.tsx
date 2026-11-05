@@ -19,9 +19,11 @@ import { ChildrenSection } from './item-detail/ChildrenSection';
 import { ActivityLog } from './item-detail/ActivityLog';
 import { XIcon } from './icons';
 
-const BACKDROP_BASE = 'fixed inset-0 z-40 bg-black/40 transition-opacity duration-200';
+// The Sheet draws above every modal (`ModalShell` is z-50), so one opened from the hierarchy modal
+// sits over it, its backdrop included.
+const BACKDROP_BASE = 'fixed inset-0 z-[60] bg-black/40 transition-opacity duration-200';
 const PANEL_BASE =
-  'fixed top-0 right-0 z-50 flex h-full w-[420px] max-w-full flex-col border-l border-zinc-700 bg-zinc-900 transition-transform duration-200 ease-out';
+  'fixed top-0 right-0 z-[70] flex h-full w-[420px] max-w-full flex-col border-l border-zinc-700 bg-zinc-900 transition-transform duration-200 ease-out';
 const DESCRIPTION_DISPLAY_BASE =
   'min-h-[72px] cursor-text rounded border border-transparent px-3 py-2 text-sm leading-relaxed transition-colors hover:border-zinc-700 hover:bg-zinc-800/50 focus:outline-none focus-visible:border-zinc-600';
 

@@ -142,6 +142,11 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Amendments
 
+**1. Phase 1 as built (Coder).**
+- **The stacking is a z-index.** The Sheet's backdrop is `z-[60]` and its panel `z-[70]` (`ItemDetailPanel.tsx`), above `ModalShell`'s `z-50`, always, not only over the hierarchy modal. The other modals share `ModalShell`, so none of them moves. The one other `z-50` surface is the notifications bell's dropdown, which now draws under an open Sheet's backdrop as the modals do.
+- **The hold is a prop.** `HierarchyModal` takes `sheetOpen`, from `BoardView`'s `selectedItemId !== null`, and ignores every close request while it's true: Escape, its X and a click on its backdrop. The Sheet's own Escape listener closes the Sheet in the same keypress.
+- **The new specs:** DRAG-7.28's title now reads "a click on a row in the modal opens that item's Sheet above it". A second spec, with no case ID, closes the Sheet by Escape, its X and its backdrop and checks the modal is as it was each time, then that a last Escape closes the modal.
+
 ## Open questions
 
 - **For the PO, after Nathan's hands-on: where the create-at-cap rule lives.** It holds for items and projects alike, so hierarchy-placement §6 is a candidate. It would sit beside "A feature's UI and its API always enforce the same `CAP`". The alternatives are each feature's page:
