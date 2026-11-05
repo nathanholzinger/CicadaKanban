@@ -8,8 +8,8 @@ import { isValidParent } from './dragClassification';
 import type { DragClassification, DropTargetState, DropTier } from '../../lib/dragTargets';
 import { descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
-import type { CarriedBranch, Placement, Placements } from './itemListOps';
-import type { DropSide, ResolvedPlacement } from '../../lib/hierarchyPlacement';
+import type { Placement, Placements } from './itemListOps';
+import type { CarriedBranch, DropSide, ResolvedPlacement } from '../../lib/hierarchyPlacement';
 
 // The Descendants layer's own tab state: which gap the ghost sits in, which
 // depth is currently chosen within that gap's range, and whether the

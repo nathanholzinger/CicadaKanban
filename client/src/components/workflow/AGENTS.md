@@ -51,7 +51,7 @@ its own header.
   but commits nothing on release, the one exception to "a release always commits"
   (wiki board-drag-interaction §3.2, §7.2). A dragged item, a Card or a Stub,
   takes its attached descendants, its **branch**, with it: no list draws them while it is
-  carried, and its copy says how many (`itemListOps.ts::carriedBranchOf`, held on the session
+  carried, and its copy says how many (`lib/hierarchyPlacement.ts::carriedBranchOf`, held on the session
   as `branch`). So no row of a section is the carried item's descendant, and no neighbor is
   stepped past (`dropAnchorFor`, `modalPlacement.ts::gapAtSlot`); a Free descendant is a Card
   in a column, a real anchor there. A section can draw fewer levels than it holds: below a row at the last
@@ -107,7 +107,7 @@ its own header.
   shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. The second line of its branch's counts hangs from the
-  copy's box in either form, out of the flow (`StubRows.tsx::CarriedBranchLine`), so the copy
+  copy's box in either form, out of the flow (`dragChrome.tsx::CarriedBranchLine`), so the copy
   stays the box the drag measures, a Stub's line steps with the depth, and a shortCard's
   root doesn't clip it (`KanbanCard.tsx` clips the content instead). **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
@@ -159,9 +159,9 @@ The drag gesture's pure, unit-tested modules:
   measures the DOM.
 - `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
   across a form switch, and its clamp to the current context.
-- `itemListOps.ts` — list selectors and ordinal placements over the board's items, the
-  rows a Card's section draws (`sectionEntries`), and the branch a carried item takes with
-  it (`carriedBranchOf`).
+- `itemListOps.ts` — list selectors and ordinal placements over the board's items, and the
+  rows a Card's section draws (`sectionEntries`), without the branch a carried item takes
+  with it.
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
 - `forcedStop.ts` — a stopped drag's signal, its wording and the armed stop, and the
   flash's length.
@@ -200,10 +200,12 @@ The board's own state, outside the gesture:
   holds the column-reorder drop.
 
 Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
-depth rule, and `lib/dragTargets.ts` the classification walk (a target's state and tier),
-both shared with the project sidebar; `components/dragChrome.tsx` holds a row's
+depth rule and the branch a carried item takes with it (`carriedBranchOf`), and
+`lib/dragTargets.ts` the classification walk (a target's state and tier), both shared
+with the project sidebar; `components/dragChrome.tsx` holds a row's
 drag registration, its live drop-side line, and the looks the drag shares (the
-active-context outline, the drop line's shape, the tier classes the sidebar draws with).
+active-context outline, the drop line's shape, the tier classes the sidebar draws with,
+the carried copy's second line and its wording).
 
 ## One way to do each of these
 
@@ -244,16 +246,18 @@ active-context outline, the drop line's shape, the tier classes the sidebar draw
 - **The dragged subtree, out of the placement math:** `dragClassification.ts`'s
   `subtreeIds`, read by the projection's exclusion (`descendantsProjection.ts`). Never
   re-derive it by filtering for cycle-forming states.
-- **What a carried item takes with it:** `itemListOps.ts::carriedBranchOf`, read once at
-  pickup (`useBoardDnd.ts::handleDragStart`) from the board's placement-aware children and
-  held on the session as `branch`, for a Card's pickup and a Stub's alike. Attached links
-  only, so it is not `subtreeIds`, which also holds the Free descendants: those stay drawn
-  where they are, at their tier.
+- **What a carried item takes with it:** `lib/hierarchyPlacement.ts::carriedBranchOf`, read
+  once at pickup (`useBoardDnd.ts::handleDragStart`) from the board's placement-aware
+  children (`itemListOps.ts::descendantsChildrenOf`) and held on the session as `branch`,
+  for a Card's pickup and a Stub's alike. Attached links only, so it is not `subtreeIds`,
+  which also holds the Free descendants: those stay drawn where they are, at their tier.
+  The project sidebar's pickup walks the same function over its real tree
+  (`sidebar/useProjectDragReorder.ts`), where every descendant goes.
   `sectionEntries` leaves its rows out, and any overflow row that stood only for them, so a
   Card's section, the hierarchy modal and the static rows under its backdrop all read the one
   set. The placement math still reads every row (`hierarchyRows`): the branch leaves the
   drawing, not the walk. The copy's second line reads its counts
-  (`itemListOps.ts::carriedBranchLabel`).
+  (`dragChrome.tsx::carriedBranchLabel`).
 - **What a target can be to the carried item, and how strongly its row is drawn:**
   `dragClassification.ts`'s `tiers` (`parent`, `anchor`, `neither`), one per item, from
   the same walk as `states` and at every layer. `DragSessionContext.ts::useDropTargetState`

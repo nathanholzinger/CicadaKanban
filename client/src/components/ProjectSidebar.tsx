@@ -82,13 +82,12 @@ export default function ProjectSidebar({
           >
             <SortableContext items={drag.rowIds} strategy={verticalListSortingStrategy}>
               <div className="pb-4" style={drag.tierVars}>
-                {flatItems.map(item => (
+                {drag.drawnItems.map(item => (
                   <SortableProjectRow
                     key={item.id}
                     item={item}
                     selectedProjectId={selectedProjectId}
                     isActive={item.id === drag.activeItem?.id}
-                    isDescendantOfActive={drag.descendantIds.has(item.id)}
                     tier={drag.tiers.get(item.id) ?? null}
                     indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
                     indicatorDepth={drag.projectedDepth ?? item.depth}
@@ -103,7 +102,9 @@ export default function ProjectSidebar({
               </div>
             </SortableContext>
 
-            <DragOverlay>{drag.activeItem && <DragGhost name={drag.activeItem.project.name} />}</DragOverlay>
+            <DragOverlay>
+              {drag.activeItem && <DragGhost name={drag.activeItem.project.name} branch={drag.branch} />}
+            </DragOverlay>
           </DndContext>
         )}
       </div>

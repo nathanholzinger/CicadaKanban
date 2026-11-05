@@ -6,6 +6,9 @@
 // never a computed position. A set-down in the project's own slot sends
 // nothing (`projectTreeUtils.ts::releaseOf`). Every row is drawn by what it can be to the
 // carried project, on the board's rule (`lib/dragTargets.ts`), at the sidebar's own strengths.
+// The carried project takes its descendants with it, its branch (`lib/hierarchyPlacement.ts::carriedBranchOf`,
+// as a board item does): the hook says which rows are drawn without them (`drawnItems`), and the
+// counts the carried copy says.
 
 import { useState, type CSSProperties } from 'react';
 import {
@@ -19,7 +22,14 @@ import {
 import type { Project } from '../../types';
 import { classifyTargets, type DropTier } from '../../lib/dragTargets';
 import { getSubtree, isWithinDepthCap, type Subtree } from '../../lib/hierarchy';
-import { computeProjection, toRows, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
+import {
+  carriedBranchOf,
+  computeProjection,
+  toRows,
+  type AnchorRelation,
+  type CarriedBranch,
+  type Projection,
+} from '../../lib/hierarchyPlacement';
 import { tierVars } from '../dragChrome';
 import { resolveDropSide } from '../workflow/dragCollision';
 import { loadDragTuning } from '../workflow/dragTuning';
@@ -30,7 +40,7 @@ const NO_SUBTREE: Subtree = { descendantIds: NO_IDS, subtreeIds: NO_IDS, height:
 const NO_TIERS: ReadonlyMap<string, DropTier> = new Map();
 
 // What a drag draws and counts by, fixed when the project is picked up: the board's classification
-// walk over the tree as it stood then, the carried project's subtree from that same tree, and the
+// walk over the tree as it stood then, the carried project's subtree and branch from that same tree, and the
 // sidebar's three strengths as the dev/test panel left them in storage (the panel lives on the
 // board, so a change takes effect on the next drag). A response landing mid-drag changes none of it.
 interface Drawn {
@@ -38,10 +48,17 @@ interface Drawn {
   /** The board's tier properties (`dragChrome.tsx::tierVars`), set from the sidebar's values. */
   vars: CSSProperties;
   /**
-   * The carried project's subtree: its descendants, which stay drawn but are no place to drop; its
-   * ids, which are never a Top/Bottom candidate; and its height, which the cap reads.
+   * The carried project's subtree: its ids, which are never a Top/Bottom candidate, and its
+   * height, which the cap reads.
    */
   subtree: Subtree;
+  /**
+   * What the pickup takes with it: every descendant in the real tree, collapsed ones included,
+   * which no row draws until the drag ends, and the counts its copy says. Null for a project with
+   * no children, and nothing is carried. A response landing mid-drag changes neither: a descendant
+   * it moves out stays hidden, and a project it moves under the carried one is not in the branch.
+   */
+  branch: CarriedBranch | null;
 }
 
 // Every row is placed among siblings, so naming one as the line's anchor gives the carried
@@ -58,6 +75,7 @@ function drawnAtPickup(activeId: string, projects: readonly Project[], depthCap:
       ghost: tuning.projectDraggedOpacity,
     }),
     subtree: getSubtree(activeId, projects),
+    branch: carriedBranchOf(activeId, fullChildrenOf(projects)),
   };
 }
 
@@ -88,9 +106,13 @@ export function useProjectDragReorder(
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
-  // The dragged project's subtree: its descendants stay drawn, none of them a place to drop,
-  // and its height is what the cap reads.
-  const { descendantIds, subtreeIds: exclude, height: subtreeHeight } = drawn?.subtree ?? NO_SUBTREE;
+  // The dragged project's subtree: none of it is a place to drop, and its height is what the cap reads.
+  const { subtreeIds: exclude, height: subtreeHeight } = drawn?.subtree ?? NO_SUBTREE;
+  const branch = drawn?.branch ?? null;
+  // The rows the sidebar draws: every rendered row but the carried project's branch, from the
+  // pickup to the drag's end. Placement doesn't read them (below): the branch comes right after the
+  // project's own row, so the indexes the gap and the release read are the same with or without it.
+  const drawnItems = branch ? flatItems.filter(i => !branch.ids.has(i.id)) : flatItems;
   // The project and its whole subtree are never a Top/Bottom candidate:
   // `rows`, what a gap is computed against, is every rendered row (a collapsed
   // subtree already left `flatItems`) without them.
@@ -128,8 +150,8 @@ export function useProjectDragReorder(
     }
 
     // dnd-kit reports the active row itself as `over` while the pointer rests
-    // on it. `exclude` holds it, so `resolveGap` reads it as a row of the
-    // dragged block: the project's own gap (wiki project-tree §1).
+    // on it, the only row of the dragged block that is drawn. `exclude` holds
+    // it, so `resolveGap` reads it as the project's own gap (wiki project-tree §1).
     const side = resolveDropSide(active.rect.current.translated, over.rect);
     const g = resolveGap(flatItems, rows, exclude, String(over.id), side);
     const proj = computeProjection(rows, g, activeItem.depth, delta.x, INDENT_WIDTH, null, childrenOf, exclude);
@@ -164,7 +186,10 @@ export function useProjectDragReorder(
     sensors,
     activeItem,
     rowIds: rows.map(r => r.id),
-    descendantIds,
+    /** The rows to draw: `flatItems` without the carried project's branch. */
+    drawnItems,
+    /** What the carried project takes with it, for its copy's second line; null when it has no descendants. */
+    branch,
     /** What each row can be to the carried project, by id, for the whole drag (the carried row has none). */
     tiers: drawn?.tiers ?? NO_TIERS,
     /** The custom properties the tier classes read, on whatever holds the rows. Undefined outside a drag. */

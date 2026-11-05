@@ -15,7 +15,7 @@
 // DropSideIndicator, ZoomCue) in dragChrome.tsx. The Card's root element is
 // its Descendants region (`dragRegions.ts`): every Card is one, a childless
 // Card included. The carried copy says what its branch holds on a second line
-// under its box, in either form (`StubRows.tsx::CarriedBranchLine`).
+// under its box, in either form (`dragChrome.tsx::CarriedBranchLine`).
 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState } from 'react';
@@ -23,7 +23,8 @@ import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { DRAG_CARD_ATTR, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
-import { hierarchyRows, sectionEntries, type CarriedBranch } from './workflow/itemListOps';
+import type { CarriedBranch } from '../lib/hierarchyPlacement';
+import { hierarchyRows, sectionEntries } from './workflow/itemListOps';
 import { useHierarchyModal } from './workflow/HierarchyModalContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
@@ -34,8 +35,15 @@ import {
   type DescendantsProjection,
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import { ACTIVE_CONTEXT_OUTLINE, DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
-import { CarriedBranchLine, SectionRows, StubBody } from './StubRows';
+import {
+  ACTIVE_CONTEXT_OUTLINE,
+  CarriedBranchLine,
+  DropSideIndicator,
+  INVALID_PLACEMENT_CLASS,
+  ZoomCue,
+  useItemRow,
+} from './dragChrome';
+import { SectionRows, StubBody } from './StubRows';
 
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';

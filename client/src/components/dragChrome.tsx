@@ -2,14 +2,17 @@
 // registration and drop-target chrome (`useItemRow`), the live side indicator,
 // and the zoom-in cue, with the looks they draw (the active-context outline, the
 // invalid-placement outline) and the drop line's shape, which the project
-// sidebar draws too. The Card tier's own render is KanbanCard.tsx, the Stub
-// tier's StubRows.tsx.
+// sidebar draws too. It also holds what a carried copy says of its branch, for
+// either surface: the second line it hangs under its box (`CarriedBranchLine`)
+// and its wording (`carriedBranchLabel`). The Card tier's own render is
+// KanbanCard.tsx, the Stub tier's StubRows.tsx.
 
 import type { CSSProperties } from 'react';
 import { useDndContext } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { DropSide } from '../lib/hierarchyPlacement';
+import type { CarriedBranch, DropSide } from '../lib/hierarchyPlacement';
+import { OVERFLOW_TEXT_CLASS } from './cardMetrics';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
 import { useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
 import type { DropTier } from '../lib/dragTargets';
@@ -189,6 +192,29 @@ export function DropSideIndicator({ side }: { side: DropSide | null }) {
   if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} data-drop-side="before" />;
   if (side === 'after') return <div className={DROP_INDICATOR_AFTER} data-drop-side="after" />;
   return null;
+}
+
+// The carried copy's second line: "+ 2 children, 5 total descendants". When every descendant is a
+// child it names the children alone.
+// eslint-disable-next-line react-refresh/only-export-components -- the wording lives beside the line it goes on; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
+export function carriedBranchLabel({ children, descendants }: Pick<CarriedBranch, 'children' | 'descendants'>): string {
+  const kids = `+ ${children} ${children === 1 ? 'child' : 'children'}`;
+  return descendants === children ? kids : `${kids}, ${descendants} total descendants`;
+}
+
+// The carried copy's second line, its branch's counts: one row tall, hung under the box it is
+// positioned against, so what dnd-kit measures of the copy stays one box. It covers what is below the
+// copy and takes no pointer. Its look is a placeholder, the overflow row's text over a fill,
+// not yet tuned. The board's copy draws it in either form, the sidebar's in its one.
+export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'children' | 'descendants'> }) {
+  return (
+    <div
+      data-carried-branch
+      className={`${OVERFLOW_TEXT_CLASS} pointer-events-none absolute top-[calc(100%+1px)] -right-px -left-px bg-zinc-800/90`}
+    >
+      <span className="truncate">{carriedBranchLabel(branch)}</span>
+    </div>
+  );
 }
 
 // The cue of a hold, shown only once the hold's dwell has elapsed (the dwell

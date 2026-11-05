@@ -105,7 +105,7 @@ export function centerModal(
 
 // The gap the ghost lands in when the cursor is over the row at `overIndex` of the list's
 // sortable `items`, as the count of rows before it. The carried item's own descendants aren't among
-// them (`itemListOps.ts::carriedBranchOf`), so every row counts. dnd-kit's shuffle
+// them (`lib/hierarchyPlacement.ts::carriedBranchOf`), so every row counts. dnd-kit's shuffle
 // puts the ghost in the slot of the row `over` names, so this is the gap the projection reads off
 // the named neighbor (`dragCollision.ts::dropAnchorFor`, `descendantsProjection.ts`), without
 // asking dnd-kit. Null when the ghost isn't in the list.

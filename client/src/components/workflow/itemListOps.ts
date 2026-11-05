@@ -9,9 +9,8 @@
 //     renders, in what order;
 //   - a Card's descendants section as flat hierarchy rows (`hierarchyRows`,
 //     `descendantsChildrenOf`), the input the shared placement library reads,
-//     and as the rows it draws, cut at the last shown level (`sectionEntries`);
-//   - the branch a carried item takes with it (`carriedBranchOf`): which rows leave the
-//     lists that draw it, and the counts its copy says.
+//     and as the rows it draws, cut at the last shown level (`sectionEntries`), without the
+//     branch a carried item takes with it (`lib/hierarchyPlacement.ts::carriedBranchOf`).
 // A write's response is folded into these lists by `itemWriteReconciliation.ts`.
 
 import type { Item } from '../../types';
@@ -328,9 +327,9 @@ export type SectionEntry = { kind: 'item'; row: HierarchyRow } | { kind: 'overfl
 // (`hierarchyRows`); the board places against all of it, and only the drawing is cut.
 // The dragged item is left out of an overflow row's count, since the ghost shows it. A row
 // whose children are all Free has none, as `rows` holds attached children only.
-// `branchIds` (`carriedBranchOf`) are rows the carried item takes with it: none is drawn, and none
-// is counted, so the overflow row of a carried row, or of the carried item whose children all travel,
-// goes with them. The rows that stay keep their places and counts.
+// `branchIds` (`lib/hierarchyPlacement.ts::carriedBranchOf`) are rows the carried item takes with
+// it: none is drawn, and none is counted, so the overflow row of a carried row, or of the carried
+// item whose children all travel, goes with them. The rows that stay keep their places and counts.
 export function sectionEntries(
   rows: readonly HierarchyRow[],
   sectionLevels: number,
@@ -353,42 +352,6 @@ export function sectionEntries(
     }
   }
   return entries;
-}
-
-// What a carried item takes with it, a Card or a Stub: its attached descendants, as the board
-// draws the tree (`childrenOf` is the placement-aware accessor, `getAttachedChildrenFrom`).
-export interface CarriedBranch {
-  /** Every row under the item, at any depth. */
-  ids: ReadonlySet<string>;
-  /** The item's attached children. */
-  children: number;
-  /** The whole branch. */
-  descendants: number;
-}
-
-// The branch of the item `itemId`, read once at pickup and held for the drag. Attached links only: a
-// Free child is a Card in a column, and it and everything under it stay where they are drawn. So it is
-// not `DragClassification.subtreeIds`, which holds every descendant. The walk isn't cut at the
-// section's last shown level, so the rows an overflow row stands for count. Null when the item has no
-// attached descendants, and nothing is carried.
-export function carriedBranchOf(
-  itemId: string,
-  childrenOf: (parentId: string) => readonly Item[],
-): CarriedBranch | null {
-  const rows = hierarchyRows(itemId, childrenOf);
-  if (rows.length === 0) return null;
-  return {
-    ids: new Set(rows.map(r => r.id)),
-    children: rows.filter(r => r.depth === 0).length,
-    descendants: rows.length,
-  };
-}
-
-// The carried copy's second line: "+ 2 children, 5 total descendants". When every descendant is a
-// child it names the children alone.
-export function carriedBranchLabel({ children, descendants }: Pick<CarriedBranch, 'children' | 'descendants'>): string {
-  const kids = `+ ${children} ${children === 1 ? 'child' : 'children'}`;
-  return descendants === children ? kids : `${kids}, ${descendants} total descendants`;
 }
 
 // The server deletes an item's whole subtree, not just the one id — so

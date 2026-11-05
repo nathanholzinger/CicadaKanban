@@ -66,8 +66,8 @@ export function fullChildrenOf(projects: readonly Project[]): (parentId: string 
 // The gap is `over` row + side, one of n + 1 (`gapIndexFor`), so a project
 // can land after the last row at its own depth, not only before it.
 //
-// `overId` inside `exclude` (the active item's own row, or a descendant of
-// it, still rendered dimmed) resolves to the gap the whole dragged block
+// `overId` inside `exclude` (the active item's own row, the one row of the
+// dragged block that is drawn) resolves to the gap the whole dragged block
 // collapses to, rather than to no projection (wiki project-tree §1). A
 // subtree is always contiguous in DFS order, so every row inside it maps to
 // exactly one gap — the one immediately after the nearest eligible row that

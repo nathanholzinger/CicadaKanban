@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, renderHook } from '@testing-library/react';
+import { render, renderHook, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import type { ReactNode } from 'react';
-import { useItemRow } from './dragChrome';
+import { CarriedBranchLine, carriedBranchLabel, useItemRow } from './dragChrome';
 import { DragGhost } from './sidebar/SortableProjectRow';
 import { DragSessionContext, PlacementsContext, type DragSession } from './workflow/DragSessionContext';
 import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
@@ -252,5 +252,32 @@ describe("the stopped item's flash", () => {
       expect(row.dataAttrs['data-stop-flash']).toBeUndefined();
       expect(row.sortableStyle.animationDuration).toBeUndefined();
     }
+  });
+});
+
+// The second line a carried copy hangs under its box, on the board and in the sidebar alike.
+describe('the carried copy’s second line', () => {
+  describe('carriedBranchLabel', () => {
+    it('says one child as “+ 1 child”, with no total when it is the whole branch', () => {
+      expect(carriedBranchLabel({ children: 1, descendants: 1 })).toBe('+ 1 child');
+    });
+
+    it('says the children alone when every descendant is a child', () => {
+      expect(carriedBranchLabel({ children: 3, descendants: 3 })).toBe('+ 3 children');
+    });
+
+    it('says both counts when the branch is deeper than its children', () => {
+      expect(carriedBranchLabel({ children: 2, descendants: 5 })).toBe('+ 2 children, 5 total descendants');
+      expect(carriedBranchLabel({ children: 1, descendants: 3 })).toBe('+ 1 child, 3 total descendants');
+    });
+  });
+
+  it('reads its branch’s wording, takes no pointer, and hangs out of the flow under the box it is in', () => {
+    render(<CarriedBranchLine branch={{ children: 2, descendants: 5 }} />);
+
+    const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;
+    expect(line).toHaveAttribute('data-carried-branch');
+    expect(line.classList).toContain('pointer-events-none');
+    expect(line.classList).toContain('absolute');
   });
 });

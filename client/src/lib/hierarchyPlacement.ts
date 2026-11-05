@@ -7,7 +7,8 @@
 // resolves the parent a depth lands on and never reads a depth cap: the
 // resolved parent is a real item/project id from the caller's own dataset, so
 // only the caller can look its absolute depth up and judge it
-// (`hierarchy.ts::isWithinDepthCap`).
+// (`hierarchy.ts::isWithinDepthCap`). It also holds what a drag carries: the
+// branch of descendants that goes with the item picked up (`carriedBranchOf`).
 
 // depth 0 = the root's direct children — the root itself is never a row.
 // `parentId` mirrors `rootId`'s own type: null at depth 0 when the caller's
@@ -88,6 +89,35 @@ export function flattenHierarchy(
 ): Row[] {
   const nodes = flattenHierarchyOf(rootId, parentId => childrenOf(parentId).map(id => ({ id })));
   return toRows(nodes, exclude);
+}
+
+// What a carried item takes with it, an item or a project: the descendants that leave every list
+// that draws them while it is carried, and the counts its copy says.
+export interface CarriedBranch {
+  /** Every row under the item, at any depth. */
+  ids: ReadonlySet<string>;
+  /** The item's children. */
+  children: number;
+  /** The whole branch. */
+  descendants: number;
+}
+
+// The branch of `itemId`, read once at pickup and held for the drag. `childrenOf` is the caller's
+// view of what is carried: the board's placement-aware attached children, so a Free child, which
+// stays where it is drawn, is none of it; the sidebar's real tree, collapsed projects included,
+// since a project moves with everything under it, drawn or not. The walk isn't cut at any level a
+// surface draws. Null when there are no descendants, and nothing is carried.
+export function carriedBranchOf(
+  itemId: string,
+  childrenOf: (parentId: string | null) => readonly string[],
+): CarriedBranch | null {
+  const rows = flattenHierarchy(itemId, childrenOf);
+  if (rows.length === 0) return null;
+  return {
+    ids: new Set(rows.map(r => r.id)),
+    children: rows.filter(r => r.depth === 0).length,
+    descendants: rows.length,
+  };
 }
 
 // The gap is `over` row + side (n + 1 gaps, never just "above

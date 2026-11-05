@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  carriedBranchOf,
   flattenHierarchy,
   flattenHierarchyOf,
   toRows,
@@ -71,6 +72,41 @@ describe('flattenHierarchyOf', () => {
     const cycle: Record<string, string[]> = { P: ['A'], A: ['B'], B: ['A', 'P'] };
     const nodes = flattenHierarchyOf('P', id => (cycle[id ?? ''] ?? []).map(record));
     expect(nodes.map(n => n.id)).toEqual(['A', 'B']);
+  });
+});
+
+// What a carried item takes with it, on the tree above: both counts are read off the one walk.
+describe('carriedBranchOf', () => {
+  it('holds every row under the item at any depth, with its children and the whole branch counted', () => {
+    const branch = carriedBranchOf('P', childrenOf);
+
+    expect([...branch!.ids].sort()).toEqual(['S1', 'S1a', 'S1a1', 'S2']);
+    expect(branch?.children).toBe(2);
+    expect(branch?.descendants).toBe(4);
+  });
+
+  it('counts a branch deeper than its children apart from them', () => {
+    const branch = carriedBranchOf('S1', childrenOf);
+
+    expect([...branch!.ids].sort()).toEqual(['S1a', 'S1a1']);
+    expect([branch?.children, branch?.descendants]).toEqual([1, 2]);
+  });
+
+  it('is null for an item with nothing under it, since nothing is carried', () => {
+    expect(carriedBranchOf('S2', childrenOf)).toBeNull();
+    expect(carriedBranchOf('S1a1', childrenOf)).toBeNull();
+  });
+
+  it('never holds the item itself', () => {
+    expect(carriedBranchOf('S1', childrenOf)?.ids.has('S1')).toBe(false);
+  });
+
+  it('a corrupted parentId cycle ends the walk instead of recursing forever', () => {
+    const cycle: Record<string, string[]> = { P: ['A'], A: ['B'], B: ['A', 'P'] };
+    const branch = carriedBranchOf('P', id => cycle[id ?? ''] ?? []);
+
+    expect([...branch!.ids].sort()).toEqual(['A', 'B']);
+    expect(branch?.descendants).toBe(2);
   });
 });
 

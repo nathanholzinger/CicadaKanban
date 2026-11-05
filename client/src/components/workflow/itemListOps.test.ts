@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
+import { carriedBranchOf } from '../../lib/hierarchyPlacement';
 import {
   getWorkphaseItemsFrom,
   getMergedColumnItemsFrom,
   getAttachedChildrenFrom,
   hierarchyRows,
   descendantsChildrenOf,
-  carriedBranchOf,
-  carriedBranchLabel,
   sectionEntries,
   shownLevels,
   EVERY_LEVEL,
@@ -401,10 +400,11 @@ describe('sectionEntries', () => {
   });
 });
 
-// The branch a carried Stub takes with it, as the board draws the tree. The tree: Card P holds the
+// The branch a carried Stub takes with it, as the board reads the tree: through its placement-aware
+// attached children. The walk itself is `hierarchyPlacement.test.ts`'s. The tree: Card P holds the
 // carried Stub S, and T. S holds S1 (then S1a, then S1a1) and S2, and has a Free child F, which holds a
 // Stub FS. T holds only a Free child G.
-describe('carriedBranchOf', () => {
+describe('carriedBranchOf, over the board’s attached children', () => {
   const items = [
     item('P'),
     item('S', { parentId: 'P', position: 1 }),
@@ -418,15 +418,10 @@ describe('carriedBranchOf', () => {
     item('G', { parentId: 'T', isAttached: 0 }),
   ];
   const branchOf = (id: string, pending = placements([])) =>
-    carriedBranchOf(id, parentId => getAttachedChildrenFrom(items, parentId, pending));
-
-  it('holds the Stub’s children and the whole branch below them, at every depth', () => {
-    const branch = branchOf('S');
-
-    expect(branch?.children).toBe(2);
-    expect(branch?.descendants).toBe(4);
-    expect([...branch!.ids].sort()).toEqual(['S1', 'S1a', 'S1a1', 'S2']);
-  });
+    carriedBranchOf(
+      id,
+      descendantsChildrenOf(parentId => getAttachedChildrenFrom(items, parentId, pending)),
+    );
 
   it('counts the rows past the levels a section shows, as the walk is not cut there', () => {
     // From P, S1a1 is at depth 3: the fourth level, which a section of three levels hides.
@@ -436,10 +431,12 @@ describe('carriedBranchOf', () => {
   });
 
   it('leaves a Free child out, with everything under it', () => {
-    const { ids } = branchOf('S')!;
+    const branch = branchOf('S')!;
 
-    expect(ids.has('F')).toBe(false);
-    expect(ids.has('FS')).toBe(false);
+    expect(branch.ids.has('F')).toBe(false);
+    expect(branch.ids.has('FS')).toBe(false);
+    // The two attached children and the three rows under them, nothing of the Free child's.
+    expect([branch.children, branch.descendants]).toEqual([2, 4]);
   });
 
   it('is null for a Stub with no attached descendants, a Free child apart', () => {
@@ -459,21 +456,6 @@ describe('carriedBranchOf', () => {
     // T is drawn under S2, and S1a is drawn Free, with S1a1 under it.
     expect([...branch.ids].sort()).toEqual(['S1', 'S2', 'T']);
     expect([branch.children, branch.descendants]).toEqual([2, 3]);
-  });
-});
-
-describe('carriedBranchLabel', () => {
-  it('says one child as “+ 1 child”, with no total when it is the whole branch', () => {
-    expect(carriedBranchLabel({ children: 1, descendants: 1 })).toBe('+ 1 child');
-  });
-
-  it('says the children alone when every descendant is a child', () => {
-    expect(carriedBranchLabel({ children: 3, descendants: 3 })).toBe('+ 3 children');
-  });
-
-  it('says both counts when the branch is deeper than its children', () => {
-    expect(carriedBranchLabel({ children: 2, descendants: 5 })).toBe('+ 2 children, 5 total descendants');
-    expect(carriedBranchLabel({ children: 1, descendants: 3 })).toBe('+ 1 child, 3 total descendants');
   });
 });
 

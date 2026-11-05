@@ -5,10 +5,10 @@ import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DropTier } from '../../lib/dragTargets';
-import type { DropSide } from '../../lib/hierarchyPlacement';
+import type { CarriedBranch, DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
-import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, tierClass } from '../dragChrome';
+import { CarriedBranchLine, DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, tierClass } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
@@ -25,7 +25,6 @@ interface RowProps {
   item: FlatItem;
   selectedProjectId: string | null;
   isActive: boolean;
-  isDescendantOfActive: boolean;
   /** What this row can be to the dragged project, which is how strongly it is drawn; none while nothing is dragged, and none for the dragged row. */
   tier: DropTier | null;
   /** 'before' draws the line above this row, 'after' below it (the gap past the last row), null draws nothing. */
@@ -44,7 +43,6 @@ export function SortableProjectRow({
   item,
   selectedProjectId,
   isActive,
-  isDescendantOfActive,
   tier,
   indicatorSide,
   indicatorDepth,
@@ -82,11 +80,10 @@ export function SortableProjectRow({
 
   // The row's content is drawn by its tier (the board's classes, at the sidebar's own strengths),
   // the dragged project's row at the ghost's. The drop line sits outside this box, so it keeps its
-  // own strength. The dragged project's descendants stay drawn, and none of them is a place to
-  // drop (wiki project-tree §2).
+  // own strength. The dragged project's descendants are not rows while it is carried
+  // (`useProjectDragReorder.ts::drawnItems`), so none is drawn here to take a drop.
   function rowOpacityClass(): string {
-    if (isActive) return GHOST_ROW;
-    return isDescendantOfActive ? `${tierClass(tier)} pointer-events-none` : tierClass(tier);
+    return isActive ? GHOST_ROW : tierClass(tier);
   }
 
   function rowBackgroundClass(): string {
@@ -211,14 +208,23 @@ export function SortableProjectRow({
 }
 
 // The carried copy. Its `DRAG_OVERLAY_ATTR` is the E2E helper's "drag finished"
-// wait: the copy outlives the drag by dnd-kit's drop animation.
-export function DragGhost({ name }: { name: string }) {
+// wait: the copy outlives the drag by dnd-kit's drop animation. Its branch, if it has one, is
+// said on a second line hung under the box, out of the flow, so what dnd-kit measures of the
+// copy stays this one box (`dragChrome.tsx::CarriedBranchLine`).
+export function DragGhost({
+  name,
+  branch = null,
+}: {
+  name: string;
+  branch?: Pick<CarriedBranch, 'children' | 'descendants'> | null;
+}) {
   return (
     <div
       {...{ [DRAG_OVERLAY_ATTR]: 'true' }}
-      className="flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl"
+      className="relative flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl"
     >
       <span className="max-w-[160px] truncate text-sm text-zinc-100">{name}</span>
+      {branch && <CarriedBranchLine branch={branch} />}
     </div>
   );
 }

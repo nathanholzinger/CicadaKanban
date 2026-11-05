@@ -2,23 +2,17 @@
 // AttachedChildRow (a real, draggable Stub, the carried item's ghost included),
 // OverflowRow (the count standing in for a row's hidden children, which opens the
 // hierarchy modal), their static drawings, SectionRows, the one list of them that
-// a Card's section and the hierarchy modal both draw, and CarriedBranchLine, the second
-// line a carried copy hangs under itself, in either form.
+// a Card's section and the hierarchy modal both draw.
 // The Card tier's own render is KanbanCard.tsx; this is everything a
 // Descendants-section row renders as.
 
 import type { Item, ItemType } from '../types';
 import TypePill from './item-detail/TypePill';
-import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
+import { OVERFLOW_TEXT_CLASS, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
 import { useModalHoldPhase, type DescendantsProjection } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import {
-  carriedBranchLabel,
-  type CarriedBranch,
-  type OverflowRowData,
-  type SectionEntry,
-} from './workflow/itemListOps';
+import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
 // shares — AttachedChildRow and StaticStubRow below, and
@@ -124,7 +118,6 @@ export function AttachedChildRow({
 }
 
 const overflowLabel = (count: number) => `${count} ${count === 1 ? 'child' : 'children'}`;
-const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 
 // The row that stands in for the children of the last shown level's row `row.ownerId`, which
 // the section doesn't draw: how many there are, one level under their parent, where they
@@ -173,21 +166,6 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
           {overflowLabel(row.count)}
         </button>
       </div>
-    </div>
-  );
-}
-
-// The carried copy's second line, its branch's counts: one row tall, hung under the box it is
-// positioned against, so what dnd-kit measures of the copy stays one box. It covers what is below the
-// copy and takes no pointer. Its look is a placeholder, the overflow row's text over a fill,
-// not yet tuned.
-export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'children' | 'descendants'> }) {
-  return (
-    <div
-      data-carried-branch
-      className={`${OVERFLOW_TEXT_CLASS} pointer-events-none absolute top-[calc(100%+1px)] -right-px -left-px bg-zinc-800/90`}
-    >
-      <span className="truncate">{carriedBranchLabel(branch)}</span>
     </div>
   );
 }

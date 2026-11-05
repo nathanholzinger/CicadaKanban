@@ -243,7 +243,7 @@ export function resolveDropSide(
 // own case below.
 //
 // The dragged item's own descendants are never rows of the list the ghost
-// slides through (`itemListOps.ts::carriedBranchOf`), so a neighbor is always
+// slides through (`lib/hierarchyPlacement.ts::carriedBranchOf`), so a neighbor is always
 // the row beside the ghost: nothing that travels with the item can be named
 // (wiki board-drag-interaction §7.2).
 //

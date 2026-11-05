@@ -50,7 +50,7 @@ import {
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { findNearestAncestor } from '../../lib/hierarchy';
-import type { AnchorRelation } from '../../lib/hierarchyPlacement';
+import { carriedBranchOf, type AnchorRelation } from '../../lib/hierarchyPlacement';
 import { isColumnData, namedAnchorFor, resolveBoardCollisions, type CollisionSession } from './dragCollision';
 import { sendItemMove, toRequest } from './dragRequest';
 import {
@@ -94,7 +94,7 @@ import type { ModalReading } from './modalPlacement';
 import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
 import {
   EVERY_LEVEL,
-  carriedBranchOf,
+  descendantsChildrenOf,
   renderedIsStub,
   renderedParentId,
   renderedWorkphaseId,
@@ -642,7 +642,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     // What the carried item takes with it, a Card's children as well as a Stub's branch: read
     // from the board's own placement-aware children, as the lists draw them.
-    const branch = carriedBranchOf(activeId, deps.getAttachedChildren);
+    const branch = carriedBranchOf(activeId, descendantsChildrenOf(deps.getAttachedChildren));
 
     // `renderedIsStub` reads the item as drawn (above) — never dnd-kit's own
     // `data.role` off the active row, which can lag a mid-drag remount. The role

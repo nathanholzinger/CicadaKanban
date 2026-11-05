@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 import type { ComponentProps } from 'react';
 import { makeProject } from '../../test/projectFixture';
 import { GHOST_ROW, tierClass } from '../dragChrome';
-import { SortableProjectRow } from './SortableProjectRow';
+import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
+import { DragGhost, SortableProjectRow } from './SortableProjectRow';
 
 function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {}) {
   render(
@@ -22,7 +23,6 @@ function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {
           }}
           selectedProjectId={null}
           isActive={false}
-          isDescendantOfActive={false}
           tier={null}
           indicatorSide={null}
           indicatorDepth={0}
@@ -71,13 +71,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
     for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
   });
 
-  it('keeps a descendant of the dragged project from taking a drop, at its tier', () => {
-    const box = renderRow({ isDescendantOfActive: true, tier: 'neither' });
-    expect(box.classList).toContain('pointer-events-none');
-    for (const cls of classesOf(tierClass('neither'))) expect(box.classList).toContain(cls);
-  });
-
-  it('lets a row that is not a descendant take a drop, whatever its tier', () => {
+  it('lets a row take a drop, whatever its tier', () => {
     const box = renderRow({ tier: 'neither' });
     expect(box.classList).not.toContain('pointer-events-none');
   });
@@ -87,5 +81,38 @@ describe('SortableProjectRow, drawn by its tier', () => {
     const line = document.querySelector('[data-drop-line]')!;
     expect(line).not.toBeNull();
     expect(box.contains(line)).toBe(false);
+  });
+});
+
+// The carried copy says what the pickup took with it on a second line, hung under its box.
+describe('DragGhost, the carried copy', () => {
+  const ghost = () => document.querySelector(`[${DRAG_OVERLAY_ATTR}]`)!;
+
+  it('says the branch’s counts on a second line inside the copy, out of its box', () => {
+    render(<DragGhost name="Q3 plan" branch={{ children: 2, descendants: 5 }} />);
+
+    const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;
+    expect(line).toHaveAttribute('data-carried-branch');
+    // The line is positioned against the copy's own box and takes no pointer, so what dnd-kit
+    // measures of the copy stays that one box.
+    expect(ghost().contains(line)).toBe(true);
+    expect(ghost().classList).toContain('relative');
+    expect(line.classList).toContain('absolute');
+    expect(line.classList).toContain('pointer-events-none');
+  });
+
+  it('says one child as “+ 1 child”', () => {
+    render(<DragGhost name="Q3 plan" branch={{ children: 1, descendants: 1 }} />);
+
+    expect(screen.getByText('+ 1 child')).toBeInTheDocument();
+  });
+
+  it('has no line without a branch', () => {
+    render(<DragGhost name="Q3 plan" />);
+    expect(document.querySelector('[data-carried-branch]')).toBeNull();
+
+    cleanup();
+    render(<DragGhost name="Q3 plan" branch={null} />);
+    expect(document.querySelector('[data-carried-branch]')).toBeNull();
   });
 });

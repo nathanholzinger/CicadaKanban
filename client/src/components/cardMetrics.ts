@@ -47,6 +47,9 @@ export const STUB_ROW_HEIGHT_CLASS = 'h-6';
 // so the height above is true of each; each adds only its own border, fill and states. The
 // height has no padding of its own to add up to: the border is inside it.
 export const STUB_ROW_BOX_CLASS = `flex ${STUB_ROW_HEIGHT_CLASS} items-center gap-1.5 rounded px-1.5`;
+// The look of a row that only says a count: the overflow row's, and the carried copy's second line
+// (`dragChrome.tsx::CarriedBranchLine`), on the sidebar as on the board.
+export const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 // The flat descendants section's own per-row indent step: depth 0 (a Card's
 // direct Stub) lands 12px in, and each level deeper adds another 12px. One
 // number, read by the render side (`descendantsIndentPx`) and the gesture

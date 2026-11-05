@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.11 — A project's pickup takes its descendants with it
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** planned. A Coder session builds Phase 1
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** Phase 1 built, for review and commit (Amendment 1). Phase 2 is Nathan's hands-on
 
 ## Goal
 
@@ -148,9 +148,51 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Code map
 
-Filled in by the Coder.
+Filled in by the Coder, phase by phase.
+
+| Symbol | Carries |
+|---|---|
+| `lib/hierarchyPlacement.ts::carriedBranchOf`, `CarriedBranch` | The branch (D1, D2), table-generic: a root id and an ids-only `childrenOf`, walked by `flattenHierarchy`. Its ids, its children (the depth-0 rows) and its whole count. Null when there are no rows. The board and the sidebar call it; neither keeps a walk of its own. |
+| `workflow/itemListOps.ts` | No longer holds the branch or its wording. `sectionEntries` still takes `branchIds`, the board's reading of the set. `descendantsChildrenOf` is the board's `childrenOf` for the walk. |
+| `workflow/useBoardDnd.ts::handleDragStart` | `carriedBranchOf(activeId, descendantsChildrenOf(deps.getAttachedChildren))`: the board passes what it passed, its placement-aware attached children, so its branch is unchanged. |
+| `workflow/DragSessionContext.ts`, `KanbanCard.tsx` | Import `CarriedBranch` from the shared layer. |
+| `dragChrome.tsx::carriedBranchLabel`, `CarriedBranchLine` | The wording and the second line (D3), one for both surfaces. The line's element is unchanged: absolute under the box it hangs from, one row tall, `pointer-events-none`, `data-carried-branch`. |
+| `cardMetrics.ts::OVERFLOW_TEXT_CLASS` | The overflow row's text look, the line's too. It moved to the leaf module beside `STUB_ROW_BOX_CLASS`, which `StubRows.tsx` and `dragChrome.tsx` both read, so neither imports the other for it (D3). |
+| `StubRows.tsx` | Imports `OVERFLOW_TEXT_CLASS`; the line and its wording are gone from it. |
+| `sidebar/useProjectDragReorder.ts` (`Drawn.branch`, `drawnItems`, `branch`) | The sidebar's branch (D1, D4): read at pickup from `fullChildrenOf(projects)`, the real tree, so a collapsed project's rows count. Held in `Drawn` with the tiers and the subtree, so a response that lands mid-drag changes none of it. The hook returns `drawnItems`, `flatItems` without the branch's ids, and `branch`. `descendantIds` is gone. Placement reads `flatItems` and `exclude` as before. |
+| `ProjectSidebar.tsx` | Draws `drag.drawnItems`, and hands `DragGhost` `drag.branch`. |
+| `sidebar/SortableProjectRow.tsx` | `isDescendantOfActive` is gone, with the dimmed, pointer-less drawing it gave a descendant. `DragGhost` takes the branch, is `relative`, and hangs `CarriedBranchLine` under its box (D5). |
+| `sidebar/projectTreeUtils.ts::resolveGap` | Comment only: the only row of the dragged block that can be `over` is the project's own. Its path for an `over` inside `exclude` stays. |
+| `workflow/dragCollision.ts`, `workflow/modalPlacement.ts`, `workflow/AGENTS.md` | Comments and the Code map name `lib/hierarchyPlacement.ts::carriedBranchOf` and `dragChrome.tsx` for the walk, the line and the wording. AGENTS.md says the sidebar's pickup walks the same function. |
+| `lib/hierarchyPlacement.test.ts` | The walk's general cases: the ids at any depth, both counts, a branch deeper than its children, none for a leaf, the item itself never in it, a cycle in the data. |
+| `workflow/itemListOps.test.ts` | The board's reading of the walk: a Free child left out with everything under it, rows past the section's shown levels, a pending attach and a pending detach, none with only a Free child. The wording moved. |
+| `dragChrome.test.tsx` | The wording, and the line: its element, out of the flow, taking no pointer. |
+| `sidebar/useProjectDragReorder.test.ts` | The sidebar's branch: its ids and counts at pickup, the rows under a collapsed descendant and a collapsed carried project, none for a project with no children, the rows to draw leaving the branch and keeping the project's own, drawn again on a release, a release that writes nothing, a release past the cap and a cancel, held when a response lands mid-drag (a descendant moved out stays hidden, a project moved under the carried one is drawn). TREE-1.14's test reads the held branch where it read `descendantIds`. |
+| `sidebar/SortableProjectRow.test.tsx` | `DragGhost`'s line with a branch, inside the copy and out of its box, and none without. The descendant-row test went with `isDescendantOfActive`. |
+| `tests/ui/project-tree-drag.spec.ts` | TREE-1.4's spec is skipped, with its reason. |
 
 ## Amendments
+
+**1. 2026-11-04, Phase 1 built** (Coder).
+- **The walk's signature (D2, left to the Coder):** `carriedBranchOf(itemId, childrenOf)`, where `childrenOf` is the ids-only accessor `flattenHierarchy` reads (`(parentId: string | null) => readonly string[]`). It is `flattenHierarchy` plus the two counts, so it takes nothing a surface doesn't already have:
+  - **the board** passes `descendantsChildrenOf(deps.getAttachedChildren)`, the ids-only form of the accessor it walks with, so its branch is the one it had;
+  - **the sidebar** passes `fullChildrenOf(projects)`.
+- **The sidebar's ids are the walk's, not `getSubtree`'s** (D2 said they'd be the same set). The hook keeps `getSubtree` for `subtreeIds` (the ids placement leaves out) and `height` (the cap), as planned.
+- **The line's text class is in `cardMetrics.ts`** (D3 left `dragChrome.tsx` or `cardMetrics.ts` to the Coder). `cardMetrics.ts` is the leaf module that already holds `STUB_ROW_BOX_CLASS`, which the class is built on, so `dragChrome.tsx` and `StubRows.tsx` read it from there with no import between them.
+- **The wording is exported from `dragChrome.tsx`,** beside the line, with the lint exception that file's other non-component exports carry.
+- **The hook returns the rows to draw (`drawnItems`) and `branch`;** `descendantIds` is gone. `rowIds` for `SortableContext` is unchanged: it already left the dragged subtree out.
+- **Placement is unchanged,** as D4 read it. The existing placement tests, TREE-1.2 to TREE-1.11 among them, pass as they stand, TREE-1.6's and TREE-1.4's included: the hook still takes an `over` on a row of the subtree, which dnd-kit no longer reports.
+- **Checked in the browser with a throwaway spec (deleted),** on a tree of A, X (with X1 and X1a, and X2), B, C and D:
+  - **At pickup** the sidebar draws A, X, B, C and D. B moves up 96px, to sit right under X's row. The copy's box is one row, 34px, and the line hangs under it, 24px tall, at the copy's width. It reads "+ 2 children, 3 total descendants".
+  - **dnd-kit reads the moved rows from the first move** (D4's check). Aimed at D's top the line is on D, at C's top it is on C, and a release after C saves X between C and D, under no parent. The tree then draws A, B, C, X, X1, X1a, X2 and D.
+  - **Every end draws the branch again:** Escape, and a set-down in X's own gap, which writes nothing. A project with no children has no line and no row leaves. With X1 collapsed, X's pickup still says "+ 2 children, 3 total descendants".
+  - **A narrow sidebar** (about 130px) truncates the line with an ellipsis.
+  - **Not probed:** a release past the cap, and the branch showing under X after a drop until the response lands. Both are the hook's own state, which the unit tests pin, and Nathan's hands-on covers them.
+- **The new tests were checked against the code.** With `drawnAtPickup` holding no branch, the hook's branch, rows-to-draw, held-branch and TREE-1.14 tests fail (9). With the hook returning `flatItems` as the rows to draw, five of them fail. With `DragGhost` drawing no line, its two line tests fail. **`ProjectSidebar.tsx` has no unit test:** that it draws the hook's `drawnItems` and hands `DragGhost` the branch is covered only by the browser check above, not by a test in the repo.
+- **The gate.**
+  - **`npm run check`:** passes. `check:docs` is 398 files with 0 hits, the client has 710 tests (17 net new), the server 438 and the scripts 245.
+  - **`npm run test:e2e`:** 215 passed, 22 skipped and 0 failed. The one skip over 8.8's close is TREE-1.4's spec, with its reason. It aims at X1 and X2, which aren't drawn now, and the hook's tests of TREE-1.4 hold its rule. No other spec failed for the sidebar's rows.
+- **Not built, as the plan has it:** no new drag spec, and no wiki or test-plan change.
 
 ## Open questions
 
