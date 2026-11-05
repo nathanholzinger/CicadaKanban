@@ -153,7 +153,7 @@ describe('the hierarchy modal’s rows and its Sheet', () => {
     expect(onCardClick).toHaveBeenCalledWith(D.id);
   });
 
-  it('Escape closes the modal with no Sheet open, and leaves it for the Sheet with one open', () => {
+  it('DRAG-7.32: Escape closes the modal with no Sheet open, and leaves it for the Sheet with one open', () => {
     const onClose = vi.fn();
     const { rerender } = render(modal(null, null, vi.fn(), { onClose }));
 

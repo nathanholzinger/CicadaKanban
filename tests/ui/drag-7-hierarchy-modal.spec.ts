@@ -41,7 +41,14 @@ import {
   overflowRow,
   region,
 } from '../helpers/boardLocators';
-import { expectCentered, expectInside, rowIds, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
+import {
+  expectCentered,
+  expectInside,
+  modalState,
+  rowIds,
+  sectionRows,
+  seedOverflowTree,
+} from '../helpers/overflowTree';
 import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
@@ -776,13 +783,19 @@ test('DRAG-7.26: the modal closes when the reloaded board leaves its Card with n
   await expect(article(page, 'A')).toBeVisible();
 });
 
+// The Sheet over the modal: opened by a click on a row, drawn above the modal, and the modal held
+// open under it. The modal is read as a whole (`modalState`): its rows in order at their indents,
+// and its list scrolled where it was.
+
+const sheetHeading = (page: Page, title: string) => itemPanel(page).getByRole('heading', { name: title, exact: true });
+
 test('DRAG-7.28: a click on a row in the modal opens that item’s Sheet above it', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Row Click Project';
-  const { r, r1 } = await seedOverflowTree(request, name);
+  const { p, r, r1 } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
@@ -790,44 +803,102 @@ test('DRAG-7.28: a click on a row in the modal opens that item’s Sheet above i
   const modal = hierarchyModal(page, 'P');
   await expect(modal).toBeVisible();
   const placed = await boxOf(modal);
+  const before = await modalState(modal, p.id);
   const writes = watchWrites(page);
 
   await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
 
-  // R1's Sheet, the modal as it was under it, and nothing written.
-  await expect(itemPanel(page)).toHaveClass(/translate-x-0/);
-  await expect(itemPanel(page).getByRole('heading', { name: 'R1', exact: true })).toBeVisible();
+  // R1's Sheet, not P's, the modal as it was under it, and nothing written.
+  const sheet = itemPanel(page);
+  await expect(sheet).toHaveClass(/translate-x-0/);
+  await expect(sheetHeading(page, 'R1')).toBeVisible();
+  await expect(sheetHeading(page, 'P')).toHaveCount(0);
   await expect(modal).toBeVisible();
   expect(await boxOf(modal)).toEqual(placed);
+  expect(await modalState(modal, p.id)).toEqual(before);
+
+  // The Sheet is in front of the modal and takes the pointer: its title, where the modal lies under
+  // it, opens for editing, and Escape ends that edit before it closes anything.
+  await sheetHeading(page, 'R1').click();
+  await expect(sheet.getByRole('textbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sheet.getByRole('textbox')).toHaveCount(0);
+  await expect(sheet).toHaveClass(/translate-x-0/);
+  await expect(modal).toBeVisible();
+
   expect(await settledWrites(page, writes)).toEqual([]);
 });
 
-test('closing the Sheet over the hierarchy modal, by Escape, its X or its backdrop, returns to the modal as it was', async ({
+test('DRAG-7.28: carrying a row in the modal opens no Sheet, and the release still places by gap and depth', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Row Drag Project';
+  const { p, r, r1, r1a, r2 } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  const sheet = itemPanel(page);
+
+  // R2 is pressed and carried to the gap between R1 and R1a, as in DRAG-7.9: no Sheet opens while it
+  // is carried, nor on the release that follows.
+  await pickUpRow(page, modal, r2.id, 'R2');
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await expect(sheet).toHaveClass(/translate-x-full/);
+  await hoverTo(page, await topQuarter(itemRow(modal, r1a.id)));
+  await hoverTo(page, await topQuarter(itemRow(modal, r1a.id)));
+  await awaitProjection(page, '4:4:true');
+  await expect(sheet).toHaveClass(/translate-x-full/);
+  await release(page);
+
+  await expect.poll(async () => (await fetchItem(request, r2.id)).parentId).toBe(r1.id);
+  await expect(sheet).toHaveClass(/translate-x-full/);
+  await expect(modal).toBeVisible();
+});
+
+// A window tall enough for the board and short enough that the modal's list scrolls, and wide enough
+// that the modal's X lies clear of the Sheet's panel, so a click on it reaches the Sheet's backdrop.
+const SCROLLING_WINDOW = { width: 1600, height: 360 };
+const SCROLLED_BY = 30;
+
+test('DRAG-7.32: closing the Sheet over the hierarchy modal, by Escape, its X or its backdrop, returns to the modal as it was', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Sheet Close Project';
-  const { r, r1 } = await seedOverflowTree(request, name);
+  const { p, r, r1 } = await seedOverflowTree(request, name);
+  await page.setViewportSize(SCROLLING_WINDOW);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
   const modal = hierarchyModal(page, 'P');
   await expect(modal).toBeVisible();
-  const placed = await boxOf(modal);
+  // Scrolled a little, with R1 still in view to press.
+  await region(modal, descendantsRegionKey(p.id)).evaluate((list, by) => (list.scrollTop = by), SCROLLED_BY);
+  const before = await modalState(modal, p.id);
+  expect(before.scrollTop, 'the modal’s list scrolls').toBe(SCROLLED_BY);
+  expect(before.rows.length).toBeGreaterThan(0);
+  const modalX = await center(modal.getByRole('button', { name: 'Close', exact: true }));
+  const writes = watchWrites(page);
+
   const sheet = itemPanel(page);
   const openSheet = async () => {
     await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
-    await expect(sheet.getByRole('heading', { name: 'R1', exact: true })).toBeVisible();
+    await expect(sheetHeading(page, 'R1')).toBeVisible();
   };
   const backToModal = async () => {
     await expect(sheet).toHaveClass(/translate-x-full/);
     await expect(modal).toBeVisible();
-    expect(await boxOf(modal)).toEqual(placed);
+    expect(await modalState(modal, p.id)).toEqual(before);
   };
 
-  // Escape closes the Sheet only, and the next Escape closes the modal.
+  // Each way of closing the Sheet closes only it. The last two are clicks on the modal: on its own
+  // X, which lies under the Sheet's backdrop, and outside it, where its backdrop is covered too.
   await openSheet();
   await page.keyboard.press('Escape');
   await backToModal();
@@ -835,10 +906,142 @@ test('closing the Sheet over the hierarchy modal, by Escape, its X or its backdr
   await sheet.getByRole('button', { name: 'Close panel' }).click();
   await backToModal();
   await openSheet();
-  // The backdrop is the strip left of the Sheet's panel, which draws over the modal's own backdrop.
-  await page.mouse.click(5, 300);
+  await page.mouse.click(5, 200);
+  await backToModal();
+  await openSheet();
+  await page.mouse.click(modalX.x, modalX.y);
   await backToModal();
 
+  // With the Sheet gone, the next Escape closes the modal.
   await page.keyboard.press('Escape');
   await expect(modal).toHaveCount(0);
+  expect(await settledWrites(page, writes)).toEqual([]);
 });
+
+test('DRAG-7.33: a child link in the Sheet replaces the Sheet over the same modal, down to the last child', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Sheet Links Project';
+  const { p, r } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const placed = await boxOf(modal);
+  const before = await modalState(modal, p.id);
+  const writes = watchWrites(page);
+  const sheet = itemPanel(page);
+  const followChild = (title: string) => sheet.getByRole('button').filter({ hasText: title }).first().click();
+  const onlyShows = async (title: string) => {
+    await expect(sheetHeading(page, title)).toBeVisible();
+    // One Sheet, showing the named item, over the same modal.
+    await expect(page.getByRole('complementary', { name: 'Item details', exact: true })).toHaveCount(1);
+    await expect(sheet.getByRole('heading', { level: 2 })).toHaveText(title);
+    await expect(modal).toBeVisible();
+    expect(await boxOf(modal)).toEqual(placed);
+    expect(await modalState(modal, p.id)).toEqual(before);
+  };
+
+  // R's Sheet from its row, then its child R1, then R1's child R1a.
+  await itemRow(modal, r.id).getByRole('button', { name: 'R', exact: true }).click();
+  await onlyShows('R');
+  await followChild('R1');
+  await onlyShows('R1');
+  await followChild('R1a');
+  await onlyShows('R1a');
+
+  // Closing the last Sheet returns to the modal.
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveClass(/translate-x-full/);
+  await expect(modal).toBeVisible();
+  expect(await modalState(modal, p.id)).toEqual(before);
+  expect(await settledWrites(page, writes)).toEqual([]);
+});
+
+test('DRAG-7.34: an edit made in the Sheet appears in the open modal, which is not closed and reopened', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Sheet Edit Project';
+  const { p, r, r1, r1a } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const before = await modalState(modal, p.id);
+
+  await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
+  await sheetHeading(page, 'R1').click();
+  await itemPanel(page).getByRole('textbox').fill('Renamed child');
+  await itemPanel(page).getByRole('textbox').press('Enter');
+
+  // The row now reads the new title, in the same place, among the same rows, at the same indents,
+  // and the other rows keep their titles.
+  await expect(sheetHeading(page, 'Renamed child')).toBeVisible();
+  await expect(itemRow(modal, r1.id)).toContainText('Renamed child');
+  await expect(itemRow(modal, r1.id)).not.toContainText('R1');
+  await expect(modal).toBeVisible();
+  const during = await modalState(modal, p.id);
+  expect(during.rows.map(row => [row.id, row.indent])).toEqual(before.rows.map(row => [row.id, row.indent]));
+  expect(during.rows.filter(row => row.id !== r1.id)).toEqual(before.rows.filter(row => row.id !== r1.id));
+
+  // R1 is still under R, with R1a beneath it, and the modal is the updated one once the Sheet closes.
+  expect((await fetchItem(request, r1.id)).parentId).toBe(r.id);
+  expect((await fetchItem(request, r1a.id)).parentId).toBe(r1.id);
+  await page.keyboard.press('Escape');
+  await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+  await expect(modal).toBeVisible();
+  await expect(itemRow(modal, r1.id)).toContainText('Renamed child');
+  expect(await modalState(modal, p.id)).toEqual(during);
+});
+
+for (const [way, close] of [
+  ['its X', (page: Page) => itemPanel(page).getByRole('button', { name: 'Close panel' }).click()],
+  ['its backdrop', (page: Page) => page.mouse.click(5, 200)],
+  ['Escape', (page: Page) => page.keyboard.press('Escape')],
+] as const) {
+  test(`DRAG-7.35: the modal closes at once when its last attached descendant is detached from its open Sheet, and the Sheet closed by ${way} returns to the board`, async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const name = `Hierarchy Modal Emptied Under Sheet ${way}`;
+    const { p, a, b, x, r } = await seedOverflowTree(request, name);
+    // A is P's only attached child, once B and X are detached.
+    for (const detached of [b, x]) await moveItem(request, detached.id, { isAttached: false });
+    await page.setViewportSize({ width: 1600, height: 720 });
+    await seedDragTuning(page, NO_POP);
+    await projectSidebar.openBoard(name);
+    await expect(article(page, 'P')).toBeVisible();
+    await overflowRow(page, r.id).click();
+    const modal = hierarchyModal(page, 'P');
+    await expect(modal).toBeVisible();
+    await itemRow(modal, a.id).getByRole('button', { name: 'A', exact: true }).click();
+    await expect(sheetHeading(page, 'A')).toBeVisible();
+    const writes = watchWrites(page);
+
+    // A successful edit detaches A: P has no attached descendants left, and the modal goes at once,
+    // with A's Sheet still open.
+    await itemPanel(page).getByLabel('Attached').click();
+    await expect(modal).toHaveCount(0);
+    await expect(itemPanel(page)).toHaveClass(/translate-x-0/);
+    await expect(sheetHeading(page, 'A')).toBeVisible();
+    expect((await fetchItem(request, a.id)).isAttached).toBe(0);
+
+    // Closing the Sheet shows the board, and the modal does not come back.
+    await close(page);
+    await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+    await expect(modal).toHaveCount(0);
+    await expect(article(page, 'P')).toBeVisible();
+    expect(await sectionRows(page, p.id)).toEqual([]);
+    // The detach was the one write.
+    expect((await settledWrites(page, writes)).length).toBe(1);
+  });
+}

@@ -20,7 +20,7 @@ test('project created via api appears in sidebar after refresh', async ({ page, 
   await expect(projectSidebar.projectName('My First Project')).toBeVisible();
 });
 
-test('creates a top-level project via the sidebar', async ({ page, projectSidebar }) => {
+test('TREE-5.5: creates a top-level project via the sidebar', async ({ page, projectSidebar }) => {
   await projectSidebar.newProjectButton.click();
   await expect(page.getByRole('heading', { name: 'New project' })).toBeVisible();
   await page.getByPlaceholder('Project name').fill('Test Project Alpha');

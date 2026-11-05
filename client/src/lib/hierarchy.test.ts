@@ -317,7 +317,7 @@ describe('noChildReason', () => {
   });
 
   it('refuses a parent already past the cap, from data that predates it', () => {
-    expect(noChildReason(9, 6)).not.toBeNull();
+    expect(noChildReason(9, 6)).toBe('At the depth cap (6 levels)');
   });
 
   it('offers the control while the cap is not yet read', () => {

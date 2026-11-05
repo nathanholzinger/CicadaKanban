@@ -30,7 +30,7 @@ function renderTab(project = MIDDLE, projectDepthCap: number | null = CAP) {
 }
 
 describe('the Overview tab’s Add subproject at the depth cap', () => {
-  it('is offered one level short of the cap, and creates under the project', async () => {
+  it('TREE-5.2: is offered one level short of the cap, and names the project as the parent', async () => {
     const { add, onCreateSubproject } = renderTab(MIDDLE);
 
     expect(add).toBeEnabled();
@@ -39,7 +39,7 @@ describe('the Overview tab’s Add subproject at the depth cap', () => {
     expect(onCreateSubproject).toHaveBeenCalledWith(MIDDLE.id);
   });
 
-  it('shows disabled, saying why, at the cap, and creates nothing', async () => {
+  it('TREE-5.3: shows disabled, saying why, at the cap, and creates nothing', async () => {
     const { add, onCreateSubproject } = renderTab(BOTTOM);
 
     expect(add).toBeDisabled();
@@ -48,7 +48,7 @@ describe('the Overview tab’s Add subproject at the depth cap', () => {
     expect(onCreateSubproject).not.toHaveBeenCalled();
   });
 
-  it('is offered at any depth until the cap is read', () => {
+  it('TREE-5.4: is offered at any depth until the cap is read', () => {
     expect(renderTab(BOTTOM, null).add).toBeEnabled();
   });
 });

@@ -126,7 +126,7 @@ describe('the Sheet’s add-child control at the depth cap', () => {
     return within(children).getByRole('button', { name: '+ Add' });
   };
 
-  it('is offered for an item one level short of the cap', async () => {
+  it('ATT-10.6: is offered for an item one level short of the cap', async () => {
     openPanel({ ...detail, depth: CAP - 2 }, CAP);
 
     const add = await addChild();
@@ -134,7 +134,7 @@ describe('the Sheet’s add-child control at the depth cap', () => {
     expect(add).not.toHaveAttribute('title');
   });
 
-  it('shows disabled, saying why, for an item at the cap, and opens no form', async () => {
+  it('ATT-10.7: shows disabled, saying why, for an item at the cap, and opens no form', async () => {
     openPanel({ ...detail, depth: CAP - 1 }, CAP);
 
     const add = await addChild();

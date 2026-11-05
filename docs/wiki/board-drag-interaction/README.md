@@ -1019,10 +1019,14 @@ in the Sheet shows in the modal, which shows the board's items.
 
 **The modal closes by its X button, a click anywhere outside it, or
 Escape.** During a drag, Escape cancels the drag instead, and the
-modal stays open (§7.3). While a Sheet is open above it, nothing closes
-the modal: Escape closes the Sheet, and the next Escape the modal. The
-modal also closes when its Card is gone, or has no attached descendants
-left, since it would have nothing to show.
+modal stays open (§7.3). While a Sheet is open above it, none of these
+closes the modal: Escape closes the Sheet, and the next Escape the
+modal. The modal also closes when its Card is gone, or has no attached
+descendants left, since it would have nothing to show. That close
+doesn't wait for a Sheet: it happens at once, with the Sheet still
+open, and closing the Sheet then returns to the board. **Why:** the
+hold keeps a gesture from closing a modal the user is still using, and
+an empty modal isn't one.
 
 **A board reload leaves an open modal open,** while its Card still has
 attached descendants, showing the hierarchy as the reloaded board has

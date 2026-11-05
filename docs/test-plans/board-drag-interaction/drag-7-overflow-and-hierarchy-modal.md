@@ -40,13 +40,13 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Automated |
 | DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Automated |
 | DRAG-7.27 | The carried item's overflow and its branch's overflow rows are absent during the drag | P2 | Open |
-| DRAG-7.28 | A click on a modal row opens its Sheet above the modal | P2 | Automated |
+| DRAG-7.28 | A click on a modal row opens its Sheet above the modal | P2 | Open |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
 | DRAG-7.32 | Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal | P1 | Open |
 | DRAG-7.33 | Parent and child links replace the Sheet over the same modal | P1 | Open |
-| DRAG-7.34 | An edit in the Sheet appears in the open modal | P1 | Open |
-| DRAG-7.35 | The modal loses its last attached descendant while its Sheet is open | P2 | Pending PO |
+| DRAG-7.34 | An edit in the Sheet appears in the open modal | P1 | Automated |
+| DRAG-7.35 | An empty hierarchy modal closes immediately while its Sheet stays open | P2 | Automated |
 
 ---
 
@@ -300,13 +300,13 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.28 — A click on a modal row opens its Sheet above the modal
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
 
 *Given* the modal open, with no drag running, *when* `R1`'s row in it is clicked, *then* `R1`'s Sheet opens above the modal and is available for interaction. The modal stays open at the same place with the same hierarchy, and opening the Sheet writes nothing. The Sheet belongs to `R1`, not the root Card `P` or another row.
 
 *When* instead a press on `R1` starts its drag in the modal, *then* carrying that row opens no Sheet. The drag still places by gap and depth, as in [DRAG-7.9](drag-7-overflow-and-hierarchy-modal.md).
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.29 — The side highlight can name an overflow row, and a release still places by gap and depth
 
@@ -334,7 +334,7 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 - *when* the Sheet's backdrop is clicked, *then* only the Sheet closes; the click does not dismiss the modal underneath;
 - *when* Escape is pressed, *then* only the Sheet closes, not both surfaces in the same keypress.
 
-After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal.
+After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal. This hold applies only to those dismissal gestures: an automatic close because the Card is gone or its hierarchy is empty does not wait for the Sheet ([DRAG-7.26](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.35](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** —
 
@@ -348,16 +348,18 @@ After each, the same modal remains at its prior place, with the same list order,
 
 ## DRAG-7.34 — An edit in the Sheet appears in the open modal
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
 *Given* `R1`'s Sheet open over the modal, with title `First child`, *when* its title is successfully changed to `Renamed child`, *then* the modal's row for `R1` shows `Renamed child`, not `First child`, without closing and reopening the modal. `R1` remains under `R` with `R1a` beneath it, at the same position in the hierarchy; unrelated rows keep their titles and places. Closing the Sheet returns to that updated modal, not an older snapshot of the item.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
-## DRAG-7.35 — The modal loses its last attached descendant while its Sheet is open
+## DRAG-7.35 — An empty hierarchy modal closes immediately while its Sheet stays open
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
-*Given* Card `P`'s hierarchy modal is open and its only attached descendant `X` has its Sheet open above it, *when* a successful edit detaches `X`, leaving `P` with no attached descendants while `X`'s Sheet remains open, *then* — **question for the PO:** wiki board-drag-interaction §9 says both that nothing closes the modal while a Sheet is open and that the modal closes when it has no attached descendants left. Does the automatic empty-hierarchy close happen immediately, leaving the Sheet open, or wait until the Sheet closes? The ordinary dismissal case keeps a nonempty hierarchy and does not decide this boundary.
+*Given* Card `P`'s hierarchy modal is open and its only attached descendant `X` has its Sheet open above it, *when* a successful edit detaches `X`, leaving `P` with no attached descendants, *then* the modal closes as soon as that empty hierarchy is reflected on the board, without waiting for the Sheet to close. `X`'s Sheet remains open and available for interaction; the automatic modal close does not dismiss it.
 
-**Automation test:** —
+*When* the Sheet is then closed by its X, its backdrop or Escape, each from that state, *then* the board is shown with no hierarchy modal. The old modal is not restored or reopened, and no additional hierarchy write is caused by closing either surface. The Sheet-open hold on dismissal gestures does not postpone this automatic close.
+
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`

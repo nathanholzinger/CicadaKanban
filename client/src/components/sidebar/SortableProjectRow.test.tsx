@@ -368,7 +368,7 @@ describe('SortableProjectRow’s Add subproject at the depth cap', () => {
   });
   const addButton = () => screen.getByRole('button', { name: 'Add subproject' });
 
-  it('is offered one level short of the cap, and while the cap is not yet read', () => {
+  it('TREE-5.2, TREE-5.4: is offered one level short of the cap, and while the cap is not yet read', () => {
     renderRow({ item: rowAt(CAP - 2), projectDepthCap: CAP });
     expect(addButton()).toBeEnabled();
     expect(addButton()).toHaveAttribute('title', 'Add subproject');
@@ -378,7 +378,7 @@ describe('SortableProjectRow’s Add subproject at the depth cap', () => {
     expect(addButton()).toBeEnabled();
   });
 
-  it('shows disabled, saying why, at the cap, and creates nothing', async () => {
+  it('TREE-5.3: shows disabled, saying why, at the cap, and creates nothing', async () => {
     const onCreateSubproject = vi.fn();
     renderRow({ item: rowAt(CAP - 1), projectDepthCap: CAP, onCreateSubproject });
 

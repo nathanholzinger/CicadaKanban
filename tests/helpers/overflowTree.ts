@@ -151,3 +151,21 @@ export function rowIds(scope: Locator): Promise<string[]> {
 export function sectionRows(page: Page, cardId: string): Promise<string[]> {
   return rowIds(region(page, descendantsRegionKey(cardId)));
 }
+
+// What an open hierarchy modal draws and where its list is scrolled: each row's id, title and indent
+// in order, and the list's scroll offset, for a spec that says the modal is as it was.
+export interface ModalState {
+  rows: Array<{ id: string; title: string; indent: string }>;
+  scrollTop: number;
+}
+
+export function modalState(modal: Locator, cardId: string): Promise<ModalState> {
+  return region(modal, descendantsRegionKey(cardId)).evaluate(list => ({
+    rows: [...list.querySelectorAll<HTMLElement>('[data-item-id]')].map(row => ({
+      id: row.getAttribute('data-item-id') ?? '',
+      title: row.querySelector('button')?.textContent?.trim() ?? '',
+      indent: getComputedStyle(row).paddingLeft,
+    })),
+    scrollTop: list.scrollTop,
+  }));
+}
