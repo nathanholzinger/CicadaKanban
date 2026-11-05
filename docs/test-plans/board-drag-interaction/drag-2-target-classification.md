@@ -143,7 +143,7 @@ Low is a drawing rule, not removal of a gap's depth range: valid shallower state
 
 ## DRAG-2.17 — The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2, wiki hierarchy-placement §8
 
 *Given* Stub `X` in Card `P`'s section has an attached child `C` with attached child `G`, both shown, *when* `X` is picked up and dragged to a different gap, *then* `C` and `G` are absent from the section, not drawn at Low. Neither is ever Top, Bottom or the named neighbor. They remain absent after `X` pops out to the column or zooms into a different Card. The same absence holds for the attached branch of a Card picked up Free and zoomed into a section.
 

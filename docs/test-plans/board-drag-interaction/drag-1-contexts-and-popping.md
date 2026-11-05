@@ -341,7 +341,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-1.33 — A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6.1
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6.1, wiki hierarchy-placement §8
 
 *Given* Card `C`, whose list of Stubs the user has collapsed, and Card `E`, whose list the user has expanded, *when* a drag of another Card `X` changes layers (pops out to Board, pops into `C`'s column, and out again) and is released, *then* `C`'s list is still collapsed and `E`'s is still expanded, at every layer change and after the release.
 

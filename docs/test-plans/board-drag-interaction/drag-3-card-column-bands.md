@@ -177,7 +177,7 @@ The labels are asserted as text; their look is open.
 
 ## DRAG-3.19 — At Board and Column layers, both copies of a dragged Card are shortCard, and its attached children are unrendered
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
 
 *Given* Card `X` with a long description, an assignee and attached leaf children `S1, S2`, *when* `X` is dragged at Board or Column layer, *then* both its carried copy and its in-list ghost render as shortCard: one pills row, the title on one line, the description clamped to exactly one line (with the line kept even when `X` has no description), no assignee footer, and no ordinary attached-children indicator or count inside the box. Both copies' boxes are the same fixed height whatever `X` contains. The carried copy alone has a separate line below its box, reading "+ 2 children"; the ghost has none ([DRAG-8.8](drag-8-carried-branch.md)).
 
@@ -203,7 +203,7 @@ The labels are asserted as text; their look is open.
 
 ## DRAG-3.22 — At the Descendants layer, both copies of the dragged item are Stub rows
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
 
 *Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. Both Stub copies' boxes share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. If `X` has an attached branch, its carried copy keeps the count line outside that box, and the ghost has none. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer, with the line on the carried copy alone. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup, with the same carried-copy-only line when it has a branch ([DRAG-8.9](drag-8-carried-branch.md)).
 
@@ -227,7 +227,7 @@ The labels are asserted as text; their look is open.
 
 ## DRAG-3.25 — Every Stub-sized row has one fixed height, with a type pill or without
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
 
 *Given* a Card's expanded descendants section with typed and untyped Stubs, and an overflow row for hidden children, let `s` be the fixed Stub-row height. *When* those rows are drawn, *then* each typed row, each untyped row and the overflow row has total height `s`. A type pill fits within the title's line, so it is no taller than that line and does not grow its row. Longer titles and other row content do not change the fixed height.
 

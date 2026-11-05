@@ -1812,7 +1812,7 @@ deferral and keep landing with their stories.
 
     - **From Story 8.7:** TREE-2.1's old-value spec in
       `project-tree-drag.spec.ts` is skipped with a reason. Restore its
-      qualified shallow-tree/Low-descendant and dragged-row assertions
+      current shallow-tree/branch-absence and dragged-row assertions
       using the current named values. New TREE-2.4, TREE-2.5, TREE-2.6,
       TREE-2.7 and TREE-2.8 cover sidebar tiers, root/cap boundaries,
       response-time stability, line/gap independence and separate
@@ -1820,6 +1820,19 @@ deferral and keep landing with their stories.
       assertions before adding gesture specs. DRAG-2.16 and DRAG-2.19
       also make the shared Low-gap and response-landing rules explicit;
       their remaining coverage stays in the same reconciliation scope.
+
+    - **From Story 8.11's Planner follow-up:** TREE-1.4's spec in
+      `project-tree-drag.spec.ts` is skipped because it aims at hidden
+      descendants. Restore the revised case by aiming at the dragged
+      project's own row. TREE-2.1's skipped spec must check the branch's
+      absence, not Low descendant rows. After close-out reconciliation,
+      fill any remaining gesture-dependent TREE-2.9, TREE-2.10,
+      TREE-2.11 and TREE-2.12 coverage for the sidebar's branch and line,
+      and DRAG-8.10's shared one-row/no-pointer line assertions. The
+      create/reparent expansion cases TREE-11.1–TREE-11.8 are Story
+      8.11's, not deferred drag work. TREE-1.1 and TREE-1.11/TREE-3.9
+      remain skipped only until Story 8.12 updates and unskips them;
+      TREE-1.14–TREE-1.16's response windows are revised in that pass.
 
     - **From Story 8.9's Planner follow-up:** after the confirming and
       close-out reconciliations, fill remaining drag coverage for

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.11 — A project's pickup takes its descendants with it
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** Phase 1 built and committed (Amendment 1). Phase 2, Nathan's hands-on, found three fixes to fold in, D7–D9 (Amendment 2). Phase 3 built them, for review and commit (Amendment 3). Phase 4, Nathan's hands-on, approved D9, and moved what's left of D7 and D8, with the depth-range report, to Story 8.12, "The sidebar's ghost moves to the gap" (Amendments 4 and 5). Phase 5, settle and hand off, is next
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.11 entry · **Status:** Phase 1 built and committed (Amendment 1). Phase 2, Nathan's hands-on, found three fixes to fold in, D7–D9 (Amendment 2). Phase 3 built them, and Nathan committed them (Amendment 3). Phase 4, Nathan's hands-on, approved D9, and moved what's left of D7 and D8, with the depth-range report, to Story 8.12, "The sidebar's ghost moves to the gap" (Amendments 4 and 5). Phase 5 wrote the Living-docs handoff, for the PO's and the Test Planner's passes (Amendment 6)
 
 ## Goal
 
@@ -46,7 +46,11 @@ D9 closes with this story. D7 and D8 ship as built, each better than what it rep
 ## Scope
 
 - **Wiki passages:** none ahead of the build. The PO writes the rules once Nathan approves (code first).
-- **Test-plan cases:** for the Test Planner, after the PO's pass. The handoff lists the ones affected.
+- **Test-plan cases (Test Planner, after the PO's pass):**
+  - Revised sidebar expectations: **TREE-1.4, TREE-1.6, TREE-1.9, TREE-2.1 and TREE-2.4.** TREE-1.9 changes only its last sentence; its gap-reading assertions wait for 8.12.
+  - Added, all **Open**: **TREE-2.9–TREE-2.12** (real-subtree counts and hidden rows, copy-only line and box/pointer behavior, narrow-sidebar truncation, and restoration at every end) and **TREE-11.1–TREE-11.8** (initial/new-project expansion, chevrons/reload, successful and failed creates and parent changes, unchanged-parent edits, and top-level writes). TREE-11.1 is the new-project/first-subproject case the Coder's D9 spec awaits.
+  - Rule-pointer updates: **TREE-2.2 and TREE-2.3** cite project-tree §11; **DRAG-1.33, DRAG-2.17, DRAG-3.19, DRAG-3.22, DRAG-3.25, DRAG-7.27 and DRAG-8.1–DRAG-8.12** cite shared hierarchy-placement §8. **DRAG-8.10** also makes the shared line's one-row height and taking no pointer explicit. Board behavior otherwise stays the same.
+  - **8.12 retains** TREE-1.1, TREE-1.8, the rest of TREE-1.9, TREE-1.11/TREE-3.9, TREE-1.14–TREE-1.16 and TREE-4.8, with D7/D8. **Story 10's item 10 retains** the skipped TREE-1.4 and TREE-2.1 surface specs, plus remaining gesture-dependent coverage after reconciliation. Existing statuses and Automation lines are left for the Reconciler to confirm.
 
 ## Inbound deferrals
 
@@ -349,10 +353,138 @@ Filled in by the Coder, phase by phase.
   - anything 8.12 changes right away is left out of this story's wiki and test-plan pass;
   - the skipped specs stay skipped here, and 8.12 updates and unskips TREE-1.1 and TREE-1.11/TREE-3.9.
 
+**6. 2026-11-04, Phase 5 wrote the handoff** (Coder).
+- **Nothing to build.** Phase 4 approved D9 and kept D7 and D8 as built (Amendment 4), so no code changed in this phase and the gate wasn't rerun. Phase 3's last gate stands: `npm run check` passes, `npm run test:e2e` has 213 passed, 24 skipped and 0 failed.
+- **The handoff is written** (Living-docs handoff), with the plan's Phase 5 list and Amendment 5's two rules applied:
+  - **what 8.12 changes right away is left out,** named at the top of the handoff and again on each passage and case it touches;
+  - **the skipped specs stay skipped here:** TREE-1.4 and TREE-2.1 for Story 10, TREE-1.1 and TREE-1.11/TREE-3.9 for 8.12.
+- **Beyond the plan's list, the handoff adds:**
+  - TREE-2.4's bullet on `X1`, which isn't drawn now;
+  - TREE-1.9's last sentence, which follows TREE-1.6;
+  - D9's rule that only a write that puts a project under a parent it didn't have opens one;
+  - the carried branch's rule for the PO to word without saying when a move lands, since 8.12 draws it at release;
+  - the tests the new cases can cite.
+- **Left to close:** D9's spec, which waits for the Planner's case, and the unit tests' case IDs.
+
+**7. 2026-11-04, the wiki (PO).** The handoff's decisions and superseded passages, less what Story 8.12 changes right away (Amendment 5).
+- **The carried branch is now a shared rule,** new hierarchy-placement §8, "A dragged entry's branch goes with it". Both surfaces carry one, with one wording and one line, and the wiki README's convention puts a rule more than one feature applies on a shared page. The handoff left it to the PO.
+  - **§8 holds:** the branch isn't drawn from pickup to the drag's end, each surface saying what it holds; the entry's own row stays; the Why; placement doesn't change; read once at pickup and held; drawn again at once at every end, under the entry wherever the hierarchy then has it; the second line's wording, X and Y; it hangs outside the measured box, covers what's below and takes no pointer; only the carried copy has it; why not grow the box.
+  - **§7's descendants bullet** now says a surface draws only those outside the branch.
+  - **The intro and Related line** name §8.
+- **Board §5a and §7.2 keep the board's own handling** and cite §8: the branch as attached descendants, the lists it leaves, the Free descendant, the board's tree with its pending writes, the rows that move, where the branch is drawn on each end; the line through every switch, the ghost with none, the box's readers, what it covers. Their section numbers are unchanged, so the DRAG cases' citations hold.
+- **Project-tree:**
+  - **§1,** "Resting on the dragged project's own row": the subtree's rows aren't drawn, so only the project's own row is left to rest on. It means the project's own gap, as before.
+  - **§2:** the descendants aren't drawn; on a tree well within the cap every row is Full and only the dragged row is dimmed; the example's `X`'s child isn't drawn. A new paragraph: the pickup takes the whole subtree, a collapsed project's rows included, by §8, and the rows below move up. The second line counts the children and the whole subtree, and is cut short in a narrow sidebar.
+  - **§11 (new), "Which projects the sidebar shows open"** (D9): every project starts open, a new one included, and a reload opens every project; a collapsed project opens when the app puts a project under it, a hand-set collapse included, by a drop (on the drop), a create or a parent change (on success); only a write that gives a project a parent it didn't have opens one. Its Why: a new project that started collapsed would hide its first subproject.
+  - **§2's drop-opening paragraph** now points to §11, and §5 and §7 each name the opening.
+  - **The intro** says the collapse is a rule, not a placeholder, and the chevrons leave the Open questions' sidebar controls.
+  - **"The look of the drag's cues"** gains the second line's look.
+- **Left out for Story 8.12,** as the handoff names them: §1's line bullet and its last bullet, the mid-drag window included; §2's ghost, line and copy; §4's failed write; the gap's reading; D7 and D8. §2's new paragraph doesn't say when a move lands, and the branch is "read at pickup and held" by §8, with no window.
+- **Deductions, for Nathan to overrule:**
+  - **The move to a shared page,** which the handoff left to the PO.
+  - **"Children" stands** in the sidebar's line, though its button says "Add subproject": one wording for both surfaces, and the hands-on raised nothing.
+  - **The collapse is a numbered section, §11,** not a paragraph in §2, since a create and a parent change aren't drags. §2 keeps a pointer, so TREE-2.2's citation still lands.
+  - **§11 says "the app"** puts the project under the parent, since only the app's own writes open one.
+- **For the Test Planner:** the handoff's list stands. The new branch cases' ground is hierarchy-placement §8 and project-tree §2; the collapse cases' is §11. Hierarchy-placement has no catalog, so §8 is tested through each surface's, as §7 is.
+- **Checks:** `check:docs` passes.
+
+**8. 2026-11-04, test-plan follow-up (Test Planner).** Applied the Coder's handoff after the PO's wiki pass, deriving the cases from the settled rules without reading code or test code.
+- **The branch:** TREE-2.1 now removes the descendants instead of dimming them, keeps the dragged row and unrelated tiers, and checks the rows below moving up. TREE-2.4 removes its drawn-Low descendant. TREE-1.4 and TREE-1.6 aim at the dragged project's own row; TREE-1.9's closing sentence no longer offers descendant rows to rest on.
+- **The new cases:** TREE-2.9–TREE-2.12 cover the real tree's hidden rows, exact wording and zero branch, the copy's one-row measured box, the line's pointer behavior and truncation, and the branch's return on a drop, Escape, own-gap release and over-cap release. They do not fix when a move lands or build a new mid-drag response-window scenario. TREE-2.9 states only the shared pickup snapshot's lifetime; the changing-subtree windows remain with TREE-1.14–TREE-1.16 in 8.12.
+- **Expansion:** the new TREE-11 suite follows project-tree §11. TREE-2.2 and TREE-2.3 keep the existing drop cases, adding the new section as a Rule pointer. No case is moved or retired. The create and edit cases distinguish unanswered, successful and failed writes, and check that unrelated or unchanged parents do not open.
+- **The board:** followed the shared-rule move to hierarchy-placement §8 without changing the board's own branch, list, pending-write or release rules. DRAG-8.10 also gains the shared line's one-row height and no-pointer assertions.
+- **For the Coder and Reconciler:** all twelve new cases are Open with no Automation mapping. Assign IDs to the handoff's existing tests where their assertions cover the new cases, add D9's first-subproject spec for TREE-11.1, and assess the revised cases against their current mappings. TREE-1.4's only mapped surface spec is reported skipped; its current Automated status needs the Reconciler's correction. TREE-1.6's mapped test is reported to inject an unreachable descendant hit, so it needs a check against the revised own-row case. This pass makes no new coverage claim and leaves existing status/Automation fields unchanged.
+- **Routing:** Story 10's item 10 names TREE-1.4 and the current TREE-2.1 behavior, and carries any remaining gesture-dependent TREE-2.9–TREE-2.12 and DRAG-8.10 coverage after reconciliation. 8.12's cases and skips remain as the handoff directs. No Pending PO question arose.
+- **Checks:** `npm run check:docs` passes (402 files, zero hits), and `git diff --check` passes. No runtime tests were run for this documentation pass.
+
 ## Open questions
 
 None yet.
 
 ## Living-docs handoff
 
-Written by the Coder in Phase 5.
+Written by the Coder in Phase 5, after Nathan's Phase 4 hands-on approved D9 and kept D7 and D8 as built (Amendment 4). The hands-on changed nothing to build, so no code changed in this phase. The wiki and the test plans are the PO's and the Test Planner's, and none is edited here.
+
+**Left out of this pass for Story 8.12** (Nathan, Amendment 5). 8.12 changes these right away, so no rule or case is written for them here. Each item below that touches one says so.
+- **project-tree §1:** "An indicator line, not a ghost", "the line's position is the gap", "a release saves exactly the gap and depth the line shows", and "a move is shown when its response arrives (§4)".
+- **project-tree §2:** the ghost, the line and the copy. **§4:** "after a failed write, the sidebar shows the project where it was".
+- **The gap's reading,** a row's half, and so TREE-1.1, TREE-1.8, TREE-1.9, TREE-1.11/TREE-3.9, TREE-1.14 to TREE-1.16 and TREE-4.8.
+- **D7 and D8,** below.
+
+- **Behavior decisions made while building, for the PO to rule on:**
+  - **The carried branch** (D1 to D6):
+    - **A pickup takes the project's whole branch out of the rows,** every descendant in the real tree. A descendant under a collapsed project goes and counts too, though no row drew it. The project's own row stays, at the strength of its own (project-tree §2).
+    - **Placement doesn't change.** The branch was never a candidate, and the rows below moving up changes no gap, projection, cap check or release.
+    - **The project's own row is the only row of its block to rest on.** The rows of its subtree aren't drawn.
+    - **The branch is drawn again when the drag ends, at every end:** a drop, Escape, a set-down in the project's own gap, a release past the cap. It's drawn under the project wherever the tree then has it. **The PO words this without saying when a move lands,** which 8.12 changes: today the branch shows at the old place until the response arrives.
+    - **It is read once at pickup and held,** the tree as it was then (§1's last bullet). A response landing mid-drag changes none of it. A descendant the response moves out stays hidden until the drag ends. A project it moves under the carried one isn't in the branch: it's drawn where the tree puts it, and stays a place to drop. 8.12 narrows that window to a refused move, so the PO leaves §1's last bullet for 8.12's pass. If the branch is written in, it says "read at pickup" and no more.
+    - **The copy's second line says what the branch holds:** "+ 2 children, 5 total descendants". When every descendant is a child it names the children alone, "+ 3 children" or "+ 1 child". A project with no children has no line. The children are the project's own, the total is the whole branch, collapsed rows counted.
+    - **The line hangs under the copy's box,** out of the flow and one row tall. It covers what is below the copy, takes no pointer, and truncates in a narrow sidebar. The copy's box stays the one row it was, so what the drag measures is unchanged. The line's look is a placeholder, "The cues' final look"'s.
+    - **The wording is the board's,** one function for both surfaces. The sidebar says "children" where its button says "Add subproject". The hands-on raised no change, so it stands unless the PO rules otherwise.
+  - **Collapse** (D9):
+    - **Every project starts open, a new one included.** A project created after the sidebar loaded used to start collapsed, hiding its first subproject. Collapse isn't remembered: a reload opens every project.
+    - **A collapsed project opens when a project is put under it,** by any of three writes:
+      - **a drop,** on the drop and before the response, so it stays open if the move fails (TREE-2.3);
+      - **a create,** from the sidebar's "Add subproject" or the project page's subprojects list, both through the create dialog;
+      - **a parent change** from the project page's dropdown (§7).
+
+      A create and a parent change open it once the write has succeeded. A failed one leaves it collapsed.
+    - **Opening wins over a collapse set by hand,** as the drop's rule had it.
+    - **Only a write that puts a project under a parent it didn't have opens one.** A rename, or an edit naming the parent the project already has, leaves a collapsed parent collapsed. A top-level project has no parent to open.
+  - **D7 and D8 go to neither the wiki nor the test plan.** Neither changes a stated rule, and 8.12 replaces both.
+    - **D7:** the copy goes at release, with no drop animation. 8.12 brings the animation back, with the move drawn at release.
+    - **D8:** the drop line starts where a name at its depth starts. 8.12 keeps that start as the line's, and its handoff asks the PO whether it's a rule.
+- **Planned passages now built:** none. None were planned.
+- **Passages superseded,** each for the PO:
+  - **project-tree §1, "Resting on the dragged project's own row, or a row of its subtree":** "Those rows stay in place, the subtree's dimmed (§2)" goes. Only the project's own row is drawn to rest on. "None of them is ever Top or Bottom" still holds.
+  - **project-tree §2:**
+    - "The dragged project's descendants are Low, so the branch reads as going with it": the sidebar draws none of them, so nothing dims for them. They are still no place to drop, and still Low in the pickup's classification, which no row shows.
+    - "On a tree well within the cap, only the dragged project's descendants dim": only the dragged project's own row does.
+    - The example's "`P12` and `X`'s child are Low": `X`'s child isn't drawn.
+    - New: the copy's second line.
+  - **project-tree §2, "A collapsed project opens when a project is dropped into it":** it holds for a create and a parent change too, on their success, and every project starts open (D9). §5 and §7 may each name the opening. "The collapse chevrons" can come off the Open questions if the PO makes the rule.
+  - **hierarchy-placement §7, "The dragged entry's descendants are Low, at every depth, wherever a surface draws them":** it's true as written, since the sidebar draws none. The page for the sidebar says it draws none. Both surfaces now carry a branch, with one wording and one line, so the PO decides whether that becomes a shared rule in §7, each page saying what its branch holds: the board's attached descendants, the sidebar's whole subtree.
+- **Implementation passages to place:** placed by the Coder, in docs the Coder owns:
+  - the module headers of `hierarchyPlacement.ts`, `dragChrome.tsx`, `useProjectDragReorder.ts`, `projectTreeUtils.ts`, `useCollapsedProjects.ts` and `ProjectSidebar.tsx`;
+  - `workflow/AGENTS.md`, which says the sidebar's pickup walks the same function over its real tree.
+
+  Nothing for the PO.
+- **Test-plan cases affected,** for the Test Planner after the PO's pass:
+  - **TREE-2.1:** it says `X1` and `X1a` "stay drawn in place at Low". They aren't drawn. The tiers clearing at the drag's end and the dragged row's own strength still hold. Its skipped spec's reason, the descendants' old 0.4, is stale for the same cause.
+  - **TREE-2.4:** the bullet "`X1` is Low by descent from `X`". `X1` isn't drawn. The rest holds.
+  - **TREE-1.6:** the cursor can't rest on `X1`'s or `X2`'s row, which aren't drawn. Its rule holds: no depth makes `X` a child of `X1` or `X2`, since they're out of placement. The case reduces to resting on `X`'s own row. Its hook test still passes, by handing the hook an `over` that dnd-kit no longer reports, so no gesture reaches that path now.
+  - **TREE-1.9's last sentence** points at TREE-1.6. The rest of TREE-1.9 is 8.12's.
+  - **TREE-1.4:** its rule holds. Its spec aims at `X1` and `X2`, which aren't drawn, so it's skipped for Story 10. The Planner rewrites the case's aim first (the cursor on `X`'s own row), and the spec follows.
+  - **TREE-1.16:** a moved-out `Y` stays hidden for the drag, so there is no row to rest on (D1). 8.12 narrows the window TREE-1.14 to TREE-1.16 describe, so the Planner takes the three together in 8.12's pass. Until then no test pins TREE-1.16 (it's Open).
+  - **TREE-2.2,** a collapsed project opening on a drop, extended to a create and a parent change, or joined by cases of their own in TREE-5 and TREE-7. TREE-2.3 holds. The rules to cover:
+    - a project created after the sidebar loaded starts open, so its first subproject shows;
+    - a create under a collapsed parent opens it, from the sidebar and from the project page; a failed create leaves it collapsed;
+    - a parent change into a collapsed project opens it; a failed one leaves it collapsed;
+    - a rename, or an edit naming the parent the project already has, leaves a collapsed parent collapsed.
+  - **A new case, or cases, for the carried branch and its line:**
+    - the pickup takes the branch out of the rows, a collapsed descendant's rows included;
+    - the line's wording: children and total, children alone, one child, and none for a project with no children;
+    - the copy's box is one row, the line outside it;
+    - the branch is drawn again at every end of the drag;
+    - the branch is read at pickup and held when a response lands mid-drag (8.12's pass takes the window, as above).
+  - **Tests the new cases can cite,** all without a case ID today:
+    - the walk: `lib/hierarchyPlacement.test.ts`;
+    - the board's reading of it: `workflow/itemListOps.test.ts`;
+    - the wording and the line: `dragChrome.test.tsx`;
+    - the sidebar's branch, its rows to draw and its held state: `sidebar/useProjectDragReorder.test.ts`;
+    - the copy's line: `sidebar/SortableProjectRow.test.tsx`;
+    - the collapse: `sidebar/useCollapsedProjects.test.ts`, `sidebar/projectTreeUtils.test.ts` (`parentPutUnder`) and `App.test.tsx`, which renders the real sidebar and create dialog.
+  - **Skipped specs, all in `tests/ui/project-tree-drag.spec.ts`:**
+    - **TREE-1.4 and TREE-2.1** stay skipped for Story 10.
+    - **TREE-1.1 and TREE-1.11/TREE-3.9** stay skipped here, and 8.12's Phase 3 updates and unskips them. Their reasons say so.
+- **For the Architect:**
+  - **Story 10's item 10 gains one skipped spec:** TREE-1.4's, with its reason in a comment above it. TREE-2.1's is already there.
+  - **The roadmap's 8.11 entry** has a "Today" paragraph that still says the sidebar draws the dragged project's descendants at Low and shows the copy's name alone. That is right as the problem's statement and wrong as live.
+  - **`tests/helpers/dragGesture.ts::settled` waits 60ms past the copy going** (Amendment 3), since dnd-kit swallows the click for 50ms after a drag. The board's drop animation outlasts that, and the sidebar's copy, going at release, didn't. 8.12 says keeping it is the Coder's call.
+  - **Root `AGENTS.md`:** nothing it says is made false.
+- **Left to the Coder at close:**
+  - **D9's spec,** once the Planner's case exists: a subproject created under a new project shows. It isn't a drag spec, so it isn't routed to Story 10.
+  - **The unit tests above take the new cases' IDs** in their titles.
+  - **The gate,** if that code work changes anything.
+- **Wiki sections added, changed, moved or removed** (PO, at close): hierarchy-placement §8 (new), its Related line, intro and §7's descendants bullet; board-drag-interaction §5a and §7.2 (the shared half moved to hierarchy-placement §8) and its Related line; project-tree §1, §2, §5, §7, §11 (new), its Related line, intro and two Open questions. Amendment 7.
+- **Test-plan handoff applied** (Test Planner): Scope and Amendment 8 list the revised cases, twelve new Open cases, shared-rule pointer changes and coverage follow-up. The 8.12 exclusions remain in force.

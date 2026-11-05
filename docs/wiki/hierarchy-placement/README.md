@@ -7,22 +7,23 @@ rules tests them in its own catalog:
 and [`../../test-plans/project-tree/`](../../test-plans/project-tree/).
 
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
-§4.1, §7 (a Card's descendants section on the board, and its tiers) ·
+§4.1, §5a, §7 (a Card's descendants section on the board, its tiers,
+and its carried branch) ·
 [`../project-tree/`](../project-tree/) §1–§3 (the project sidebar, its
-tiers, and the project cap) ·
+tiers and carried branch, and the project cap) ·
 [`../item-attachment/`](../item-attachment/) §8 (the item cap)
 
 This page answers "given where a dragged entry is released in a
 hierarchy, where does it land, how deep may a hierarchy go, and how is
-each entry drawn while one is dragged." Its rules are shared: a Card's
-descendants section on the board and the project sidebar both place by
-them and draw their entries by §7's tiers, and §6's depth cap holds for
-every write that gives an item or a project a parent, whatever the
-surface. An *entry* is one row of the hierarchy: an item, shown as a
-Stub in a Card's section, or a project in the sidebar. Each feature's
-own page says how it shows the gap, what its root is, and any rule of
-its own, and marks as Planned any rule here that it's still to be built
-to.
+each entry drawn while one is dragged, and what goes with it." Its rules
+are shared: a Card's descendants section on the board and the project
+sidebar both place by them, draw their entries by §7's tiers and carry
+a branch by §8, and §6's depth cap holds for every write that gives an
+item or a project a parent, whatever the surface. An *entry* is one
+row of the hierarchy: an item, shown as a Stub in a Card's section, or
+a project in the sidebar. Each feature's own page says how it shows the
+gap, what its root is, and any rule of its own, and marks as Planned any
+rule here that it's still to be built to.
 
 ---
 
@@ -175,8 +176,9 @@ whether its parent is.
   can (§3).
 - **The dragged entry's descendants are Low,** at every depth, wherever
   a surface draws them. Each one's parent is the dragged entry or one of
-  its descendants, never a legal parent (§4). Each surface's page says
-  which of them it draws.
+  its descendants, never a legal parent (§4). A surface draws only those
+  outside the dragged entry's branch (§8), and its page says which those
+  are.
 - **The tier passes down.** Every entry under a Mid or a Low one is Low,
   since neither is a legal parent. So an entry's tier needs only its own
   answer and its parent's.
@@ -196,6 +198,36 @@ one surface can be tuned without moving the other. Its page names them.
 **A tier dims the entry's own content, never the drop cue beside it.**
 The drop line keeps full strength beside a Mid entry, which a release
 can name.
+
+## 8. A dragged entry's branch goes with it
+
+**While an entry is dragged, its *branch* isn't drawn,** from pickup to
+the drag's end: the descendants that move with it (§4), at every depth.
+Each surface's page says what its branch holds. The entry's own row
+stays. **Why:** so the pickup reads as taking the whole branch.
+
+- **Placement doesn't change.** The branch is never a candidate (§4), so
+  the gaps and depths a drag offers are the ones a drawn branch would
+  give. Only where the rows are drawn changes.
+- **The branch is read once, at pickup,** and held for the whole drag,
+  as the tiers are (§7).
+- **When the drag ends, the branch is drawn again at once,** at every
+  end, under the entry wherever the hierarchy then has it.
+
+**The carried copy shows the branch's count on a second line:** "+ X
+children, Y total descendants". X is the entry's children in the
+branch, and Y the whole branch, rows hidden from view counted. When
+every descendant is a child it reads "+ X children" alone, and one
+child reads "+ 1 child". An entry with no branch has no line.
+- **It hangs under the copy's box,** one row tall, outside the box the
+  drag measures, so it changes nothing the drag reads from that box.
+- **It covers what's below the copy,** and takes no pointer.
+- **Only the carried copy has it,** not the entry's own row in the list.
+
+Why not grow the copy's box to hold the line: each surface reads the
+drag from that box, and a box a row taller would read a row off for
+every entry with a branch. The line's look is each surface's (its Open
+questions).
 
 ---
 

@@ -19,7 +19,7 @@ X        (0)
 | TREE-1.3 | The boundaries: above the first row, below a nested last row, clamping, and the top level as the floor | P1 | Automated |
 | TREE-1.4 | When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn | P2 | Automated |
 | TREE-1.5 | A collapsed project hides its subtree from view, not from placement | P1 | Automated |
-| TREE-1.6 | Resting on a row of the dragged project's own subtree means its own gap | P1 | Automated |
+| TREE-1.6 | Resting on the dragged project's own row means its own gap, with its descendants absent | P1 | Automated |
 | TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
 | TREE-1.9 | Coming back to the dragged project's own row means its own gap | P1 | Automated |
 | TREE-1.10 | On the dragged project's own row, the cursor picks among its own gap's depths | P2 | Automated |
@@ -70,9 +70,9 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 ## TREE-1.4 — When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §2
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §2, wiki hierarchy-placement §8
 
-*Given* a sidebar whose only top-level project is `X`, with children `X1` and `X2`, so `X`'s subtree holds every project, *when* `X` is dragged, *then* no row is ever Top or Bottom, and wherever the cursor goes, exactly one depth is offered: the top level, where `X` already is. No line is drawn, and a release sends no request.
+*Given* a sidebar whose only top-level project is `X`, with children `X1` and `X2`, so `X`'s subtree holds every project, *when* `X` is picked up and the cursor rests on `X`'s own row, *then* `X1` and `X2` are absent and no row is Top or Bottom. Exactly one depth is offered: the top level, where `X` already is. Moving elsewhere in the sidebar offers no other gap or depth. No line is drawn, and a release sends no request.
 
 **Automation test:** `tests/ui/project-tree-drag.spec.ts`
 
@@ -87,11 +87,11 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 **Automation test:** `client/src/components/sidebar/useProjectDragReorder.test.ts`, `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts`
 
-## TREE-1.6 — Resting on a row of the dragged project's own subtree means its own gap
+## TREE-1.6 — Resting on the dragged project's own row means its own gap, with its descendants absent
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §8
 
-*Given* top-level projects `A`, `X` and `B`, in that order, where `X` has children `X1` and `X2`, and `A` has none, *when* `X` is dragged and the cursor rests on `X1`'s or `X2`'s row, *then* the line is in `X`'s own gap, between `A` and `B`, offering that gap's two depths: the top level, `X`'s own, and `A`'s first child. *When* `X` is released there as `A`'s first child, *then* it's saved there, with `X1` and `X2` still its children. No depth in any gap makes `X` a child of `X1` or `X2`, since they're never Top or Bottom.
+*Given* top-level projects `A`, `X` and `B`, in that order, where `X` has children `X1` and `X2`, and `A` has none, *when* `X` is dragged and the cursor rests on `X`'s own row, *then* the line is in `X`'s own gap, between `A` and `B`, offering that gap's two depths: the top level, `X`'s own, and `A`'s first child. `X1` and `X2` are absent, so neither has a row to rest on. *When* `X` is released there as `A`'s first child, *then* it's saved there, with `X1` and `X2` still its children. No depth in any gap makes `X` a child of `X1` or `X2`, since they're never Top or Bottom.
 
 **Automation test:** `client/src/components/sidebar/useProjectDragReorder.test.ts`
 
@@ -105,9 +105,9 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 ## TREE-1.9 — Coming back to the dragged project's own row means its own gap
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §5
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §5, wiki hierarchy-placement §8
 
-*Given* the tree, *when* `X` is dragged until the line shows another gap, between `A1a` and `B`, and the cursor then comes back to `X`'s own row, *then* the line moves to `X`'s own gap, below `B`. *When* `X` is released there at the top level, its own depth, *then* no request is sent, as in [TREE-1.8](tree-1-gap-and-depth.md). A row of `X`'s subtree means the same gap ([TREE-1.6](tree-1-gap-and-depth.md)).
+*Given* the tree, *when* `X` is dragged until the line shows another gap, between `A1a` and `B`, and the cursor then comes back to `X`'s own row, *then* the line moves to `X`'s own gap, below `B`. *When* `X` is released there at the top level, its own depth, *then* no request is sent, as in [TREE-1.8](tree-1-gap-and-depth.md). `X`'s branch has no drawn rows to rest on; its own row is the only row of that block left ([TREE-1.6](tree-1-gap-and-depth.md)).
 
 **Automation test:** `tests/ui/project-tree-drag.spec.ts`
 

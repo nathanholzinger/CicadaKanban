@@ -286,7 +286,7 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.27 — The carried item's overflow and its branch's overflow rows are absent during the drag
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2, wiki board-drag-interaction §4.1
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2, wiki board-drag-interaction §4.1, wiki hierarchy-placement §8
 
 *Given* the tree, *when* `R` is picked up in the section, *then* its overflow row is absent for the whole drag, not drawn at Low. The gap after `Q` runs to `T`, with neither `R`'s hidden branch nor its overflow row offered as Top, Bottom or the named neighbor. Unrelated overflow rows remain drawn and keep their ordinary counts. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
 

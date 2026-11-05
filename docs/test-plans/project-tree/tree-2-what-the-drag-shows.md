@@ -1,10 +1,10 @@
 # TREE-2 — What the drag shows
 
-**Next ID:** TREE-2.9
+**Next ID:** TREE-2.13
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
-| TREE-2.1 | The dragged project's descendants are dimmed for the whole drag | P2 | Open |
+| TREE-2.1 | The dragged project's descendants are absent for the whole drag, and its own row stays | P2 | Open |
 | TREE-2.2 | A collapsed project opens when a project is dropped into it as its child | P2 | Automated |
 | TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Automated |
 | TREE-2.4 | Legal parents are Full, the cap boundary is Mid, and deeper rows are Low | P1 | Open |
@@ -12,20 +12,24 @@
 | TREE-2.6 | A response landing mid-drag does not redraw the pickup tiers | P1 | Open |
 | TREE-2.7 | Tiers leave the drop line at full strength and do not remove valid gap states | P1 | Open |
 | TREE-2.8 | The sidebar uses opacity values independent of the board's | P1 | Open |
+| TREE-2.9 | The count line includes the real subtree, including descendants hidden by collapse | P1 | Open |
+| TREE-2.10 | Only the carried copy has the line, outside its one-row box and taking no pointer | P1 | Open |
+| TREE-2.11 | The count line is cut short in a narrow sidebar | P2 | Open |
+| TREE-2.12 | Every end of the drag draws the branch again under the project | P1 | Open |
 
 ---
 
-## TREE-2.1 — The dragged project's descendants are dimmed for the whole drag
+## TREE-2.1 — The dragged project's descendants are absent for the whole drag, and its own row stays
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7, wiki hierarchy-placement §8
 
-*Given* top-level projects `A` and `X`, where `X` has a child `X1`, and `X1` a child `X1a`, with enough room under the project cap for `A` to take `X`'s whole subtree, *when* `X` is dragged, *then* `X1` and `X1a` stay drawn in place at Low, using `projectNeitherOpacity`, wherever the cursor goes. Neither is a placement neighbor. `A` is Full on this shallow fixture; unrelated rows nearer the cap may instead be Mid or Low ([TREE-2.4](tree-2-what-the-drag-shows.md)). `X`'s own row is drawn separately at `projectDraggedOpacity`, without a target tier. *When* the drag ends, by a release or a cancel, *then* the tiers and dragged-row dim clear, and every row is drawn at full strength at its resulting place.
+*Given* top-level projects `A`, `X` and `B`, where expanded `X` has child `X1`, expanded `X1` has child `X1a`, and there is enough room under the project cap for `A` to take `X`'s whole subtree, *when* `X` is picked up, *then* `X1` and `X1a` are absent for the whole drag, not drawn at Low. `B` moves up by the height their rows occupied, including row spacing, with no empty branch-sized space left. Neither descendant is a placement neighbor. `A` and `B` are Full on this shallow fixture; unrelated rows nearer the cap may instead be Mid or Low ([TREE-2.4](tree-2-what-the-drag-shows.md)). `X`'s own row stays drawn at `projectDraggedOpacity`, without a target tier. *When* the drag ends, by a release or a cancel, *then* the tiers and dragged-row dim clear, and the branch is drawn again under `X` at its resulting place, with the projects' collapsed or expanded states respected.
 
 **Automation test:** —
 
 ## TREE-2.2 — A collapsed project opens when a project is dropped into it as its child
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §11
 
 *Given* top-level projects `T` and `X`, where `T` is collapsed and its children are `T1` and `T2`, *when* `X` is released one tab right of `T`, as its first child, *then* `T` is expanded afterwards, showing `X`, `T1` and `T2` under it. *When* `X` is instead released aligned with `T`, as its sibling, *then* `T` stays collapsed.
 
@@ -33,7 +37,7 @@
 
 ## TREE-2.3 — A collapsed project opened by a drop stays open if the move fails
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §4
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §4, wiki project-tree §11
 
 *Given* top-level projects `T` and `X`, where `T` is collapsed and its children are `T1` and `T2`, *when* `X` is released one tab right of `T`, as its first child, and the server refuses the move, *then* `T` is expanded, showing `T1` and `T2` under it, and `X` is shown top-level again, after `T`, where it was ([TREE-4.8](tree-4-sibling-order.md)).
 
@@ -41,16 +45,16 @@
 
 ## TREE-2.4 — Legal parents are Full, the cap boundary is Mid, and deeper rows are Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §3, wiki hierarchy-placement §7
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §3, wiki hierarchy-placement §7, wiki hierarchy-placement §8
 
 *Given* the project cap `CAP >= 4`, a chain `P1` through `P_CAP`, with `P1` top-level at absolute depth 1 and each following project the previous one's child, and unrelated top-level `X` with one child `X1`, *when* `X` is picked up, *then*:
 
 - `P1` through `P_(CAP-2)` are Full: each can take `X` with subtree height 1 without exceeding `CAP`;
 - `P_(CAP-1)` is Mid at `projectAnchorOpacity`: it cannot take `X` as a child, but its parent can, so `X` can be its sibling;
 - `P_CAP` is Low at `projectNeitherOpacity`: neither it nor its parent can take `X`;
-- `X1` is Low by descent from `X`, and `X`'s own row takes `projectDraggedOpacity` without a target tier.
+- `X1` is absent as part of the carried branch, and `X`'s own row takes `projectDraggedOpacity` without a target tier.
 
-Each tier changes only opacity, adding no relationship color and removing no row. The Mid boundary is the one depth immediately after the last legal parent depth; entries below that boundary remain Low. Top-level projects count from depth 1 in these cap assertions.
+Each tier changes only opacity, adding no relationship color and removing no unrelated row. The carried branch's absence is separate from those tiers (wiki hierarchy-placement §8). The Mid boundary is the one depth immediately after the last legal parent depth; entries below that boundary remain Low. Top-level projects count from depth 1 in these cap assertions.
 
 **Automation test:** —
 
@@ -91,5 +95,54 @@ Each tier changes only opacity, adding no relationship color and removing no row
 *Given* a board and sidebar with different configured opacity values, *when* a project drag starts with Mid and Low rows, *then* their own content uses `projectAnchorOpacity` and `projectNeitherOpacity`, while the dragged project's own row uses `projectDraggedOpacity`. Each has its own value, even when the Low and dragged-row values differ. No board opacity value substitutes for any of them.
 
 *When* only the board's opacity values change, *then* a new project drag retains the sidebar's configured strengths. With the sidebar's values changed instead, its next drag uses those values while board targets and the board's ghost retain their own configured strengths. The rule is independent configuration of the two surfaces; the temporary tuning panel's controls are not part of this case.
+
+**Automation test:** —
+
+## TREE-2.9 — The count line includes the real subtree, including descendants hidden by collapse
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8
+
+*Given* each tree below, *when* its project `X` is picked up, *then* the carried copy has exactly the following second line:
+
+| Tree below `X` | Line |
+|---|---|
+| No children | No line |
+| One leaf child | `+ 1 child` |
+| Three leaf children | `+ 3 children` |
+| One child with one child of its own | `+ 1 child, 2 total descendants` |
+| Children `A` and `B`; `A` has child `A1`, `A1` has child `A1a`, and `B` has child `B1` | `+ 2 children, 5 total descendants` |
+
+*Given* the last tree with `A` collapsed, *when* `X` is picked up, *then* `A1` and `A1a` still count, even though their rows were hidden before pickup. The line is "+ 2 children, 5 total descendants", and all five descendants are out of the drawn list. Picking up collapsed `X` gives that same count, with no descendant rows needing to leave. The counts and branch membership are read at pickup and held for the whole drag; moving the cursor does not recalculate them from the shortened list. `X` itself is never counted.
+
+**Automation test:** —
+
+## TREE-2.10 — Only the carried copy has the line, outside its one-row box and taking no pointer
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8
+
+*Given* project `X` has children and next drawn row `B`, *when* `X` is picked up, *then* its carried copy has the count line but its own row in the list has none. The copy's measured box remains one project-row tall, equal to the box of a carried leaf project; the second line hangs below it, one row tall. It covers what is below the copy without adding a second row of space to the sidebar or changing the box used to resolve the drag. Where that line covers `B`, the pointer still reaches the row below: the line intercepts no pointer and is not itself a placement target.
+
+**Automation test:** —
+
+## TREE-2.11 — The count line is cut short in a narrow sidebar
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8
+
+*Given* project `X` has two children and five total descendants, and the sidebar is too narrow to fit "+ 2 children, 5 total descendants" on one line, *when* `X` is picked up, *then* the second line is cut short to the sidebar row's width. It does not wrap to a third line or widen the sidebar. With enough width the whole text is shown. The underlying children and descendant counts are the same at either width.
+
+**Automation test:** —
+
+## TREE-2.12 — Every end of the drag draws the branch again under the project
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8, wiki hierarchy-placement §5, wiki hierarchy-placement §6
+
+*Given* top-level project `X` with children `A` and `B`, where `A` has child `A1`, all expanded, *when* `X` is picked up, *then* those three descendant rows leave. *When* the drag ends in each way below, *then* its branch is drawn again at once under the row where the hierarchy then has `X`, with `A` before `B` and `A1` under `A`:
+
+- a valid drop under unrelated project `Q`: the branch is drawn under `X` throughout the move, and after the move succeeds `X.parentId = Q`, with the three descendant links unchanged;
+- Escape: no move is sent and `X` stays top-level;
+- a release in `X`'s own gap at its own depth: no move is sent and its parent and position stay unchanged;
+- a release in a state that would put the carried subtree past the project cap: no move is sent and its parent and position stay unchanged.
+
+The copy's second line ends with the drag. If `A` was collapsed at pickup, its child `A1` stays hidden after the drag; restoration does not expand it. This case does not fix when a successful move changes `X`'s place in the sidebar.
 
 **Automation test:** —

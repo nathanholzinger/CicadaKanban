@@ -4,7 +4,7 @@
 
 **Related:** [`../hierarchy-placement/`](../hierarchy-placement/) (the
 gap-and-depth rule the sidebar places by, the depth cap, and the drag's
-tiers) ·
+tiers and carried branch) ·
 [`../positioning/`](../positioning/) (how a project's position
 resolves) · [`../boards-columns-unsorted/`](../boards-columns-unsorted/)
 (which projects' items a board shows) ·
@@ -14,12 +14,12 @@ row)
 
 This page answers "what is the project tree, how does a write change it,
 and which workflow does each project use." Its numbered sections state
-what the API does, and what the sidebar's drag adds to it. The project
-page, and the sidebar's controls other than the drag, are a working
-placeholder: they're under Open questions, and no test case is derived
-from them. A dragged project is placed by
-[`../hierarchy-placement/`](../hierarchy-placement/)'s gap and depth,
-and a project's position resolves by
+what the API does, and what the sidebar's drag and collapse add to it.
+The project page, and the sidebar's controls other than the drag and
+the collapse (§11), are a working placeholder: they're under Open
+questions, and no test case is derived from them. A dragged project is
+placed by [`../hierarchy-placement/`](../hierarchy-placement/)'s gap and
+depth, and a project's position resolves by
 [`../positioning/`](../positioning/)'s rules, which items share. Which
 items a board shows is
 [`../boards-columns-unsorted/`](../boards-columns-unsorted/)'s.
@@ -46,14 +46,12 @@ move (§6). What the sidebar adds:
   real tree. Tabbed right of a collapsed Top, a project goes ahead of
   Top's real first child; aligned with it, after Top's whole subtree,
   shown or not.
-- **Resting on the dragged project's own row, or a row of its subtree,
-  means the gap the subtree collapses to**, which is the project's own
-  gap, with its depth range. Those rows stay in place, the subtree's
-  dimmed (§2), but none of them is ever Top or Bottom
-  ([`../hierarchy-placement/`](../hierarchy-placement/) §4), so the line
-  goes where the subtree was. On the board a dragged item's attached
-  descendants aren't drawn, so there are no such rows to rest on
-  ([`../board-drag-interaction/`](../board-drag-interaction/) §7.2).
+- **Resting on the dragged project's own row means its own gap,** with
+  its depth range. The rows of its branch aren't drawn while it's
+  dragged (§2), and none of them is ever Top or Bottom
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §4), as on the
+  board ([`../board-drag-interaction/`](../board-drag-interaction/)
+  §7.2).
 - **An empty hierarchy arises when the dragged project's subtree holds
   every project**, since that subtree is never a candidate: for example, a
   sidebar with one top-level project. It offers one state, at the top
@@ -94,10 +92,10 @@ placing a project beside a row always gives it that row's parent.
 - **Mid shows only near the cap.** A row is past the cap when its depth
   plus 1 plus the dragged subtree's height is over it (§3), so Mid is
   the one depth of rows just past the cap, and the rows under them are
-  Low. On a tree well within the cap, only the dragged project's
-  descendants dim.
-- **The dragged project's descendants are Low,** so the branch reads as
-  going with it, and none of its rows is a place to drop (§1).
+  Low. On a tree well within the cap, every row is Full, and only the
+  dragged project's own row is dimmed.
+- **The dragged project's descendants aren't drawn** (below). They'd be
+  Low, and none of them is a place to drop (§1).
 - **The dragged project's own row** is drawn at a strength of its own.
 - **The sidebar's values:** Mid is drawn at `projectAnchorOpacity`,
   about 0.6, Low at `projectNeitherOpacity`, about 0.3, and the dragged
@@ -106,14 +104,23 @@ placing a project beside a row always gives it that row's parent.
 
 Example, with the cap at 12: a chain of projects runs from `P1`, at the
 top level, down to `P12`, and `X`, with one child, is dragged. `P1` to
-`P10` are Full, `P11` is Mid, and `P12` and `X`'s child are Low.
+`P10` are Full, `P11` is Mid, and `P12` is Low. `X`'s child isn't
+drawn.
 
 The tiers are settled. Their final look isn't a rule yet (Open
 questions).
 
+**A pickup takes the dragged project's whole subtree out of the rows,**
+as its branch ([`../hierarchy-placement/`](../hierarchy-placement/)
+§8). Projects have no Free links, so every descendant goes with it, and
+so does one under a collapsed project, which no row drew. The rows below
+move up by the branch's height, and the project's own row stays.
+- **The drag copy's second line** counts the project's children and its
+  whole subtree, the rows under a collapsed project included. In a
+  narrow sidebar it's cut short.
+
 **A collapsed project opens when a project is dropped into it** as its
-child, so the moved project is in view. It opens on the drop, so it
-stays open if the move fails and the project goes back (§4).
+child (§11).
 
 ## 3. What makes a project a legal parent
 
@@ -187,7 +194,8 @@ a write failed isn't a rule yet (Open questions).
 `1`.
 
 A create needs a name (§8). The new project uses the workflow its parent
-uses, until it's given one of its own (§10).
+uses, until it's given one of its own (§10). A collapsed parent opens in
+the sidebar once the create succeeds (§11).
 
 ## 6. Moving a project
 
@@ -224,7 +232,8 @@ lands at `4`.
 
 **`PUT /api/projects/:id` can change a project's parent,** as the
 project page's parent dropdown does (Open questions). The new parent
-must be legal (§3).
+must be legal (§3). A collapsed new parent opens in the sidebar once the
+edit succeeds (§11).
 
 **An edit that changes the parent places the project after its new
 siblings' true last,** the position a move naming no neighbor gives it
@@ -332,6 +341,27 @@ shows in Unsorted
 No other item changes. That holds whether or not a project owns the
 workflow: one with no owner deletes the same way.
 
+## 11. Which projects the sidebar shows open
+
+**Every project in the sidebar starts open, a new one included,** and
+stays open until the user collapses it by its chevron. A collapse isn't
+kept: a reload opens every project. A collapsed project hides its
+subtree from view, not from placement (§1). **Why a new one starts
+open:** a project that started collapsed would hide the first
+subproject made under it.
+
+**A collapsed project opens when the app puts a project under it,** so
+that project is in view, even where the user collapsed it by hand:
+- **A drop** into it as a child opens it on the drop, so it stays open
+  if the move fails and the project goes back (§4).
+- **A create** under it (§5), and **an edit that changes a project's
+  parent** to it (§7), open it once the write succeeds. A failed one
+  leaves it collapsed.
+- **Only a write that gives a project a parent it didn't have opens
+  one.** A rename, or an edit naming the parent the project already
+  has, leaves a collapsed parent collapsed. A top-level project has no
+  parent to open.
+
 ---
 
 ## Open questions
@@ -344,9 +374,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   project outside the project's own subtree, which is what §3 accepts.
   Whether it also leaves out a parent over the project cap (§3) is open.
 - **The sidebar's other controls.** The create and delete buttons, how
-  the delete asks before deleting, the collapse chevrons, and the
-  remembered selection. The create dialog trims a name, and refuses an
-  empty one.
+  the delete asks before deleting, and the remembered selection. The
+  create dialog trims a name, and refuses an empty one.
 - **The sidebar's width (§3).** A handle on the sidebar's right edge
   drags it wider or narrower: 240px by default, held between 120px and
   420px, and kept in the browser for each viewer. It has no keyboard
@@ -358,8 +387,10 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   dropdown back on the stored parent, and reaches the user only as a
   console error.
 - **The look of the drag's cues (§1, §2).** How an over-cap tab state
-  looks, and the tiers' final look. Today the tiers are drawn as the
-  board's are, by opacity alone, and the line past the cap is red.
+  looks, the tiers' final look, and the drag copy's second line's. Today
+  the tiers are drawn as the board's are, by opacity alone, the line
+  past the cap is red, and the second line has the board's placeholder
+  look.
 - **A project that uses no workflow (§10).** It shows "Set up a
   Workflow", and has no board
   ([`../boards-columns-unsorted/`](../boards-columns-unsorted/), Open

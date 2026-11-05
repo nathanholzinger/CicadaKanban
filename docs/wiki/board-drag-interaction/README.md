@@ -8,7 +8,7 @@ is allowed to produce) · [`../item-positioning/`](../item-positioning/)
 [`../positioning/`](../positioning/) (how the resulting position
 resolves) ·
 [`../hierarchy-placement/`](../hierarchy-placement/) (the gap-and-depth
-rule the Descendants layer places by)
+rule the Descendants layer places by, the tiers, and the carried branch)
 
 This page answers "what happens as the user drags, and what does a release
 at a given place mean." The *consequences* of any resolved drop —
@@ -643,32 +643,28 @@ description, many attached children, an assignee footer). shortCard fixes
 both drag copies to one exact height, which is what makes §5's carve-out
 reservation *exact* rather than an approximation.
 
-**The carried copy of an item with attached descendants shows their
-count on a second line,** in either form, hung under the box the drag
-measures: "+ X children, Y total descendants". X is the item's attached
-children, and Y its whole branch (§7.2), rows past a section's shown
-levels included (§9). When every descendant is a child it reads
-"+ X children" alone, and one child reads "+ 1 child". An item with no
-attached descendants, or with only Free children, has no line.
+**The carried copy of an item with a branch shows its count on a
+second line** ([`../hierarchy-placement/`](../hierarchy-placement/)
+§8), in either form. Its total counts the rows past a section's shown
+levels (§9). An item whose children are all Free has no branch (§7.2),
+so no line.
 - **The line goes with the copy through every switch** (above): a Card
   zoomed into a section keeps it as a Stub, and a Stub popped out to a
   column keeps it as a shortCard. A shortCard copy's tilt (§2) turns it
   too.
-- **Only the carried copy has it.** The ghost has none, in either form.
+- **The ghost has none,** in either form.
 - **It adds nothing to the copy's box,** a Stub row or a shortCard. So
   the bands' reservation (§5), the side highlight (§2, rule 3) and the
-  copy's bound (§2) read the box as they would with no line.
+  copy's bound (§2) read the box as they would with no line. They're
+  exact only because the box is one known height at every layer
+  (above).
 - **It covers what's below the copy:** in a section, the row just below
   the ghost; in a column or a sub-row, the top of the Card below the
   ghost and the gap above that Card. The bound holds the box alone, so
   at a section's or a sub-row's last row the line can hang past the
   Card's or the sub-row's bottom edge.
 
-**Why:** the branch isn't drawn while the item is carried (§7.2), so the
-line says what goes with it. Why not grow the copy to hold it: the box
-is one known height at every layer, which the bands and the side
-highlight are exact by (above). The line's look isn't a rule yet (Open
-questions).
+The line's look isn't a rule yet (Open questions).
 
 **On drop, the ghost returns to full height.** How it gets there isn't a
 rule yet (Open questions).
@@ -833,33 +829,28 @@ names:
 
 ### 7.2 What travels with the item, and what's invalid
 
-**The dragged item carries its whole subtree**
-([`../hierarchy-placement/`](../hierarchy-placement/) §4). On the board,
-its *branch*, its attached descendants at every depth, leaves every list
-that draws it, for the whole drag, a Card's as well as a Stub's: the
-section, the hierarchy modal and the rows a section draws under the
-modal's backdrop (§7.3). The overflow rows the branch's rows own go
-with them (§9). The carried copy shows the branch's count (§5a).
-**Why:** so the pickup reads as taking the whole branch.
+**The dragged item carries its whole subtree, and its branch isn't
+drawn while it's dragged**
+([`../hierarchy-placement/`](../hierarchy-placement/) §4, §8). On the
+board the branch is the item's attached descendants at
+every depth, a Card's as well as a Stub's. It leaves every list that
+draws it: the section, the hierarchy modal and the rows a section draws
+under the modal's backdrop (§7.3), with the overflow rows its rows own
+(§9). The carried copy shows its count (§5a).
 
 - **A Free descendant isn't part of the branch,** nor is anything under
   one. It's a Card in its column, drawn at its tier, and its Stubs stay
   in its section (§4.1).
-- **The placement doesn't change.** The branch is never a placement
-  candidate (§3.2), so the gaps and depths are the ones a drawn branch
-  would offer, and a neighbor is always the row beside the ghost (§2).
-- **The branch is read once, at pickup,** from the tree as the board
-  draws it, its pending writes included (§4, §10), and held for the
-  whole drag. A write that lands mid-drag doesn't change what's left
-  out.
+- **The branch is read from the tree as the board draws it,** its
+  pending writes included (§4, §10).
 - **The rows below a Stub's branch move up at its pickup,** by the
   branch's height. A Card's pickup draws its copies as shortCards
   (§5a), which leave its Stubs out already, so the branch moves nothing
   more there. Its zoom into a section adds one row, the ghost, and not
   its branch's rows. How either should move isn't a rule yet (Open
   questions).
-- **When the drag ends, the branch is drawn again at once,** under the
-  item: on a drop, where the preview puts it (§10); on a cancel, a
+- **When the drag ends, the branch is drawn under the item:** on a
+  drop, where the preview puts it (§10); on a cancel, a
   release that writes nothing or one past the cap, where it was; on a
   stop, where the reloaded board has it (§10).
 
