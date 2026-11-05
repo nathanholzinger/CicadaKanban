@@ -138,7 +138,7 @@ describe('a move out, read by the render list and the real tree', () => {
 
 // The gap is the ghost's slot: the dragged project's own row is one of the rows drawn, and the gap is
 // the place of the row the copy is nearest, among the rows without the dragged one.
-describe('resolveGap', () => {
+describe('TREE-1.17, TREE-1.18: resolveGap, the ghost takes the nearest row’s slot, counting the rows drawn', () => {
   // A, B, X, C, D, drawn in that order, with X the dragged project: its gap is among A, B, C and D.
   const drawn = ['A', 'B', 'X', 'C', 'D'].map(id => ({ id }));
   // The two rows a gap sits between, among the rows without X; null at either end of the list.

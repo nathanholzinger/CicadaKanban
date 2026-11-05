@@ -152,43 +152,6 @@ describe('a project move, from its release to its answer', () => {
     expect(tree()).toBe(AT_REST);
   });
 
-  it('leaves a second move out when the first is answered, and a first when the second is', async () => {
-    await openApp();
-    const first = held<Project>();
-    const second = held<Project>();
-    vi.mocked(moveProject).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-
-    act(() => void release('R', 'P', 'C', null));
-    act(() => void release('Q', 'P', 'R', null));
-    expect(tree()).toBe('P -C -R -Q -D');
-
-    // The first answers: R is where it was drawn, and Q is still out.
-    await act(async () => first.resolve(makeProject('R', { parentId: 'P', position: 1.5 })));
-    expect(tree()).toBe('P -C -R -Q -D');
-
-    // The second is refused: Q goes back, and R, answered, stays. The read that follows is the server's
-    // tree, which has R where its answer put it.
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(fetchProjects).mockResolvedValue(
-      TREE.map(p => (p.id === 'R' ? { ...p, parentId: 'P', position: 1.5 } : p)),
-    );
-    await act(async () => second.reject(new Error('refused')));
-    expect(tree()).toBe('P -C -R -D Q');
-  });
-
-  it('keeps the first move out when the second is answered first', async () => {
-    await openApp();
-    const first = held<Project>();
-    const second = held<Project>();
-    vi.mocked(moveProject).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-
-    act(() => void release('R', 'P', 'C', null));
-    act(() => void release('Q', 'P', 'R', null));
-
-    await act(async () => second.resolve(makeProject('Q', { parentId: 'P', position: 1.75 })));
-    expect(tree()).toBe('P -C -R -Q -D');
-  });
-
   it('draws a project ahead of the first top-level project when it names that one as the neighbor after it', async () => {
     await openApp();
     vi.mocked(moveProject).mockReturnValueOnce(held<Project>().promise);
@@ -228,5 +191,147 @@ describe('the positions of a tree with a move out', () => {
     await act(async () => answer.resolve(makeProject('X', { parentId: 'P', position: 15 })));
     expect(tree()).toBe('P -A -X --X1 -B');
     expect(positions()).toEqual({ P: 1, A: 10, B: 20, X: 15, X1: 7 });
+  });
+});
+
+// A tree from `[id, parentId, position]` rows, for the cases below that open the app on a tree of their own.
+const treeOf = (...rows: Array<[id: string, parentId: string | null, position: number]>) =>
+  rows.map(([id, parentId, position]) => makeProject(id, { parentId, position }));
+
+describe('TREE-4.8: after a failed write, the sidebar shows the project where it was before the attempt', () => {
+  // A, B and X at the top level, and X's move under A is refused.
+  const REST = 'A B X';
+
+  async function releaseXUnderA() {
+    vi.mocked(fetchProjects).mockResolvedValue(treeOf(['A', null, 1], ['B', null, 2], ['X', null, 3]));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await openApp(REST);
+    const answer = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(answer.promise);
+    act(() => void release('X', 'A', null, null));
+    // Drawn under A at the release, before the refusal arrives.
+    expect(tree()).toBe('A -X B');
+    return answer;
+  }
+
+  it('puts X back as soon as the move fails, without waiting for the read of the tree', async () => {
+    const answer = await releaseXUnderA();
+    vi.mocked(fetchProjects).mockReturnValueOnce(new Promise<Project[]>(() => {}));
+
+    await act(async () => answer.reject(new Error('refused')));
+
+    expect(tree()).toBe(REST);
+  });
+
+  it('leaves X restored rather than retaining the refused placement when the read fails too', async () => {
+    const answer = await releaseXUnderA();
+    vi.mocked(fetchProjects).mockRejectedValueOnce(new Error('down'));
+
+    await act(async () => answer.reject(new Error('refused')));
+
+    expect(tree()).toBe(REST);
+  });
+});
+
+describe('TREE-4.9: a release draws the move and its branch at once, and success keeps that placement', () => {
+  it('draws X between A1 and A2 under A, with X1 beneath it, before the answer, and a success leaves it', async () => {
+    vi.mocked(fetchProjects).mockResolvedValue(
+      treeOf(['A', null, 1], ['A1', 'A', 1], ['A2', 'A', 2], ['B', null, 2], ['X', null, 3], ['X1', 'X', 1]),
+    );
+    await openApp('A -A1 -A2 B X -X1');
+    const answer = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(answer.promise);
+
+    act(() => void release('X', 'A', 'A1', null));
+
+    // After A1 and before A2, the relation the move sends; no X row remains top-level.
+    expect(tree()).toBe('A -A1 -X --X1 -A2 B');
+    expect(moveProject).toHaveBeenCalledExactlyOnceWith('X', { parentId: 'A', prevId: 'A1', nextId: null });
+    const rendersBefore = seen.trees.length;
+
+    await act(async () => answer.resolve(makeProject('X', { parentId: 'A', position: 1.5 })));
+
+    expect(tree()).toBe('A -A1 -X --X1 -A2 B');
+    for (const rows of seen.trees.slice(rendersBefore)) expect(rows.join(' ')).toBe('A -A1 -X --X1 -A2 B');
+  });
+});
+
+describe('TREE-4.10: moves released one after another settle independently by their own answers', () => {
+  // P has A, Q has B, and X and Y are top-level leaves. X goes under P after A, then Y under Q after B.
+  const REST = 'P -A Q -B X Y';
+  const BOTH = 'P -A -X Q -B -Y';
+  const FIXTURE = treeOf(['P', null, 1], ['A', 'P', 1], ['Q', null, 2], ['B', 'Q', 1], ['X', null, 3], ['Y', null, 4]);
+  const xSaved = () => makeProject('X', { parentId: 'P', position: 1.5 });
+  const ySaved = () => makeProject('Y', { parentId: 'Q', position: 1.5 });
+
+  async function releaseBoth() {
+    vi.mocked(fetchProjects).mockResolvedValue(FIXTURE);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await openApp(REST);
+    const x = held<Project>();
+    const y = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(x.promise).mockReturnValueOnce(y.promise);
+    act(() => void release('X', 'P', 'A', null));
+    act(() => void release('Y', 'Q', 'B', null));
+    // Both are drawn at once, before either answer.
+    expect(tree()).toBe(BOTH);
+    return { x, y };
+  }
+
+  it.each(['X', 'Y'] as const)(
+    'keeps the other move drawn while its answer is out, whichever answers first (%s)',
+    async first => {
+      const { x, y } = await releaseBoth();
+      const [firstMove, secondMove] = first === 'X' ? [x, y] : [y, x];
+      const saved = (id: 'X' | 'Y') => (id === 'X' ? xSaved() : ySaved());
+      const second = first === 'X' ? 'Y' : 'X';
+
+      await act(async () => firstMove.resolve(saved(first)));
+      expect(tree()).toBe(BOTH);
+
+      await act(async () => secondMove.resolve(saved(second)));
+      expect(tree()).toBe(BOTH);
+    },
+  );
+
+  it('puts X back when it fails while Y is unanswered, and Y stays there when it then succeeds', async () => {
+    const { x, y } = await releaseBoth();
+
+    await act(async () => x.reject(new Error('refused')));
+    expect(tree()).toBe('P -A Q -B -Y X');
+
+    await act(async () => y.resolve(ySaved()));
+    expect(tree()).toBe('P -A Q -B -Y X');
+  });
+
+  it('keeps Y’s saved placement through X’s rollback and the read that follows it, when Y succeeds first', async () => {
+    const { x, y } = await releaseBoth();
+
+    await act(async () => y.resolve(ySaved()));
+    expect(tree()).toBe(BOTH);
+
+    // The server has Y where its answer put it, and X where it was.
+    vi.mocked(fetchProjects).mockResolvedValue(FIXTURE.map(p => (p.id === 'Y' ? ySaved() : p)));
+    await act(async () => x.reject(new Error('refused')));
+    expect(tree()).toBe('P -A Q -B -Y X');
+  });
+});
+
+describe('TREE-2.12: every end of the drag draws the branch again under the project', () => {
+  it('draws X and its branch under Q at the release, before the answer, and a success leaves that tree', async () => {
+    // X has the children A and B, and A has A1. Q is unrelated.
+    vi.mocked(fetchProjects).mockResolvedValue(
+      treeOf(['X', null, 1], ['A', 'X', 1], ['A1', 'A', 1], ['B', 'X', 2], ['Q', null, 2]),
+    );
+    await openApp('X -A --A1 -B Q');
+    const answer = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(answer.promise);
+
+    act(() => void release('X', 'Q', null, null));
+
+    // The branch is under X throughout the move, with A before B and A1 under A.
+    expect(tree()).toBe('Q -X --A ---A1 --B');
+    await act(async () => answer.resolve(makeProject('X', { parentId: 'Q', position: 1 })));
+    expect(tree()).toBe('Q -X --A ---A1 --B');
   });
 });

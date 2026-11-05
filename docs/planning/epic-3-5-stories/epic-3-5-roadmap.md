@@ -1189,7 +1189,7 @@ than the story, planned as its D7–D9:
 
 ---
 
-### Story 8.12 — The sidebar's ghost moves to the gap
+### Story 8.12 — The sidebar's ghost moves to the gap ✅ (done 2026-11-04)
 **Plan:** [`story-8-12-sidebar-ghost-moves-to-gap.md`](story-8-12-sidebar-ghost-moves-to-gap.md)
 
 **Found with Story 8.11** (Nathan, 2026-11-04). It runs next, after

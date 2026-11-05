@@ -9,8 +9,11 @@ import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { DragGhost, SortableProjectRow } from './SortableProjectRow';
 import {
   ROW_CHEVRON_WIDTH_CLASS,
+  ROW_CHEVRON_WIDTH_PX,
   ROW_GAP_CLASS,
+  ROW_GAP_PX,
   ROW_HANDLE_WIDTH_CLASS,
+  ROW_HANDLE_WIDTH_PX,
   projectNameIndentPx,
   projectRowIndentPx,
 } from './projectTreeUtils';
@@ -180,6 +183,48 @@ describe('SortableProjectRow, where its drop line starts', () => {
   });
 });
 
+// The line starts in the column the ghost's name does, at each depth, and each deeper state starts farther right.
+describe('TREE-2.13: the line starts at the ghost’s name on its top edge in every gap after the first move', () => {
+  const lineIn = () => document.querySelector<HTMLElement>('[data-drop-line]')!;
+
+  it.each([0, 1, 2, 3])('at depth %i, the ghost is drawn there and its line starts at its name', depth => {
+    const box = renderRow({ ghost: { depth, line: true, invalid: false } });
+    expect(document.querySelector('[data-drag-ghost]')).toHaveAttribute('data-drag-ghost', String(depth));
+    // The name's column: the row's padding at the depth, then the handle's and the chevron's room and the gaps.
+    expect(box.style.paddingLeft).toBe(`${projectRowIndentPx(depth)}px`);
+    expect(lineIn().style.marginLeft).toBe(`${projectNameIndentPx(depth)}px`);
+    expect(projectNameIndentPx(depth)).toBe(
+      projectRowIndentPx(depth) + ROW_HANDLE_WIDTH_PX + ROW_GAP_PX + ROW_CHEVRON_WIDTH_PX + ROW_GAP_PX,
+    );
+  });
+
+  it('starts each deeper state farther right', () => {
+    const starts = [0, 1, 2, 3].map(depth => {
+      cleanup();
+      renderRow({ ghost: { depth, line: true, invalid: false } });
+      return parseFloat(lineIn().style.marginLeft);
+    });
+    expect(starts).toEqual([...starts].sort((a, b) => a - b));
+    expect(new Set(starts).size).toBe(4);
+  });
+
+  it('draws one line, on the ghost’s top edge and never its bottom, and none while it has no gap yet', () => {
+    renderRow({ ghost: { depth: 1, line: true, invalid: false } });
+    expect(document.querySelectorAll('[data-drop-line]')).toHaveLength(1);
+    expect(lineIn().classList).toContain('-top-px');
+    cleanup();
+    renderRow({ ghost: { depth: 1, line: false, invalid: false } });
+    expect(document.querySelector('[data-drop-line]')).toBeNull();
+  });
+
+  it('keeps the line at full strength while the ghost is dimmed: it sits outside the dimmed box', () => {
+    const box = renderRow({ ghost: { depth: 1, line: true, invalid: false } });
+    for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
+    expect(box.contains(lineIn())).toBe(false);
+    for (const cls of classesOf(GHOST_ROW)) expect(lineIn().classList).not.toContain(cls);
+  });
+});
+
 // The line rides the ghost's top edge: between the ghost and the row above it, in one place in every gap.
 describe('SortableProjectRow, the drop line on the ghost', () => {
   const lineIn = () => document.querySelector<HTMLElement>('[data-drop-line]');
@@ -256,7 +301,7 @@ describe('DragGhost, the carried copy', () => {
     for (const cls of classesOf(INVALID_PLACEMENT_CLASS)) expect(ghost().classList).not.toContain(cls);
   });
 
-  it('says the branch’s counts on a second line inside the copy, out of its box', () => {
+  it('TREE-2.10: says the branch’s counts on a second line inside the copy, out of its box', () => {
     render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 2, descendants: 5 }} />);
 
     const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;
@@ -273,6 +318,14 @@ describe('DragGhost, the carried copy', () => {
     render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 1, descendants: 1 }} />);
 
     expect(screen.getByText('+ 1 child')).toBeInTheDocument();
+  });
+
+  it('TREE-2.10: leaves the count line to the carried copy: the ghost in the list has none', () => {
+    renderRow({ ghost: { depth: 0, line: true, invalid: false } });
+    expect(document.querySelector('[data-carried-branch]')).toBeNull();
+    cleanup();
+    render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 1, descendants: 1 }} />);
+    expect(document.querySelectorAll('[data-carried-branch]')).toHaveLength(1);
   });
 
   it('has no line without a branch', () => {

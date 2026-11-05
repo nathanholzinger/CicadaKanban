@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.12 — The sidebar's ghost moves to the gap
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built, committed and approved (Amendment 2). Phase 4 wrote the Living-docs handoff (Amendment 3), and the PO's pass is done (Amendment 4). Phase 5, a move drawn by slot, is folded in (Amendment 5) and built (Amendment 7)
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.12 entry · **Status:** Phases 1–3 built, committed and approved (Amendment 2). Phase 4 wrote the Living-docs handoff (Amendment 3), and the PO's pass is done (Amendment 4). Phase 5, a move drawn by slot, is folded in (Amendment 5) and built (Amendment 7). The tests carry the cases' IDs (Amendment 8), for the Reconciler
 
 ## Goal
 
@@ -370,6 +370,26 @@ Filled in by the Coder, phase by phase.
 - **No hands-on,** as planned: nothing drawn changes.
 - **Gate:** `npm run check` passes (438 server, 794 client, 245 script tests). `npm run test:e2e`: 215 passed, 22 skipped, none failed, the same as before Phase 5.
 
+**Amendment 8: the tests take the cases' IDs (Coder, 2026-11-04).** The close step for the code. Titles state the revised cases, and a test carries an ID only where it asserts what the case says. No behavior changed, and no E2E spec's body did.
+- **Retitled to the revised cases:** the hook's TREE-1.6, TREE-1.9 and TREE-1.10, and the E2E specs for TREE-1.1 and TREE-1.9. TREE-1.8, TREE-1.11/TREE-3.9, TREE-2.2, TREE-2.3, TREE-4.7 and TREE-4.8 kept their titles, which the cases still state. TREE-1.4's and TREE-2.1's skipped specs are untouched, for Story 10 to rewrite.
+- **New tests that carry an ID:**
+  - **TREE-1.17:** `sidebar/useProjectDragReorder.test.ts`, the case's table of five slots and the write each saves, every gap reached from one row, and no second gap when the copy crosses a row's middle; and `sidebar/projectTreeUtils.test.ts`, `resolveGap`.
+  - **TREE-1.18:** the same two files, with the case's tree: the slot list, the gap each nearest row names, and the tab right of `T` that still names `T1`.
+  - **TREE-2.1:** the hook, with the case's tree: the branch is out of the rows and of placement, the ghost has no tier and follows the gap and depth, and a release or a cancel clears the tiers and the ghost and draws the branch again.
+  - **TREE-2.10:** `sidebar/SortableProjectRow.test.tsx`, the count line inside the copy, out of its box and taking no pointer, and none on the ghost in the list.
+  - **TREE-2.12:** the hook, for the Escape, the own gap, the past-the-cap and the valid-drop ends, and a collapsed `A` that stays collapsed; and `App.pendingMove.test.tsx`, the drop under `Q` drawn with its branch at the release.
+  - **TREE-2.13:** the hook, none before the first move and one in every gap after, and the four depths of the gap between `A1a` and `B`; and the row, the line at each depth in the ghost's name column, farther right at each deeper state, on the top edge, at full strength.
+  - **TREE-4.8:** `App.pendingMove.test.tsx`, the move drawn under `A` at the release, then `X` restored as soon as it fails, whether the read is unanswered or fails too. The spec carries the create and the edit.
+  - **TREE-4.9, TREE-4.10:** the same file, with the cases' trees. TREE-4.10 replaces the two two-move tests Phase 1 wrote.
+  - **TREE-4.11:** the hook, with the case's chain: `P`'s branch, its line, its height, `S` Full and `T` Mid.
+  - **TREE-4.12:** Phase 5's test, as Amendment 7 has it.
+- **What no unit test can assert, for the Reconciler to see:**
+  - **TREE-1.19.** It is about rows sliding under a held copy, which dnd-kit measures without their transform. That needs the gesture, so it is Story 10's with the other gesture-dependent cases, and its test is not stamped.
+  - **TREE-2.1's `B` moves up by the branch's height, and TREE-2.10's copy box one row tall.** Both read a layout, which the unit tests don't have. Their specs are Story 10's.
+  - **TREE-4.9's reload clause.** The tests above stop at the drawn tree and the answer. A reload is the server's, and the E2E specs for TREE-1.12 and TREE-4.7 read it after one, without carrying TREE-4.9's ID.
+  - **TREE-2.9 and TREE-2.11** are 8.11's cases and not in this Scope. Their tests exist (the wording in `dragChrome.test.tsx`, the counts in the hook's branch tests, the copy's line in `SortableProjectRow.test.tsx`) and carry no ID yet.
+- **Gate:** `npm run check` passes (438 server, 831 client, 245 script tests). The sidebar specs ran after the two retitles, with 15 passed and 2 skipped. The full `npm run test:e2e` ran after Phase 5, 215 passed and 22 skipped, and no E2E body has changed since.
+
 ## Open questions
 
 - **For Nathan, in Phase 2:** D4's held copy, or a copy that follows the pointer sideways, as today. *Settled in Amendment 2: the held copy stays.*
@@ -458,7 +478,7 @@ Written by the Coder in Phase 4, after Nathan approved the gesture (Amendment 2)
   - **The depth range** (inbound 3). D2 and D4 are the answer, and Nathan's hands-on said the placement feels more intuitive and raised nothing against the range. The Coder ran neither the scrolled list nor the deep stack against it. If it comes back, the roadmap treats it as a defect, fixed in Story 8.
   - **Wiki positioning §5 and the ranks** (above, for the PO). The root `AGENTS.md` says no project write takes a number, which is still true. Whether it names `withMoveApplied` beside the board's `applyPlacements` is the Architect's call. *Settled by Amendment 5: the ranks are gone, wiki positioning §5 stands, and the root `AGENTS.md` needs no change.*
 - **Left to the Coder at close:**
-  - **The unit tests take the new cases' IDs** in their titles, and the old ones whose wording moved are retitled: the hook's TREE-1.6 and TREE-2.x describes, and `SortableProjectRow.test.tsx`'s TREE-2.1 and TREE-2.7.
-  - **The gate,** if that changes anything.
+  - **The unit tests take the new cases' IDs** in their titles, and the old ones whose wording moved are retitled: the hook's TREE-1.6 and TREE-2.x describes, and `SortableProjectRow.test.tsx`'s TREE-2.1 and TREE-2.7. *Done: Amendment 8.*
+  - **The gate,** if that changes anything. *Done: Amendment 8.*
 - **Test-plan handoff applied** (Test Planner): Scope and Amendment 6 record the revised cases, eight new Open cases, Reconciler checks and Story 10 routes. TREE-4.12 covers positioning §5 for Phase 5; the visible placement cases need no further change for that implementation fix.
 - **Wiki sections added, changed, moved or removed** (PO, at close): hierarchy-placement §1 (the gap is the ghost's slot, now shared) and its intro; board-drag-interaction §7.1's gap bullet (its shared half moved to hierarchy-placement §1); project-tree §1, §2, §4 and the Open questions' "The look of the drag's cues". Positioning §5 is unchanged: Nathan kept it, and the sidebar's ranks are to go (Amendment 4).

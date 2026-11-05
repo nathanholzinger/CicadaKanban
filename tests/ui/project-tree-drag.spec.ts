@@ -28,7 +28,7 @@ const TREE_1 = [
 // The rows of TREE_1 other than the one dragged.
 const TREE_1_ROWS = ['A', 'A1', 'A1a', 'B'];
 
-test('TREE-1.1: an indicator line shows the gap, and a release saves exactly what the line shows', async ({
+test('TREE-1.1: the ghost shows the gap and depth, and a release saves exactly that placement', async ({
   page,
   request,
   projectSidebar,
@@ -230,7 +230,7 @@ test('TREE-1.8: a project set back down in its own gap, at its own depth, writes
   expect(await fetchProject(request, ids.X)).toEqual(before);
 });
 
-test('TREE-1.9: coming back to the dragged project’s own row means its own gap', async ({
+test('TREE-1.9: coming back nearest the dragged project’s own row returns the ghost to its own gap', async ({
   page,
   request,
   projectSidebar,
