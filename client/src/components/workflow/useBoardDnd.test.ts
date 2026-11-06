@@ -20,7 +20,8 @@ import { useBoardDnd, type BoardDndDeps } from './useBoardDnd';
 
 vi.mock('../../api/items');
 
-// The board has no columns: the drag starts in no context, which is all the session needs.
+// The board has no columns: a Free Card's drag starts in no context, which is all the session needs. A Stub's
+// drag starts in its containing Card's Descendants context whatever the columns.
 const boardWithCap = (itemDepthCap: number): BoardWithDetails =>
   ({ columns: [], itemDepthCap }) as unknown as BoardWithDetails;
 const board = boardWithCap(4);

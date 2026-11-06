@@ -38,7 +38,8 @@ export interface Placement {
    */
   workphaseId?: string;
   /**
-   * Previewed as a Stub of this Card, overriding the item's own attachment
+   * Previewed as a Stub of this item, a Card or a Stub (a nested Descendants
+   * placement goes under the Stub it names), overriding the item's own attachment
    * for rendering purposes only — exactly as `workphaseId` overrides column
    * membership above, and never touching real data. Explicit `null`
    * previews detaching to Free; omitted means "no opinion, use the item's

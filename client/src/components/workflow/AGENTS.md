@@ -337,8 +337,9 @@ the carried copy's second line and its wording).
   ghost under the cursor, it reads with `paintedBoxOf`, which includes the shuffle's
   transforms where `boxOf` does not.
 - What needs `useBoardDnd`'s live session, such as a reload landing mid-drag, is tested by
-  rendering the hook: `useBoardDnd.test.ts` starts a drag on a board with no columns,
-  which begins in no context, and calls the hook's handlers with the events they read.
+  rendering the hook: `useBoardDnd.test.ts` starts a Free Card's drag on a board with no
+  columns, which begins in no context, and calls the hook's handlers with the events they
+  read. A Stub's drag begins in its containing Card's Descendants context whatever the columns.
   The gesture itself is tested through the pure modules and the E2E specs.
 - The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
   `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
@@ -362,4 +363,5 @@ the carried copy's second line and its wording).
   `data-drag-region` (its key), a card list's also `data-drag-card-count`, and the
   carve-out's zones and dividers `data-carve-zone` and `data-carve-divider`. A Card's root
   is its Descendants region, so it carries `data-drag-region` and, always, `data-drag-card`
-  (its id).
+  (its id); while its hierarchy modal is open the modal's list carries the region key, and the
+  root has `data-drag-card` alone.

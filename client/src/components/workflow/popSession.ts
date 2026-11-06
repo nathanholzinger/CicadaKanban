@@ -274,8 +274,9 @@ function transitionTo(key: string | null, sample: Sample, entered: ReadonlySet<s
 // — is what keeps an invalid target (Cycle-forming, Depth-capped) from
 // ever becoming a candidate, with no validity check of its own: it relies on
 // `dragStructure.ts::resolveDragStructure` registering a `descendants:` region
-// only for a Valid Card. An invalid Card can still be named for a reposition,
-// but is never a zoom-in candidate (wiki board-drag-interaction §3.2).
+// only for a Valid Card, bar the Stub drag's own containing Card, which always has one so the drag can
+// return to it. An invalid Card can still be named for a reposition, but a foreign one is never a
+// zoom-in candidate (wiki board-drag-interaction §3.2).
 //
 // `since` resets on *either* a different card or the same card's other
 // side (`PopHover.side`). `phase` is recomputed every call from

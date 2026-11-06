@@ -242,10 +242,11 @@ export function resolveDropSide(
 // which-half-of-`over` side — `over` naming anything else (no row) is its
 // own case below.
 //
-// The dragged item's own descendants are never rows of the list the ghost
+// The attached descendants the dragged item carries are never rows of the list the ghost
 // slides through (`lib/hierarchyPlacement.ts::carriedBranchOf`), so a neighbor is always
 // the row beside the ghost: nothing that travels with the item can be named
-// (wiki board-drag-interaction §7.2).
+// (wiki board-drag-interaction §7.2). Its Free descendants stay in the column as Cards, and one
+// of them can be named.
 //
 // `over` naming anything but a card/Stub row — the bare column/sub-row
 // container itself, at rest or between shuffles — is no anchor at all:

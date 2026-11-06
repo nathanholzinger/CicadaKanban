@@ -1387,7 +1387,7 @@ describe('TREE-2.5: top-level rows take the root’s legal-parent answer', () =>
 describe('TREE-2.6: a response landing mid-drag does not redraw the pickup tiers', () => {
   afterEach(() => localStorage.clear());
 
-  // The cap is 5. R1 > R2 > Q puts Q at depth 3, CAP - 2, with the children Q1 (Mid) and Q2 (Low) below it. X has
+  // The cap is 5. R1 > R2 > Q puts Q at depth 3, CAP - 2, with Q's child Q1 (Mid) and Q1's child Q2 (Low) below it. X has
   // one child, so its subtree is one level tall. P is a top-level leaf, Full for X, and its parent edit to Q is out.
   const CAP = 5;
   const atPickup = tree(

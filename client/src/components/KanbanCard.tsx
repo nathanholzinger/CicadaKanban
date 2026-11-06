@@ -102,8 +102,8 @@ function ShortCard({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
     <>
       <CardPillsRow item={item} itemTypes={itemTypes} />
       <p className="truncate text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
-      {/* Always one line, even with no description — reserves the same
-          space either way, which is the whole point of a fixed height. */}
+      {/* At most one line. An empty description draws no text, and the card's
+          wrapper, not this paragraph, supplies the fixed height. */}
       <p className="mt-1.5 line-clamp-1 text-xs leading-relaxed text-zinc-400">{item.description}</p>
     </>
   );

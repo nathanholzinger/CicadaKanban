@@ -254,7 +254,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // `classification` decides which Cards resolve as regions at all (an
   // invalid target — cycle-forming, depth-capped — is never poppable, and
   // here that's simply "never a region," so nothing downstream has to
-  // re-check validity). It's a parameter rather than read off the session
+  // re-check validity; a Stub drag's own containing Card is the exception,
+  // whose region always resolves so the drag can return to it). It's a parameter rather than read off the session
   // ref because the very first resolution of a drag (`beginDragAt`) runs
   // before the session exists yet — every call site below already has its
   // own classification in scope regardless.

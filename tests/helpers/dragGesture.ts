@@ -24,9 +24,9 @@ import {
 // `resolveTarget` is a callback, not a static point: the board reflows under
 // a live drag (the ghost opens a gap, a Card grows or shrinks), shifting
 // whichever card used to sit where the target was. A point measured once
-// before the drag started can go stale the moment that happens, so this
-// approaches in two passes: once toward the target's pre-drag position, then
-// again after re-measuring the target's post-reflow position for the final,
+// can go stale the moment that happens, so this approaches in two passes:
+// once toward the target as measured after the pickup, then again after
+// re-measuring it once that approach has reflowed the board, for the final,
 // precise approach. Every measurement is in layout space (`boxOf`), which is
 // the space dnd-kit resolves collisions in — see its comment for the trap
 // that avoids.

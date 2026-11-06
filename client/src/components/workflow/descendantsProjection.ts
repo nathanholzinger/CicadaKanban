@@ -173,7 +173,8 @@ function overflowBesideGhost(
 }
 
 // What the hold that opens the modal keys on, off the projection: nothing in an over-cap state,
-// as a Card's zoom-in never starts on an invalid target (wiki board-drag-interaction §6.1).
+// as a zoom-in never starts on an invalid foreign Card (the Stub's own Card, which it can always return
+// to, is the exception: `dragStructure.ts::descendantsStructure`; wiki board-drag-interaction §6.1).
 export function modalHoldTarget(projection: DescendantsProjection | null): ModalHoldTarget | null {
   if (!projection?.valid || !projection.overflowBeside) return null;
   const { ownerId, side } = projection.overflowBeside;
