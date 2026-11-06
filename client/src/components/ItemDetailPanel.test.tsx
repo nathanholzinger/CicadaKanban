@@ -143,4 +143,65 @@ describe('the Sheet’s add-child control at the depth cap', () => {
     await userEvent.click(add);
     expect(screen.queryByPlaceholderText('Child title...')).not.toBeInTheDocument();
   });
+
+  // A write's answer carries no depth, so the Sheet reads the item again after a reparent.
+  it('ATT-10.8: follows the item’s depth through a reparent up from the cap and back down to it, with the Sheet open', async () => {
+    // T is one level short of the cap and S two, so X at the cap under T moves to CAP - 1 under S and back.
+    const onUpdate = vi.fn();
+    vi.mocked(fetchItem).mockResolvedValue({ ...detail, parentId: 'T', depth: CAP - 1 });
+    render(
+      <ItemDetailPanel
+        itemId="X"
+        items={[makeItem('X', { parentId: 'T' }), makeItem('S'), makeItem('T')]}
+        itemTypes={[]}
+        itemDepthCap={CAP}
+        onClose={() => {}}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onNavigate={() => {}}
+        onChildCreated={() => {}}
+      />,
+    );
+    const add = await addChild();
+    expect(add).toBeDisabled();
+    expect(add).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    const parent = screen.getByRole('combobox', { name: 'Parent item' });
+
+    // Under S the item is at CAP - 1: the control is enabled and starts a child create, which sends nothing yet.
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'S' }));
+    vi.mocked(fetchItem).mockResolvedValue({ ...detail, parentId: 'S', depth: CAP - 2 });
+    await userEvent.selectOptions(parent, 'S');
+    await waitFor(() => expect(add).toBeEnabled());
+    expect(add).not.toHaveAttribute('title');
+    await userEvent.click(add);
+    expect(screen.getByPlaceholderText('Child title...')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(createItem).not.toHaveBeenCalled();
+
+    // Back under T it is at the cap again: disabled with the same reason, out of the tab order, and no create.
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'T' }));
+    vi.mocked(fetchItem).mockResolvedValue({ ...detail, parentId: 'T', depth: CAP - 1 });
+    await userEvent.selectOptions(parent, 'T');
+    // The form's closing drew the control again.
+    const again = await addChild();
+    await waitFor(() => expect(again).toBeDisabled());
+    expect(again).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    again.focus();
+    expect(again).not.toHaveFocus();
+    await userEvent.click(again);
+    expect(screen.queryByPlaceholderText('Child title...')).not.toBeInTheDocument();
+    expect(createItem).not.toHaveBeenCalled();
+  });
+
+  it('reads the item again for a reparent only, not for another write to it', async () => {
+    openPanel({ ...detail, parentId: 'P', isAttached: 1, depth: 1 }, CAP);
+    const attached = await screen.findByRole('checkbox', { name: 'Attached' });
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'P', isAttached: 0 }));
+    vi.mocked(fetchItem).mockClear();
+
+    await userEvent.click(attached);
+
+    await waitFor(() => expect(attached).not.toBeChecked());
+    expect(fetchItem).not.toHaveBeenCalled();
+  });
 });

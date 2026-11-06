@@ -1,12 +1,13 @@
 # TREE-9 — Deleting a project deletes its subtree
 
-**Next ID:** TREE-9.4
+**Next ID:** TREE-9.5
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | TREE-9.1 | Deleting a project deletes its whole subtree, and is never refused | P0 | Automated |
 | TREE-9.2 | An item of another project in a deleted workphase survives, with no workphase | P1 | Automated |
 | TREE-9.3 | A delete leaves labels, and the workflow a project outside the subtree uses, alone | P2 | Automated |
+| TREE-9.4 | Earlier write answers cannot restore a deleted project or place another project under it | P0 | Open |
 
 ---
 
@@ -39,3 +40,18 @@
 *Given* top-level project `T`, on workflow `WT`, with children `P` and `S`, where `P` owns workflow `W` and `S` has no workflow of its own; and label `L`, on an item of `P` and on an item of `S`, *when* `P` is deleted, *then* `L` still exists, and `S`'s item still carries it. A board of `WT` still lists `S`'s item: `S` still uses `WT`.
 
 **Automation test:** `server/tests/routes/projects.test.ts`
+
+## TREE-9.4 — Earlier write answers cannot restore a deleted project or place another project under it
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki project-tree §9
+
+*Given* project `P` with child `C`, and unrelated top-level `Q`, each of these with an earlier write saved by the server but its answer still unanswered in the client:
+
+- a rename or move of `P`;
+- an edit or move of `C` that leaves it in `P`'s subtree;
+- a create of `N` under `P`;
+- a move of formerly unrelated `X` into `P`'s subtree.
+
+*When* `P` is successfully deleted and that deletion is reflected in the sidebar before the earlier answer arrives, *then* `P` and its deleted subtree are absent. *When* the earlier answer subsequently lands, *then* none of those deleted rows returns, and no row is shown under deleted `P`. The same holds if several such answers land in either order. `Q` remains top-level, and its name and saved position stay unchanged. Reading the projects still finds neither `P` nor the descendants the delete removed; receiving an old answer causes no write that recreates them.
+
+**Automation test:** —

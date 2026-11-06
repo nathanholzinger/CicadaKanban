@@ -1315,7 +1315,7 @@ audit (step 3 above).
 
 ---
 
-### Story 8.13 — The hierarchy modal opens a Stub's Sheet, and a create stops at the cap
+### Story 8.13 — The hierarchy modal opens a Stub's Sheet, and a create stops at the cap ✅ (done 2026-11-05)
 **Plan:** [`story-8-13-modal-sheet-and-create-cap.md`](story-8-13-modal-sheet-and-create-cap.md)
 
 **Found in manual testing** (Nathan, 2026-11-04). Two small fixes,
@@ -1324,12 +1324,11 @@ reconciliation of Stories 8.8, 8.11 and 8.12 (the entry above), since
 it touches files those stories changed.
 - **A click on a Stub in the hierarchy modal opens its Sheet.** The
   modal stays open under the Sheet, and closing the Sheet returns to it.
-  Today a click there opens nothing (wiki board-drag-interaction §9's
-  Open question).
+  Before this story a click there opened nothing.
 - **A create stops at the depth cap.** "Add subproject" on a sidebar row
   and on the Overview tab, and the add-child in an item's Sheet, show
   disabled, saying why, at a parent the cap allows no child under.
-  Today they're offered, and the API refuses the create.
+  Before this story they were offered, and the API refused the create.
 
 **Dropped:** a Stub pulled out of a Card couldn't be moved straight to
 the Done column. Neither Nathan nor the Architect could reproduce it

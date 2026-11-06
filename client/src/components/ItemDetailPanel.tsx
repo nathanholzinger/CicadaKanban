@@ -233,6 +233,15 @@ function ItemDetailPanelContent({
   function handleItemUpdated(updated: ItemWriteResponse) {
     setDetail(prev => (prev ? { ...prev, ...updated } : prev));
     onUpdate(updated);
+    if (updated.parentId !== detail?.parentId) refreshDepths();
+  }
+
+  // A write's response carries no depth, so after a reparent the item's own and its children's come from a
+  // read. The add-child control and the depth pills draw from them.
+  function refreshDepths() {
+    fetchItem(itemId)
+      .then(fresh => setDetail(prev => (prev ? { ...prev, depth: fresh.depth, children: fresh.children } : prev)))
+      .catch(err => console.error('Failed to refresh item depth:', err));
   }
 
   // Called by ChildrenSection after a child is created.

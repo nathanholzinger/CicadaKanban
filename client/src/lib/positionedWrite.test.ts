@@ -90,3 +90,32 @@ describe('applyWriteResponse, over projects', () => {
     expect(result.map(p => p.id)).toEqual(['A', 'N']);
   });
 });
+
+describe('applyWriteResponse, when a later write has already set some rows', () => {
+  const list = () => [
+    makeProject('Y', { position: 4 }),
+    makeProject('Z', { position: 999 }),
+    makeProject('X', { position: 998, name: 'Before' }),
+  ];
+  const older = projectResponse(makeProject('X', { position: 3, name: 'After' }), [
+    { id: 'Y', position: 1 },
+    { id: 'Z', position: 2 },
+    { id: 'X', position: 3 },
+  ]);
+
+  it('skips the pair of a row the later write set, and applies the rest', () => {
+    const result = applyWriteResponse(list(), older, new Set(['Y']));
+    expect(result.map(p => [p.id, p.position])).toEqual([
+      ['Y', 4],
+      ['Z', 2],
+      ['X', 3],
+    ]);
+  });
+
+  it('keeps the position of a written row the later write set, and takes the rest of the response', () => {
+    const result = applyWriteResponse(list(), older, new Set(['X']));
+    const x = result.find(p => p.id === 'X')!;
+    expect([x.position, x.name]).toEqual([998, 'After']);
+    expect(result.find(p => p.id === 'Y')!.position).toBe(1);
+  });
+});

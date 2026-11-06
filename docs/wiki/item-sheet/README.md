@@ -37,6 +37,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   workphase ([`../item-attachment/`](../item-attachment/) §2a, §14). At
   the cap it shows disabled, by the shared rule
   ([`../item-attachment/`](../item-attachment/) §14).
+- **After a reparent.** The Sheet reads the item again, so what it
+  shows of the item's depth, its children and the add-child control
+  follows the new place.
 - **What the Sheet draws over.** It draws above the board and every
   modal on it, the notifications bell's open list included, its backdrop
   dimming them.

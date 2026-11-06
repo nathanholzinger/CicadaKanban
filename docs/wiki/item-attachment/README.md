@@ -422,7 +422,9 @@ A create is a write like any other: §1, §2a, §7 and §8 hold for it, and
 **The Sheet's add-child control shows disabled at a parent the item cap
 allows no child under**
 ([`../hierarchy-placement/`](../hierarchy-placement/) §6;
-[`../item-sheet/`](../item-sheet/)).
+[`../item-sheet/`](../item-sheet/)). It follows the item's current
+place: after the item is reparented from its Sheet, the control is
+judged at the item's new depth.
 
 ---
 

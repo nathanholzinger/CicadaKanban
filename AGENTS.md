@@ -46,7 +46,7 @@ projects (tree via parent_id self-ref, depth-capped)
 | `agents` | Claude agent registrations (`claude_project_id`, `surface`, `repo_path`) |
 | `labels` / `item_labels` | Flat global tags, many-to-many. Provisional: the tag system is due to be replaced, so fix bugs here but don't consolidate or refactor it |
 | `chat_threads` / `chat_messages` | Agent conversation threads — **schema only, no API/UI yet** |
-| `attachments` | External file links per item — **schema only, no UI yet** |
+| `attachments` | External file links per item (a label, a type and an optional URL), added and deleted in the item's Sheet |
 | `activity_log` | Audit trail on items |
 | `notifications` | Created when an item moves to a `triggers_notification` workphase, polled by frontend every 15s |
 
@@ -104,7 +104,10 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   path folds it through `client/src/lib/positionedWrite.ts::applyWriteResponse`: the
   board's item writes by way of
   `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`, the
-  sidebar's project writes in `App.tsx`.
+  sidebar's project writes by way of
+  `client/src/components/sidebar/useProjectCollection.ts::foldWrite`. Its `newer` names
+  the rows a later write has already set, so an older answer leaves them as they are;
+  the sidebar passes it.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **A reference in a request is checked in one order: present, a string, names a row**

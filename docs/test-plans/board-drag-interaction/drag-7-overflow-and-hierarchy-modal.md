@@ -44,7 +44,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
 | DRAG-7.32 | Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal | P1 | Open |
-| DRAG-7.33 | Parent and child links replace the Sheet over the same modal | P1 | Open |
+| DRAG-7.33 | Child links replace the Sheet over the same modal | P1 | Open |
 | DRAG-7.34 | An edit in the Sheet appears in the open modal | P1 | Automated |
 | DRAG-7.35 | An empty hierarchy modal closes immediately while its Sheet stays open | P2 | Automated |
 
@@ -338,11 +338,11 @@ After each, the same modal remains at its prior place, with the same list order,
 
 **Automation test:** —
 
-## DRAG-7.33 — Parent and child links replace the Sheet over the same modal
+## DRAG-7.33 — Child links replace the Sheet over the same modal
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
 
-*Given* `R1`'s Sheet open over `P`'s hierarchy modal, *when* the link to parent `R` is followed, *then* `R`'s Sheet replaces `R1`'s in the foreground. *When* the child link back to `R1` is followed, and then the link to its child `R1a`, *then* the Sheet likewise shows that named item each time. No second Sheet is left open underneath. The same modal stays open beneath every replacement, at its prior place, with the same hierarchy and scroll position. Following these links writes nothing; closing the last Sheet returns to that modal.
+*Given* `R`'s Sheet open over `P`'s hierarchy modal, *when* the link to child `R1` is followed, *then* `R1`'s Sheet replaces `R`'s in the foreground. *When* the link to its child `R1a` is followed, *then* `R1a`'s Sheet replaces it in turn. No second Sheet is left open underneath. The same modal stays open beneath every replacement, at its prior place, with the same hierarchy and scroll position. Following these links writes nothing; closing the last Sheet returns to that modal.
 
 **Automation test:** —
 

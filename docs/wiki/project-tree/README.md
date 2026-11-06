@@ -310,6 +310,10 @@ items still hold the old workflow's workphases
 ([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §3).
 Labels are global, and stay.
 
+**A deleted project stays gone from the sidebar.** No answer to an
+earlier write, whenever it lands, shows the project back, or shows
+another project under it.
+
 **A delete never changes which workflow a project outside the subtree
 uses,** since a project inherits only from its ancestors (§10), and none
 of an outside project's ancestors is in the subtree.

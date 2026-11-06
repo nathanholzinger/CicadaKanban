@@ -1,6 +1,6 @@
 # ATT-10 — Creating an item
 
-**Next ID:** ATT-10.8
+**Next ID:** ATT-10.9
 
 The rules every write is held to hold for a create too. A parentless create's attachment flag is [ATT-1.14](att-1-free-attached-state.md)'s, a create's workphase is [ATT-9](att-9-workphase-a-write-leaves.md)'s, a child's project is [ATT-5.6](att-5-cross-project-reparenting.md)'s and [ATT-5.7](att-5-cross-project-reparenting.md)'s, a parent's legality is [ATT-4.10](att-4-legal-parent-depth-cap.md)'s, and the activity entry is [ATT-8.3](att-8-hierarchy-changes-logged.md)'s.
 
@@ -13,6 +13,7 @@ The rules every write is held to hold for a create too. A parentless create's at
 | ATT-10.5 | A create whose project is an empty string is refused, and nothing is stored | P2 | Automated |
 | ATT-10.6 | The Sheet allows adding a child that reaches exactly the item cap | P1 | Automated |
 | ATT-10.7 | The Sheet's add-child control stays drawn but disabled at or past the item cap | P1 | Automated |
+| ATT-10.8 | After a reparent, the add-child control follows the item's new depth | P1 | Automated |
 
 ---
 
@@ -79,3 +80,13 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 *Given* instead existing `P` is at depth `CAP + 1` in data the API did not create, *then* the control behaves the same way, and the reason names the item cap, not `P`'s depth or the project cap. `P` remains readable in its Sheet. The disabled control's color, opacity and cursor are not assertions of this case.
 
 **Automation test:** `tests/ui/item-create-cap.spec.ts`
+
+## ATT-10.8 — After a reparent, the add-child control follows the item's new depth
+
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §8, wiki hierarchy-placement §6
+
+*Given* item cap `CAP >= 3`, root items at absolute depth 1, a leaf `X` at depth `CAP`, and legal parents `S` at `CAP - 2` and `T` at `CAP - 1`, *when* `X` is shown in its Sheet, *then* its add-child control is disabled with `At the depth cap (N levels)`, `N = CAP`.
+
+*When* `X` is successfully reparented from its Sheet under `S`, so its new depth is `CAP - 1`, *then* the control for the updated item is enabled and offers a child create under `X`; the old depth does not leave it disabled. No child is created by the reparent itself. *When* `X` is successfully reparented under `T`, returning to depth `CAP`, *then* the control is drawn disabled again, with the same item-cap reason. It takes no click or keyboard focus and cannot start a child create. In both directions the control follows the current saved parent and depth, not a depth cached before the write. If the Sheet remains open through either write, the control updates there without closing and reopening the Sheet. This case does not prescribe whether the Sheet stays open after a reparent.
+
+**Automation test:** `client/src/components/ItemDetailPanel.test.tsx`

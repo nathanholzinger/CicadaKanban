@@ -1013,8 +1013,8 @@ A drag can start in it, and a drag in it is §7.3's.
 **A click on a row in the modal opens that item's Sheet, above the
 modal.** A row being dragged opens nothing. The modal stays open under
 the Sheet, and closing the Sheet, any way it closes, returns to the
-modal as it was. A link in the Sheet to the item's parent or a child
-opens that item's Sheet in its place, over the same modal. An edit made
+modal as it was. A link in the Sheet to one of the item's children
+opens that child's Sheet in its place, over the same modal. An edit made
 in the Sheet shows in the modal, which shows the board's items.
 
 **The modal closes by its X button, a click anywhere outside it, or

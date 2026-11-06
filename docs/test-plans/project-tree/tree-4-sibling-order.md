@@ -1,6 +1,6 @@
 # TREE-4 — A project's position compares among its siblings
 
-**Next ID:** TREE-4.13
+**Next ID:** TREE-4.14
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Automated |
 | TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
 | TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Automated |
+| TREE-4.13 | A late response preserves positions already set by a newer saved write | P1 | Automated |
 
 ---
 
@@ -129,3 +130,15 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 *Given* expanded parent `P` with children `A` at position `10` and `B` at `20`, and top-level `X` at `30` with child `X1` at `7`, *when* `X` is released under `P`, after `A`, while the answer is outstanding, *then* the sidebar draws `A, X, B` as `P`'s children, with `X1` still under `X`, by the chosen slot. The client's position values stay `A = 10`, `B = 20`, `X = 30` and `X1 = 7`; no tree used for display substitutes ranks or any other client-computed positions. The move sends the parent and named-neighbor relation, with no position. *When* the server answers with `X.position = 15` and no reindex, *then* `X` takes `15`, the other three values stay unchanged, and the drawn tree and order do not move.
 
 **Automation test:** `client/src/App.pendingMove.test.tsx`, `client/src/lib/hierarchy.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts`
+
+## TREE-4.13 — A late response preserves positions already set by a newer saved write
+
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4, wiki positioning §7, wiki positioning §8
+
+*Given* expanded project `P` with children `X` at `1500` and `Y` at `1600`, expanded `Q` with child `B` at `4`, and top-level `R`, *when* the server first saves `R` as `P`'s last child, *then* that answer discloses `X = 1`, `Y = 2`, `R = 3`. *When* the server then saves `X` as `Q`'s last child, *then* `X.parentId = Q` and `X.position = 5`.
+
+*When* the answer for `X` arrives before the earlier answer for `R`, *then* the sidebar shows `Q`'s children as `B, X`. *When* `R`'s late answer lands, *then* `X` keeps parent `Q` and position `5`, rather than taking the older disclosed `1`; `Q`'s children stay `B, X`, with no intervening render that puts `X` before `B`. The other applicable values from the earlier answer still take effect: `P`'s children read `Y, R`, at `2` and `3`. The final tree and positions agree with the server without a reload. Answering the two writes in their saved order ends with that same tree.
+
+*Given* instead an earlier answer writes a project's own position as `5`, and a later saved write of a different project reindexes that row to `2`, *when* the later answer is applied first and the earlier answer then arrives, *then* the row keeps `2`. Neither an older reindex pair nor an older written-row position replaces a position already set by the newer saved write. This case fixes the saved outcomes, not how requests are queued or how responses are tracked.
+
+**Automation test:** `client/src/components/sidebar/useProjectCollection.test.ts`

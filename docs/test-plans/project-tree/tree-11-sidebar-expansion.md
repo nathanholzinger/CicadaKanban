@@ -69,6 +69,8 @@
 
 *Given* collapsed parent `P` with child `X`, *when* the app successfully renames `X` without changing its parent, *then* `P` stays collapsed and `X` stays hidden. *When* an edit explicitly names `P`, the parent `X` already has, and succeeds, *then* `P` likewise stays collapsed. Neither successful edit gives `X` a new parent, so neither opens one. Renaming `P` itself also leaves it collapsed.
 
+*Given* instead `P` has child `C` and top-level `X` has been moved under `P` by a release that opens `P`, but its answer is still outstanding, and a rename of `X` is requested meanwhile, *when* the move succeeds and the user collapses `P` before the rename's answer, *then* the later rename success leaves `P` collapsed with both `C` and `X` hidden. `X` keeps parent `P` and receives the new name; the rename gives it no new parent and does not open `P` again. An edit explicitly retaining `P` has the same outcome. This holds regardless of whether the rename was requested before the earlier move's answer.
+
 **Automation test:** —
 
 ## TREE-11.8 — A top-level create or parent change opens no unrelated project

@@ -36,6 +36,8 @@ vi.mock('./components/ProjectPage', () => ({
 const seen = vi.hoisted(() => ({ trees: [] as string[][], projects: [] as Project[] }));
 let release: ReorderProject;
 let remove: (id: string) => Promise<void>;
+let collapsed: ReadonlySet<string>;
+let toggleCollapse: (id: string) => void;
 type UpdateProject = (id: string, data: UpdateProjectInput) => Promise<void>;
 let update: UpdateProject;
 
@@ -47,12 +49,18 @@ vi.mock('./components/ProjectSidebar', async () => {
       pendingMoves,
       onReorderProject,
       onDeleteProject,
+      collapsedIds,
+      onToggleCollapse,
     }: {
       projects: Project[];
       pendingMoves: PendingMove[];
       onReorderProject: ReorderProject;
       onDeleteProject: (id: string) => Promise<void>;
+      collapsedIds: ReadonlySet<string>;
+      onToggleCollapse: (id: string) => void;
     }) => {
+      collapsed = collapsedIds;
+      toggleCollapse = onToggleCollapse;
       release = onReorderProject;
       remove = onDeleteProject;
       const rows = flatten(projects, new Set(projects.map(p => p.id)), pendingMoves).map(
@@ -489,6 +497,45 @@ describe('a read of the whole tree after a write: applied only when no write has
 
     expect(fetchProjects).toHaveBeenCalledTimes(1);
     expect(tree()).toBe('P -C -D Q');
+  });
+});
+
+describe('an edit queued behind a move opens the parent it put a project under, not one it left alone', () => {
+  // X is a top-level project, open in the project page. Its move under P is out when the user renames it.
+  async function renameBehindMove() {
+    localStorage.setItem('activeProjectId', 'X');
+    vi.mocked(fetchProjects).mockResolvedValue(treeOf(['P', null, 1], ['X', null, 2]));
+    await openApp('P X');
+    const move = held<Project>();
+    const rename = held<Project>();
+    vi.mocked(moveProject).mockReturnValueOnce(move.promise);
+    vi.mocked(updateProject).mockReturnValueOnce(rename.promise);
+    act(() => void release('X', 'P', null, null));
+    act(() => void update('X', { name: 'Renamed' }));
+    return { move, rename };
+  }
+
+  it('TREE-11.7: leaves P collapsed when the user collapses it before the rename is answered', async () => {
+    const { move, rename } = await renameBehindMove();
+    await act(async () => move.resolve(makeProject('X', { parentId: 'P', position: 1 })));
+    act(() => toggleCollapse('P'));
+    expect(collapsed.has('P')).toBe(true);
+
+    await act(async () => rename.resolve(makeProject('X', { name: 'Renamed', parentId: 'P', position: 1 })));
+
+    expect(collapsed.has('P')).toBe(true);
+  });
+
+  it('TREE-11.5: still opens the parent for an edit that does put the project under it', async () => {
+    localStorage.setItem('activeProjectId', 'X');
+    vi.mocked(fetchProjects).mockResolvedValue(treeOf(['P', null, 1], ['X', null, 2]));
+    await openApp('P X');
+    act(() => toggleCollapse('P'));
+    vi.mocked(updateProject).mockResolvedValueOnce(makeProject('X', { parentId: 'P', position: 1 }));
+
+    await act(async () => update('X', { parentId: 'P' }));
+
+    expect(collapsed.has('P')).toBe(false);
   });
 });
 

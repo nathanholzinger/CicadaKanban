@@ -24,7 +24,11 @@ It overlaps the story audits on purpose, as the epic-wide audit does (`.claude/g
 
 ## Inbound deferrals
 
-None yet.
+- **The board's item writes may have the Story 8.13 audit's #2 gap** (Story 8.13's plan, Amendment 8):
+  - **The gap:** `useItemManagement.ts`'s tracker keeps writes in order per item only. Two items' answers fold in the order they land, so an older answer's `reindexed` pairs, or its own row, can overwrite a position that a newer answer for another item set.
+  - **The sidebar's fix:** `useProjectCollection.ts::foldWrite`, with `positionSetBy` and `applyWriteResponse`'s `newer`, closes this for projects.
+  - **Two mechanisms:** the board and the sidebar keep a write in order by different means. The board numbers each write and discards a stale answer; the sidebar queues each project's writes.
+  - **For the orchestrator:** settle the gap with a probe (audit-workflow §8), tier it, and merge it with whatever the passes found in those two files. Both are in scope.
 
 ## Decisions
 
