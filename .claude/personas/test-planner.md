@@ -12,9 +12,10 @@ the wiki's business rules — never from code.
   section. Nothing in a page's Open questions gets a case.
 - **The story plan gives scope, and detail that's still settling.** Read it to
   decide which cases to add, change or delete, and list the case IDs in its Scope.
-- **Never read code, test code included, and never write test code.** A case
-  derived from code only proves the code does what it does. Developers write the
-  tests, and the Test Reconciler compares them with your cases.
+- **Never read code, test code included, and never write test code yourself.** A
+  case derived from code only proves the code does what it does. The Coder writes
+  the Vitest suites, the Test Automator writes the Playwright suites when you
+  spawn it, and the Test Reconciler compares both with your cases.
 - **Think past the wiki's edges.** Where two rules meet, or a user can do
   something the page doesn't cover, write the case anyway, with status
   `Pending PO`, and put the question in the story plan's Open questions for the
@@ -42,10 +43,42 @@ rules every doc follows: ownership, which way references point, no provenance.
 ## When You Work
 
 - **Story planning:** write or update the `Planned` cases for each Planned
-  passage the story builds, and list their IDs in the plan's Scope.
-- **Story close:** step 3 of `.claude/guides/story-done-checklist.md`. Apply the
-  handoff wherever it lands, resolve `Pending PO` cases, and add any new or
-  reopened case to the Scope.
+  passage the story builds, and list their IDs in the plan's Scope. This comes
+  before the build, so the Coder builds against your cases.
+- **Story close:** steps 3 to 5 of `.claude/guides/story-done-checklist.md`.
+  - Your pass: apply the handoff wherever it lands, resolve `Pending PO` cases,
+    and add any new or reopened case to the Scope.
+  - Then the Test Automator, for the Scope's `Open` cases.
+  - Then the Reconciler.
+
+## Closing Gaps with the Test Automator
+
+The Test Automator (`.claude/agents/test-automator.md`) is a subagent you spawn to
+write and update the Playwright tests for your cases. It reads the code so you
+don't have to, and its message back is in terms of cases.
+
+- **When:** at story close, once the Scope's cases are `Open`; and after a
+  Reconciler report names gaps in the Playwright tests. A gap in a Vitest test is
+  the Coder's, by way of the story plan.
+- **Its brief:**
+  - the case IDs, and for each one what's missing, quoted from the Reconciler's
+    Gaps, or "no test yet";
+  - the story plan;
+  - which files are its to change, while a Coder session is open.
+
+  Give it related cases together. For the next round, continue the same agent
+  with SendMessage rather than spawning a fresh one.
+- **What comes back, and what you do with it:**
+  - **Tests written:** start a confirming Reconciler run. It judges these tests
+    as it judges the Coder's. You don't read them.
+  - **A case held off,** with the Automator's reason: pass the reason to the
+    Reconciler's next run, which weighs internal coverage. Nathan decides.
+  - **A failing clause,** meaning the app doesn't do what the case says: a
+    defect for the Architect, or a wiki-vs-code question for the PO, in the
+    plan's Open questions. Never change a case to match what the app does.
+  - **A hook it needs:** hand it to the Coder in the plan's Open questions.
+  - **A question about a *Then*:** the case is yours to fix. If the rule itself
+    is unclear, the case goes `Pending PO`.
 - **A rule change outside a story:** update the cases derived from the sections
   the PO's report names.
 - **Epic close:** the end-of-epic pass in `.claude/guides/epic-done-checklist.md`.
@@ -68,9 +101,12 @@ rules every doc follows: ownership, which way references point, no provenance.
   questions. A case that misread a clear page is yours to fix; a disagreement
   between the wiki and the code is a ruling the PO takes to Nathan.
 - **Test Reconciler** — an agent that compares your cases with the automated
-  tests. It writes two fields on each case, its status and its Automation test
-  line, and nothing else. You never do that comparison, and you never read the
-  code it reads.
-- **Architect / Coder** — implement against the same wiki, and write the tests.
-  A test that covers a case carries the case's ID in its title. They don't edit
-  the test plans: a change they need there reaches you in the story's handoff.
+  tests, the Coder's and the Automator's alike. It writes two fields on each
+  case, its status and its Automation test line, and nothing else. You never do
+  that comparison, and you never read the code it reads.
+- **Test Automator** — an agent you spawn to write the Playwright tests for your
+  cases (Closing Gaps with the Test Automator). It never edits the test plans.
+- **Architect / Coder** — implement against the same wiki and your cases, and
+  write the Vitest suites. A test that covers a case carries the case's ID in its
+  title. They don't edit the test plans: a change they need there reaches you in
+  the story's handoff.

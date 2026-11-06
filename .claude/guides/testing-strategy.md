@@ -25,6 +25,8 @@ There's no CI; everything runs locally.
 | Client units | Next to the code, as `*.test.ts(x)` | Pure modules and hooks, in jsdom with Testing Library. Items come from `itemFixture.ts::makeItem` and projects from `projectFixture.ts::makeProject`, never a hand-written literal. |
 | Scripts | Next to the code in `scripts/`, as `*.test.mts` | Repo tooling, such as the docs checker, on `node:test`. |
 
+**Who writes which:** the Coder writes the Vitest suites, server routes included, as part of the build. The Test Automator (`.claude/agents/test-automator.md`), which the Test Planner spawns, writes the Playwright suites from the test-plan cases. Neither edits the other's to make a test pass.
+
 **Which layer a test belongs in:**
 - A rule a user or an API caller can see gets a test through that surface: Playwright, or a server route test.
 - Logic whose correctness doesn't depend on the surface gets a unit test next to it.

@@ -25,6 +25,10 @@ catalog (`docs/test-plans/`) with the automated tests (Vitest under
   doubted. Answer each under Test Quality Concerns.
 - **Nathan's approvals** of internal mappings and `Manual` proposals, given in the
   prompt for a confirming run.
+- **Cases the Test Automator held off on,** with its reasons, given in the prompt.
+  For each, look for internal tests that cover it, and say whether it's better
+  covered internally or still needs a surface test. Propose the mapping or the
+  `Manual` call as usual.
 
 ## What You May Write
 
@@ -49,7 +53,9 @@ When you're asked for a proposing run, write only the report.
   titles for each case's ID.
 - **A case with no test carrying its ID:** look for a test that covers it
   anyway. If you find one, propose it in the report (which test gets which ID).
-  Never write that mapping: a developer adds the ID, and a later run confirms it.
+  Never write that mapping: the test's writer adds the ID (the Coder for a Vitest
+  test, the Test Automator for a Playwright test), and a later run confirms it.
+  Judge every test the same way, whoever wrote it.
 - **Which tests count** (`docs/test-plans/README.md`): a Playwright UI or API
   test, or a server route test, counts as it is. A test that calls client or
   server internals directly counts only once Nathan approves it: propose it, and

@@ -2,6 +2,8 @@
 
 What happens when a story's code is complete, in order, and what must hold before Nathan signs off. The order matters: each step reads what the one before it produced.
 
+**Before the build, the rules come first.** The PO writes the story's `**Planned:**` wiki passages, and the Test Planner writes their `Planned` cases. The Coder then builds against both, with the Vitest suites. A discovery made while building, or an audit finding that keeps the code, works back to the PO and the Planner through the handoff, but a story isn't planned that way.
+
 ## The steps
 
 1. **Write the handoff.** Whoever wrote the code (usually the Coder) fills in the story plan's living-docs handoff (`.claude/guides/story-plan-template.md`).
@@ -11,20 +13,23 @@ What happens when a story's code is complete, in order, and what must hold befor
    - sections added, changed, moved or removed are recorded in the handoff.
 
    This lands before the audit, because the audit checks code against the wiki.
-3. **Run two passes in parallel:**
-   - **The Test Planner's pass** (`docs/test-plans/README.md`).
-     - It applies the handoff to the test plans wherever it lands, not only to the cases in the story's Scope, because changed rules, superseded passages and moved sections can touch any case.
-     - It resolves Pending PO cases from the PO's rulings.
-     - It adds any new or reopened case to the story's Scope, so step 4 covers it.
-   - **The story's audit** (`.claude/guides/audit-workflow.md`).
-4. **Land the remaining code work:**
-   - the audit's Fix Now findings, in batches, each ending with the gate and a stop for review and commit;
-   - tests for the cases in Scope that are still `Open`, each starting its title with the case's ID (`docs/test-plans/README.md`).
-5. **Run the Reconciler once**, against the finished code. Running it earlier would map a test layout that step 4 is still changing.
+3. **The Test Planner's pass** (`docs/test-plans/README.md`).
+   - It applies the handoff to the test plans wherever it lands, not only to the cases in the story's Scope, because changed rules, superseded passages and moved sections can touch any case.
+   - It resolves Pending PO cases from the PO's rulings.
+   - It adds any new or reopened case to the story's Scope, so steps 4 and 5 cover it.
+4. **The Playwright tests.** The Test Planner spawns the Test Automator (`.claude/agents/test-automator.md`) for the Scope's `Open` cases.
+   - It writes and updates their Playwright tests, each starting its title with the case's ID (`docs/test-plans/README.md`).
+   - It names any case it holds off on, and why, and any test hook it needs, which the Coder adds.
+   - The Coder's Vitest tests for the Scope's cases came in with the build.
+5. **Run the Reconciler** against the finished tests, the Coder's and the Automator's alike. Running it earlier would map a test layout that step 4 is still changing.
    - It confirms the Scope's cases.
+   - It weighs each case the Automator held off on against the internal tests.
    - It checks the whole catalog for cases whose test is gone, since a story can delete the only test for a case it never scoped.
-   - Gaps it finds go back to step 4, or get routed. It then re-checks only those.
-6. **Sign off.** Nathan signs off, and the story plan, its audit and its Reconciler report move to `docs/archive/`.
+   - Gaps it finds go back to the Automator for a Playwright test, or to the Coder for a Vitest test, or get routed. It then re-checks only those.
+6. **The story's audit** (`.claude/guides/audit-workflow.md`). It runs last, so it reads the finished code with its tests in place.
+   - Its Fix Now findings land in batches, each ending with the gate and a stop for review and commit.
+   - A batch that changes a case's behavior or its tests gets its Playwright tests updated by the Automator. Then a confirming Reconciler run covers just the cases the batches touched.
+7. **Sign off.** Nathan signs off, and the story plan, its audit and its Reconciler reports move to `docs/archive/`.
 
 ## Before sign-off
 

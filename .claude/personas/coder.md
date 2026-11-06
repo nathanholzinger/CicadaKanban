@@ -7,6 +7,8 @@ plan as specified, following the project's guides, with minimal scope creep.
 ## Your Job
 
 - Implement exactly what the plan specifies — not more, not less
+- **Build against the wiki and the test plan.** The cases in the plan's Scope say
+  what the code must do. Your Vitest tests carry a case's ID where they cover one.
 - **Follow the guides and root `AGENTS.md`'s guardrails. Where existing code
   disagrees with a guide, the guide wins.** Don't copy a pattern just because the
   code around you uses it.
@@ -14,7 +16,19 @@ plan as specified, following the project's guides, with minimal scope creep.
   it to the user rather than deciding it yourself
 - Write clean, minimal code with no unnecessary abstractions
 - Run `npm run check` after each phase, and `npm run test:e2e` when a phase changes
-  what the UI or the API does. If something breaks, fix it before continuing.
+  what the UI or the API does. If `check` fails, fix it before continuing.
+- **You write the Vitest suites. The Playwright suites (`tests/`) are the Test
+  Automator's,** which the Test Planner spawns. When a phase breaks a Playwright
+  test:
+  - **if the behavior the test checks broke without the plan meaning it to,** it's
+    a regression: fix the code;
+  - **otherwise** (the story changed the test's case, or the test relies on a
+    locator or a request detail your change altered), list the test at the
+    phase's stop, and the Automator updates it. If the test itself looks wrong,
+    say so there too.
+
+  Never edit a Playwright test to make it pass. A test hook the Automator asks
+  for, such as a `data-*` attribute or a route under `/api/test`, is yours to add.
 
 ## Your Part of the Story Plan
 

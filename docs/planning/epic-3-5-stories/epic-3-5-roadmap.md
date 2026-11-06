@@ -1349,8 +1349,8 @@ Epic 3.5". Story 8 ends with Story 8.13.
 ### Story 10 — DnD automation catch-up (no skipped Playwright tests)
 **Plan:** [`story-10-dnd-automation-catch-up.md`](story-10-dnd-automation-catch-up.md)
 (2026-11-04). The items below stay here until the plan's Phase 2, the
-inventory, which moves them into the plan. Until then, route new items
-here as before.
+inventory, which moves them into the plan. New items aren't routed here
+any more: since 2026-11-05 they go to the plan's Inbound deferrals.
 
 **Goal:** bring the drag automation suites up to the test-plan catalogs
 once the gesture has stopped moving, and decide — case by case — what the
@@ -1834,10 +1834,10 @@ deferral and keep landing with their stories.
 
     - **From the reconciliation of Stories 8.8, 8.11 and 8.12**
       (2026-11-04,
-      [`test-reconciliation-stories-8-8-8-11-8-12.md`](../../audits/test-reconciliation-stories-8-8-8-11-8-12.md)),
+      [`test-reconciliation-stories-8-8-8-11-8-12.md`](../../archive/test-reconciliation-stories-8-8-8-11-8-12.md)),
       its Gaps' "Story 10 item 10" row: the gesture and layout clauses
       left once the fixes story
-      ([`stories-8-8-8-11-8-12-fixes.md`](stories-8-8-8-11-8-12-fixes.md))
+      ([`stories-8-8-8-11-8-12-fixes.md`](../../archive/stories-8-8-8-11-8-12-fixes.md))
       has stamped and tested what needs no drag.
       - **The board:** DRAG-1.33, DRAG-2.17, DRAG-2.18, DRAG-2.22,
         DRAG-3.19, DRAG-3.22, DRAG-3.25, DRAG-4.8, DRAG-7.15,
@@ -1848,8 +1848,11 @@ deferral and keep landing with their stories.
         fixture.
 
       **What each case still misses** is in that story's confirming
-      run, named here at the story's close. Until then, the
-      reconciliation's Coverage Mapping.
+      run
+      ([`test-reconciliation-stories-8-8-8-11-8-12-fixes-confirming.md`](../../archive/test-reconciliation-stories-8-8-8-11-8-12-fixes-confirming.md)).
+      For TREE-1.1, TREE-1.9 and TREE-2.9, now Automated, the
+      close-out's confirming run is the later word
+      ([`test-reconciliation-story-8-close-out-confirming.md`](../../archive/test-reconciliation-story-8-close-out-confirming.md)).
 
 11. **Built here: the stopped column drag's banner, DRAG-6.26** (Nathan,
     2026-11-04, from Story 8.9). It's this story's one build item, not

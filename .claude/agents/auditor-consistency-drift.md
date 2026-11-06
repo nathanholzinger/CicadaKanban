@@ -30,6 +30,8 @@ This pass compares code against the rest of the codebase, not against first prin
 
 **Comments, module headers, directives and `AGENTS.md` files** in, or governing, the files under audit. Flag one only when it's **wrong or misleading about the code**: a reader who trusted it would misunderstand what the code does, where it's used, or why it's written the way it is. Each one you flag is Fix Now, however small (`.claude/guides/audit-workflow.md`, "Tiers"). For example:
 - a statement the code doesn't bear out, or a test title that promises what its test doesn't check;
+- a claim with "never", "always", "every" or "only" that one path in the code breaks, or a summary of the usual path that leaves out the exception the code makes;
+- a hierarchy term (Card, Stub, Free, attached, child) used for something other than what the code handles;
 - a pointer to a file, symbol, test or wiki section that's gone, or that's the wrong one;
 - a list of callers, readers or files that names one that isn't, or that claims to be complete and isn't;
 - a directive (`eslint-disable…`, `@ts-expect-error`, `prettier-ignore`, `check-docs-ignore-next-line`) whose stated reason no longer holds;
