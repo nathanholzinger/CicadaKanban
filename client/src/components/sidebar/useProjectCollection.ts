@@ -7,9 +7,10 @@
 // - A move is drawn at its release, by the relation it sends, until its own answer lands (`pendingMoves`,
 //   laid over `projects` in `sidebarProjects`): a second move released meanwhile loses neither, and a
 //   refused one goes back with its answer (wiki project-tree §4).
-// - A read of the whole tree, after a refused move and after a delete, is applied only when no write's answer
-//   has been applied since it started (`refreshProjects`). An older snapshot is dropped and the tree is read
-//   again, so a recovery never undoes a newer write.
+// - A read of the whole tree, the first load and the ones after a refused move and after a delete, is applied
+//   only when no write's answer has been applied since it started and no later read has started
+//   (`readProjects`). An older snapshot is dropped and the tree is read again, so a read never undoes a newer
+//   write. The sidebar is `loaded` once the latest read is applied or has failed.
 // - A project the server no longer holds stays gone: a delete, and a read that no longer lists a project the
 //   collection held, record it (`deletedIds`), and a write answer that lands late for it, or for a child put
 //   under it, is dropped (`foldWrite`). A delete isn't queued behind the project's writes, so without this an
@@ -24,7 +25,7 @@
 // What stays with the caller: which project is selected, the create dialog, and opening a collapsed parent
 // (`onParentOpened`), since a collapse is the sidebar's.
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Project } from '../../types';
 import {
   fetchProjects,
@@ -50,7 +51,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
   // Each project's last write still out, so its next one waits for that answer (`writeInTurn`).
   const writeTails = useRef(new Map<string, Promise<void>>());
   // How many write answers have been applied, and which read of the whole tree is the latest
-  // (`refreshProjects`).
+  // (`readProjects`).
   const writesApplied = useRef(0);
   const latestRead = useRef(0);
   // The projects the server has deleted. Ids are never reused, so the set only grows.
@@ -61,15 +62,37 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
   // is a render behind.
   const appliedRows = useRef(new Map<string, Project>());
 
-  useEffect(() => {
-    fetchProjects()
-      .then(fresh => {
-        remember(fresh);
-        setProjects(fresh);
-      })
-      .catch(err => console.error('Failed to load projects:', err))
-      .finally(() => setLoaded(true));
+  // The one reader of the whole tree. A read that a later one superseded is dropped: the later one decides.
+  // One that began before a write's answer was applied is read again, since its snapshot may not have the
+  // write. It reads only refs and setters, so it is the same function for the life of the hook.
+  const readProjects = useCallback((failure: string) => {
+    const attempt = (): Promise<void> => {
+      const read = ++latestRead.current;
+      const applied = writesApplied.current;
+      return fetchProjects()
+        .then(fresh => {
+          if (read !== latestRead.current) return;
+          if (applied !== writesApplied.current) return attempt();
+          // No write has landed since the read began, so a project held before it and absent from it was
+          // deleted (a project created since would be a write, and isn't held).
+          const listed = new Set(fresh.map(p => p.id));
+          for (const id of appliedRows.current.keys()) if (!listed.has(id)) deletedIds.current.add(id);
+          appliedRows.current = new Map(fresh.map(row => [row.id, row]));
+          setProjects(fresh);
+          setLoaded(true);
+        })
+        .catch(err => {
+          console.error(failure, err);
+          if (read === latestRead.current) setLoaded(true);
+        });
+    };
+    return attempt();
   }, []);
+
+  // React's StrictMode runs this twice in development: the first read is the superseded one.
+  useEffect(() => {
+    void readProjects('Failed to load projects:');
+  }, [readProjects]);
 
   // `sent` numbers the write as it goes out, which is when the server takes it: after the project's earlier
   // one is answered.
@@ -91,10 +114,6 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
     return run;
   }
 
-  function remember(rows: Project[]) {
-    appliedRows.current = new Map(rows.map(row => [row.id, row]));
-  }
-
   // Folds the answer of write number `sent` into `projects`, unless the project is deleted, or was put under
   // one (the delete took that child too, or the server refused the put). Returns the project as it stood
   // before the answer, or null when the answer wasn't folded.
@@ -108,24 +127,6 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
     setProjects(prev => applyWriteResponse(prev, written, newer));
     writesApplied.current++;
     return { before };
-  }
-
-  async function refreshProjects(failure: string) {
-    const read = ++latestRead.current;
-    const applied = writesApplied.current;
-    try {
-      const fresh = await fetchProjects();
-      if (read !== latestRead.current) return;
-      if (applied !== writesApplied.current) return refreshProjects(failure);
-      // No write has landed since the read began, so a project held before it and absent from it was
-      // deleted (a project created since isn't in `projects`, which this call closed over).
-      const listed = new Set(fresh.map(p => p.id));
-      for (const { id } of projects) if (!listed.has(id)) deletedIds.current.add(id);
-      remember(fresh);
-      setProjects(fresh);
-    } catch (err) {
-      console.error(failure, err);
-    }
   }
 
   async function create(data: CreateProjectInput) {
@@ -162,7 +163,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
       await deleteProject(id);
       deletedIds.current.add(id);
       writesApplied.current++;
-      void refreshProjects('Failed to refresh projects after delete:');
+      void readProjects('Failed to refresh projects after delete:');
     } catch (err) {
       console.error('Failed to delete project:', err);
       throw err;
@@ -183,7 +184,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
       // the refetch resyncs the tree (wiki project-tree §4).
       console.error('Failed to reposition project:', err);
       settle();
-      void refreshProjects('Failed to refresh projects after failed reorder:');
+      void readProjects('Failed to refresh projects after failed reorder:');
     }
   }
 

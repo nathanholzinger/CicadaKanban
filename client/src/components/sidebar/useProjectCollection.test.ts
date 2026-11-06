@@ -1,6 +1,6 @@
 // The collection's answer handling, over the hook itself: a write's answer that lands after a delete, and
-// one that lands after a newer write of another project. The API is held so each test settles the answers in
-// the order it names.
+// one that lands after a newer write of another project, and a read of the tree that lands after a write's
+// answer. The API is held so each test settles the answers in the order it names.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -13,10 +13,12 @@ vi.mock('../../api/projects');
 
 function held<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>(res => {
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((res, rej) => {
     resolve = res;
+    reject = rej;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 const treeOf = (...rows: Array<[id: string, parentId: string | null, position: number]>) =>
@@ -233,5 +235,135 @@ describe('TREE-4.13: a late response preserves positions already set by a newer 
 
     // X keeps 2; it takes what else its own answer said.
     expect(collection.find('X')).toMatchObject({ position: 2, name: 'Saved' });
+  });
+});
+
+describe('TREE-4.14: an older tree read preserves a write already applied in the sidebar', () => {
+  // The hook as React's StrictMode mounts it in development: the load effect runs twice, so there are two
+  // reads. The first is held; the second is the one that exposes the sidebar.
+  async function openWithFirstReadHeld(tree: () => Project[]) {
+    const first = held<Project[]>();
+    vi.mocked(fetchProjects).mockReturnValueOnce(first.promise).mockResolvedValueOnce(tree());
+    const seen: Project[][] = [];
+    const hook = renderHook(
+      () => {
+        const collection = useProjectCollection(vi.fn());
+        seen.push(collection.projects);
+        return collection;
+      },
+      { reactStrictMode: true },
+    );
+    await waitFor(() => expect(hook.result.current.loaded).toBe(true));
+    const find = (id: string) => hook.result.current.projects.find(p => p.id === id);
+    // Every list rendered from the latest one on, for a check that none of them was the old tree.
+    const rendersFromNow = () => seen.slice(seen.length - 1);
+    return { hook, first, seen, find, rendersFromNow };
+  }
+
+  it('keeps an edit’s name when the first read lands with the tree as it was', async () => {
+    const tree = () => [makeProject('P', { name: 'Old', position: 1 }), makeProject('Q', { position: 2 })];
+    const { hook, first, find, rendersFromNow } = await openWithFirstReadHeld(tree);
+    vi.mocked(updateProject).mockResolvedValueOnce(makeProject('P', { name: 'Renamed', position: 1 }));
+    await act(async () => hook.result.current.update('P', { name: 'Renamed' }));
+    expect(find('P')?.name).toBe('Renamed');
+    const sinceTheEdit = rendersFromNow();
+
+    await act(async () => first.resolve(tree()));
+
+    expect(find('P')?.name).toBe('Renamed');
+    expect(find('Q')).toMatchObject({ parentId: null, position: 2 });
+    // No render from the edit on drew the old name.
+    for (const projects of [...sinceTheEdit, hook.result.current.projects]) {
+      expect(projects.find(p => p.id === 'P')?.name).toBe('Renamed');
+    }
+  });
+
+  it('keeps a move’s parent and order when the first read lands with the tree as it was', async () => {
+    const tree = () => treeOf(['P', null, 1], ['A', 'P', 1], ['B', 'P', 2], ['X', null, 2]);
+    const { hook, first, find, rendersFromNow } = await openWithFirstReadHeld(tree);
+    vi.mocked(moveProject).mockResolvedValueOnce(makeProject('X', { parentId: 'P', position: 1.5 }));
+    await act(async () => hook.result.current.reorder('X', 'P', 'A', null));
+    const sinceTheMove = rendersFromNow();
+
+    await act(async () => first.resolve(tree()));
+
+    const { projects } = hook.result.current;
+    const childrenOfP = projects
+      .filter(p => p.parentId === 'P')
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map(p => p.id);
+    expect(childrenOfP).toEqual(['A', 'X', 'B']);
+    expect(find('X')?.parentId).toBe('P');
+    expect(projects.filter(p => p.id === 'X')).toHaveLength(1);
+    for (const rendered of [...sinceTheMove, projects]) {
+      expect(rendered.find(p => p.id === 'X')).toMatchObject({ parentId: 'P', position: 1.5 });
+    }
+  });
+
+  it('holds a later refresh to the same rule: its older read is dropped and the tree is read again', async () => {
+    vi.mocked(fetchProjects).mockResolvedValueOnce([makeProject('P', { name: 'Old', position: 1 })]);
+    const seen: Project[][] = [];
+    const hook = renderHook(() => {
+      const collection = useProjectCollection(vi.fn());
+      seen.push(collection.projects);
+      return collection;
+    });
+    await waitFor(() => expect(hook.result.current.loaded).toBe(true));
+    // A refused move starts a read of the tree, which is held while an edit is answered.
+    const refresh = held<Project[]>();
+    vi.mocked(fetchProjects).mockReturnValueOnce(refresh.promise);
+    vi.mocked(moveProject).mockRejectedValueOnce(new Error('refused'));
+    await act(async () => hook.result.current.reorder('P', null, null, null));
+    vi.mocked(updateProject).mockResolvedValueOnce(makeProject('P', { name: 'Renamed', position: 1 }));
+    await act(async () => hook.result.current.update('P', { name: 'Renamed' }));
+    const sinceTheEdit = seen.slice(seen.length - 1);
+    vi.mocked(fetchProjects).mockResolvedValueOnce([makeProject('P', { name: 'Renamed', position: 1 })]);
+
+    await act(async () => refresh.resolve([makeProject('P', { name: 'Old', position: 1 })]));
+
+    expect(fetchProjects).toHaveBeenCalledTimes(3);
+    for (const projects of [...sinceTheEdit, hook.result.current.projects]) expect(projects[0].name).toBe('Renamed');
+  });
+
+  describe('the sidebar is loaded when the latest read is applied or has failed', () => {
+    const open = () => {
+      const first = held<Project[]>();
+      const second = held<Project[]>();
+      vi.mocked(fetchProjects).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const hook = renderHook(() => useProjectCollection(vi.fn()), { reactStrictMode: true });
+      return { hook, first, second };
+    };
+
+    it('is not loaded by the first read, which the second superseded, landing', async () => {
+      const { hook, first, second } = open();
+
+      await act(async () => first.resolve(treeOf(['P', null, 1])));
+      expect(hook.result.current.loaded).toBe(false);
+      expect(hook.result.current.projects).toEqual([]);
+
+      await act(async () => second.resolve(treeOf(['P', null, 1], ['Q', null, 2])));
+      expect(hook.result.current.loaded).toBe(true);
+      expect(hook.result.current.projects.map(p => p.id)).toEqual(['P', 'Q']);
+    });
+
+    it('is loaded when the latest read fails, with nothing in it', async () => {
+      const { hook, first, second } = open();
+      await act(async () => first.resolve(treeOf(['P', null, 1])));
+
+      await act(async () => second.reject(new Error('down')));
+
+      expect(hook.result.current.loaded).toBe(true);
+      expect(hook.result.current.projects).toEqual([]);
+    });
+
+    it('is not loaded by the failure of a read the latest superseded', async () => {
+      const { hook, first, second } = open();
+
+      await act(async () => first.reject(new Error('down')));
+      expect(hook.result.current.loaded).toBe(false);
+
+      await act(async () => second.resolve(treeOf(['P', null, 1])));
+      expect(hook.result.current.loaded).toBe(true);
+    });
   });
 });
