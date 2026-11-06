@@ -16,7 +16,7 @@
 //   older move or edit answer would add the deleted row back.
 // - An answer renumbers other projects too (`reindexed`), and different projects' writes aren't ordered, so
 //   an older answer can land after a newer one that set the same row. Each write is numbered as it is sent,
-//   and a row keeps the position of the latest-sent write that set it (`positionSetBy`): an older answer's
+//   and a row keeps the position of the latest-sent write that set it (`positionWrites`): an older answer's
 //   pair for it is skipped (`applyWriteResponse`'s `newer`).
 // - An edit opens the parent it put a project under, never one it left alone (wiki project-tree §11). The
 //   parent it is compared with is the one the project had when the edit's own answer came to be applied, which
@@ -36,7 +36,7 @@ import {
   type UpdateProjectInput,
 } from '../../api/projects';
 import { withMoveApplied, type PendingMove } from '../../lib/hierarchy';
-import { applyWriteResponse } from '../../lib/positionedWrite';
+import { applyWriteResponse, positionRecord } from '../../lib/positionedWrite';
 import { parentPutUnder } from './projectTreeUtils';
 
 export type CreateProjectInput = Parameters<typeof createProject>[0];
@@ -55,10 +55,8 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
   const latestRead = useRef(0);
   // The projects the server has deleted. Ids are never reused, so the set only grows.
   const deletedIds = useRef(new Set<string>());
-  // How many writes have been sent, and for each project the number of the write whose answer last set its
-  // position (`foldWrite`).
-  const writesSent = useRef(0);
-  const positionSetBy = useRef(new Map<string, number>());
+  // The writes sent, numbered, and which one last set each project's position (`foldWrite`).
+  const positionWrites = useRef(positionRecord());
   // Each project as the latest answer or read applied to `projects` left it, read synchronously where `projects`
   // is a render behind.
   const appliedRows = useRef(new Map<string, Project>());
@@ -77,7 +75,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
   // one is answered.
   function writeInTurn<T>(id: string, write: () => Promise<T>): Promise<{ answer: T; sent: number }> {
     const send = () => {
-      const sent = ++writesSent.current;
+      const sent = positionWrites.current.send();
       return write().then(answer => ({ answer, sent }));
     };
     const earlier = writeTails.current.get(id);
@@ -106,10 +104,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
     const before = appliedRows.current.get(id);
     appliedRows.current.set(id, written);
     // The rows this answer sets, less those a write sent after it has already set.
-    const setBy = positionSetBy.current;
-    const touched = [id, ...(written.reindexed ?? []).map(pair => pair.id)];
-    const newer = new Set(touched.filter(row => (setBy.get(row) ?? 0) > sent));
-    for (const row of touched) if (!newer.has(row)) setBy.set(row, sent);
+    const newer = positionWrites.current.answer(sent, written);
     setProjects(prev => applyWriteResponse(prev, written, newer));
     writesApplied.current++;
     return { before };
@@ -135,7 +130,7 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
 
   async function create(data: CreateProjectInput) {
     try {
-      const sent = ++writesSent.current;
+      const sent = positionWrites.current.send();
       const created = await createProject(data);
       // A project created under one the server has since deleted isn't drawn, and opens nothing.
       if (!foldWrite(created, sent)) return;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyWriteResponse } from './positionedWrite';
+import { applyWriteResponse, positionRecord } from './positionedWrite';
 import type { Project } from '../types';
 import type { ReindexedPosition } from '../api/shared';
 import { makeItem } from '../test/itemFixture';
@@ -117,5 +117,66 @@ describe('applyWriteResponse, when a later write has already set some rows', () 
     const x = result.find(p => p.id === 'X')!;
     expect([x.position, x.name]).toEqual([998, 'After']);
     expect(result.find(p => p.id === 'Y')!.position).toBe(1);
+  });
+});
+
+describe('positionRecord', () => {
+  const pairs = (...ids: string[]) => ids.map((id, i) => ({ id, position: i + 1 }));
+
+  it('numbers the writes in the order they are sent', () => {
+    const record = positionRecord();
+    expect([record.send(), record.send(), record.send()]).toEqual([1, 2, 3]);
+  });
+
+  it('names no row for answers that land in the order the writes were sent', () => {
+    const record = positionRecord();
+    const [first, second] = [record.send(), record.send()];
+    expect(record.answer(first, { id: 'X', reindexed: pairs('Y', 'Z', 'X') })).toEqual(new Set());
+    expect(record.answer(second, { id: 'Y', reindexed: pairs('Y') })).toEqual(new Set());
+  });
+
+  it('names the rows a later-sent write has set, its written row and its pairs, when an older answer lands', () => {
+    const record = positionRecord();
+    const [first, second] = [record.send(), record.send()];
+    record.answer(second, { id: 'Y', reindexed: pairs('Y', 'X') });
+
+    expect(record.answer(first, { id: 'X', reindexed: pairs('Y', 'Z', 'X') })).toEqual(new Set(['X', 'Y']));
+  });
+
+  it('names a written row with no pairs of its own', () => {
+    const record = positionRecord();
+    const [first, second] = [record.send(), record.send()];
+    record.answer(second, { id: 'X' });
+
+    expect(record.answer(first, { id: 'X' })).toEqual(new Set(['X']));
+  });
+
+  it('records the rows an answer was not skipped for as its own, so a later write is the newer', () => {
+    const record = positionRecord();
+    const [first, second, third] = [record.send(), record.send(), record.send()];
+    record.answer(second, { id: 'A' });
+    expect(record.answer(first, { id: 'B', reindexed: pairs('A', 'B') })).toEqual(new Set(['A']));
+
+    // B is now the first write's, so the second's answer for it is the newer and names nothing.
+    expect(record.answer(second, { id: 'B' })).toEqual(new Set());
+    // A third write's answer, landing last, is newer than every record.
+    expect(record.answer(third, { id: 'A', reindexed: pairs('B', 'A') })).toEqual(new Set());
+  });
+
+  it('keeps the latest-sent write as a row’s, so a still older answer does not lower it', () => {
+    const record = positionRecord();
+    const [first, second, third] = [record.send(), record.send(), record.send()];
+    record.answer(third, { id: 'A' });
+
+    expect(record.answer(second, { id: 'A' })).toEqual(new Set(['A']));
+    expect(record.answer(first, { id: 'A' })).toEqual(new Set(['A']));
+  });
+
+  it('leaves a row alone that no later-sent write set', () => {
+    const record = positionRecord();
+    const [first, second] = [record.send(), record.send()];
+    record.answer(second, { id: 'Y' });
+
+    expect(record.answer(first, { id: 'X', reindexed: pairs('X', 'Z') })).toEqual(new Set());
   });
 });
