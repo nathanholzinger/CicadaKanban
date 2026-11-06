@@ -65,6 +65,41 @@ test('TREE-1.1: the ghost shows the gap and depth, and a release saves exactly t
   await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(2)}px`);
 });
 
+test('TREE-1.1: a release with no movement after the last row was crossed saves the gap the ghost shows', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const ids = await seedProjects(request, [
+    ['A', null],
+    ['B', null],
+    ['C', null],
+  ]);
+  await page.goto('/');
+  const moves: unknown[] = [];
+  page.on('request', req => {
+    if (req.method() === 'PATCH' && req.url().endsWith('/move')) moves.push(req.postDataJSON());
+  });
+  const pitch = (await paintedBoxOf(projectSidebar.row('B'))).y - (await paintedBoxOf(projectSidebar.row('A'))).y;
+
+  // One movement, the last, takes the copy past the point where B is the nearest row. dnd-kit names the
+  // new row to the sidebar after that move, so there is no further movement to catch up with.
+  const from = await pickUp(page, projectSidebar.dragHandle('A'));
+  await page.mouse.move(from.x, from.y + pitch * 0.75);
+  await expect.poll(() => ghostSlot(projectSidebar, ['B', 'C'])).toEqual(['B', 'C']);
+
+  await release(page);
+
+  // A is saved after B at the top level, where the ghost was.
+  await expect.poll(() => moves.length).toBe(1);
+  expect(moves[0]).toEqual({ parentId: null, prevId: ids.B, nextId: null });
+  await expect(projectSidebar.projectNames('B', 'A', 'C')).toHaveText(['B', 'A', 'C']);
+  expect((await fetchProject(request, ids.A)).parentId).toBeNull();
+  // And the order is the stored one.
+  await page.reload();
+  await expect(projectSidebar.projectNames('B', 'A', 'C')).toHaveText(['B', 'A', 'C']);
+});
+
 test('TREE-1.12: a release saves the placement as a move naming a neighbor, never a position', async ({
   page,
   request,

@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
 import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
@@ -35,7 +35,16 @@ function sidebarDrag(
     useProjectDragReorder(projects, flatItems, onReorderProject, expand, depthCap, moves),
   );
   let activeId = '';
+  // The row and the sideways travel the last event carried: the release's event names them, as dnd-kit's
+  // end event does.
   let overId = '';
+  let deltaX = 0;
+  const pointerAt = (over: string, depth: number) => {
+    const seedDepth = flatItems.find(i => i.id === activeId)!.depth;
+    overId = over;
+    deltaX = (depth - seedDepth) * INDENT_WIDTH;
+    return { delta: { x: deltaX, y: 0 }, over: { id: over } };
+  };
 
   return {
     onReorderProject,
@@ -47,15 +56,13 @@ function sidebarDrag(
       activeId = id;
       act(() => result.current.handleDragStart({ active: { id } } as unknown as DragStartEvent));
     },
+    // dnd-kit's move event: the pointer moved, with the `over` of the render before it.
     hover(over: string, depth: number) {
-      const seedDepth = flatItems.find(i => i.id === activeId)!.depth;
-      overId = over;
-      act(() =>
-        result.current.handleDragMove({
-          delta: { x: (depth - seedDepth) * INDENT_WIDTH, y: 0 },
-          over: { id: over },
-        } as unknown as DragMoveEvent),
-      );
+      act(() => result.current.handleDragMove(pointerAt(over, depth) as unknown as DragMoveEvent));
+    },
+    // dnd-kit's announcement of a new `over`, which a move event of the same render carried one render late.
+    announce(over: string, depth: number) {
+      act(() => result.current.handleDragOver(pointerAt(over, depth) as unknown as DragOverEvent));
     },
     // The two rows the ghost sits between, among the rows without the dragged project; null at either end of the list.
     slot() {
@@ -64,7 +71,13 @@ function sidebarDrag(
       return gap === null ? null : [rows[gap - 1] ?? null, rows[gap] ?? null];
     },
     release() {
-      act(() => result.current.handleDragEnd({ over: { id: overId } } as unknown as DragEndEvent));
+      act(() =>
+        result.current.handleDragEnd({ delta: { x: deltaX, y: 0 }, over: { id: overId } } as unknown as DragEndEvent),
+      );
+    },
+    // The release with an end event of its own, naming a row no earlier event named.
+    releaseAt(over: string, depth: number) {
+      act(() => result.current.handleDragEnd(pointerAt(over, depth) as unknown as DragEndEvent));
     },
   };
 }
@@ -72,6 +85,72 @@ function sidebarDrag(
 // TREE-1's tree: top-level A, B and X, where A has a child A1, and A1 has a
 // child A1a. X is the project dragged.
 const TREE_1 = tree(['A', null], ['A1', 'A'], ['A1a', 'A1'], ['B', null], ['X', null]);
+
+// dnd-kit's move event carries the `over` of the render before it, and the announcement of the new one
+// follows without the pointer having to move again, so a release can come with the move still naming the
+// row before.
+describe('TREE-1.1: a release saves the gap and depth the ghost shows, though no move followed the last row crossed', () => {
+  const FLAT = tree(['A', null], ['B', null], ['C', null]);
+
+  it('after A’s last movement makes B the nearest row, a release without moving again saves A after B at the top level', () => {
+    const drag = sidebarDrag(FLAT);
+    drag.pickUp('A');
+    // The move that crosses into B's row still names A, and the sortable then draws A's ghost after B.
+    drag.hover('A', 0);
+    drag.announce('B', 0);
+    expect(drag.slot()).toEqual(['B', 'C']);
+
+    drag.release();
+
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('A', null, 'B', null);
+  });
+
+  it('draws the ghost at the announced row, with its line, before any further move', () => {
+    const drag = sidebarDrag(FLAT);
+    drag.pickUp('A');
+    drag.hover('A', 0);
+    expect(drag.slot()).toEqual([null, 'B']);
+
+    drag.announce('B', 0);
+
+    expect(drag.slot()).toEqual(['B', 'C']);
+    expect(drag.hook.ghost).toMatchObject({ depth: 0, line: true });
+  });
+
+  it('reads the depth from the announcement’s own offset, so a tab made with the announcement is saved', () => {
+    const drag = sidebarDrag(tree(['A', null], ['B', null], ['C', null], ['D', null]));
+    drag.pickUp('A');
+    drag.hover('A', 0);
+
+    drag.announce('B', 1);
+
+    expect(drag.hook.projectedDepth).toBe(1);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('A', 'B', null, null);
+  });
+
+  it('places the release from its own event: the row it names, not the last one a move or an announcement named', () => {
+    const drag = sidebarDrag(FLAT);
+    drag.pickUp('A');
+    drag.hover('B', 0);
+
+    // The end event names C, with no event in between.
+    drag.releaseAt('C', 0);
+
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('A', null, 'C', null);
+  });
+
+  it('still writes nothing when the announcement names the project’s own row, which is its own gap', () => {
+    const drag = sidebarDrag(FLAT);
+    drag.pickUp('A');
+    drag.hover('B', 0);
+    drag.announce('A', 0);
+
+    drag.release();
+
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+  });
+});
 
 describe('TREE-1.2: a gap offers the depths from Bottom’s to Top’s + 1, and each places the project differently', () => {
   it.each([
@@ -1045,6 +1124,7 @@ function liveDrag(first: Project[], depthCap: number | null = null, firstMoves: 
   );
   let seedDepth = 0;
   let overId = '';
+  let deltaX = 0;
 
   return {
     onReorderProject,
@@ -1058,11 +1138,9 @@ function liveDrag(first: Project[], depthCap: number | null = null, firstMoves: 
     // The carried copy nearest the row `over`, with the pointer at the absolute depth `depth`.
     hover(over: string, depth: number) {
       overId = over;
+      deltaX = (depth - seedDepth) * INDENT_WIDTH;
       act(() =>
-        result.current.handleDragMove({
-          delta: { x: (depth - seedDepth) * INDENT_WIDTH, y: 0 },
-          over: { id: over },
-        } as unknown as DragMoveEvent),
+        result.current.handleDragMove({ delta: { x: deltaX, y: 0 }, over: { id: over } } as unknown as DragMoveEvent),
       );
     },
     // The two rows the ghost sits between, among the rows without the dragged project; null at either end of the list.
@@ -1072,7 +1150,9 @@ function liveDrag(first: Project[], depthCap: number | null = null, firstMoves: 
       return gap === null ? null : [rows[gap - 1] ?? null, rows[gap] ?? null];
     },
     release() {
-      act(() => result.current.handleDragEnd({ over: { id: overId } } as unknown as DragEndEvent));
+      act(() =>
+        result.current.handleDragEnd({ delta: { x: deltaX, y: 0 }, over: { id: overId } } as unknown as DragEndEvent),
+      );
     },
     cancel() {
       act(() => result.current.handleDragCancel());

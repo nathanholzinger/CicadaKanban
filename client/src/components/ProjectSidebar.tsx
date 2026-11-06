@@ -91,6 +91,7 @@ export default function ProjectSidebar({
             collisionDetection={closestCenter}
             onDragStart={drag.handleDragStart}
             onDragMove={drag.handleDragMove}
+            onDragOver={drag.handleDragOver}
             onDragEnd={drag.handleDragEnd}
             onDragCancel={drag.handleDragCancel}
           >

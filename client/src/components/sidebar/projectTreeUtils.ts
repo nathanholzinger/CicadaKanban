@@ -98,8 +98,8 @@ export function fullChildrenOf(
 
 // The gap is the ghost's slot (wiki board-drag-interaction §2), one of n + 1
 // among the rows without the dragged subtree. `drawn` is the list the sortable
-// context holds, in the order it was drawn at pickup, the dragged project's own
-// row included, and `overId` is the row dnd-kit says the copy is nearest. The
+// context holds now, in the order the sidebar draws it, the dragged project's own
+// row included and its branch left out, and `overId` is the row dnd-kit says the copy is nearest. The
 // ghost takes that row's slot, the standard sortable shuffle: from a row below
 // the ghost's own slot it lands after it, from one above it lands before it,
 // and from its own row it stays. Either way the gap is that row's place in

@@ -9,7 +9,9 @@
 // row is drawn by what it can be to the carried project, on the board's rule
 // (`lib/dragTargets.ts`), at the sidebar's own strengths. The carried project takes its descendants
 // with it, its branch (`lib/hierarchyPlacement.ts::carriedBranchOf`, as a board item does): the hook
-// says which rows are drawn without them (`drawnItems`), and the counts the carried copy says.
+// says which rows are drawn without them (`drawnItems`), and the counts the carried copy says. Every
+// event that names a row, a move, the announcement of a new row and the release, places the ghost by one
+// function (`placementAt`), so a release saves the gap and depth the last of them drew.
 
 import { useState, type CSSProperties } from 'react';
 import {
@@ -18,7 +20,9 @@ import {
   useSensors,
   type DragEndEvent,
   type DragMoveEvent,
+  type DragOverEvent,
   type DragStartEvent,
+  type Over,
 } from '@dnd-kit/core';
 import type { Project } from '../../types';
 import { classifyTargets, type DropTier } from '../../lib/dragTargets';
@@ -127,9 +131,11 @@ export function useProjectDragReorder(
   const { subtreeIds: exclude, height: subtreeHeight } = drawn?.subtree ?? NO_SUBTREE;
   const branch = drawn?.branch ?? null;
   // The rows the sidebar draws: every rendered row but the carried project's branch, from the
-  // pickup to the drag's end. The project's own row is among them, and it is the ghost. Placement
-  // doesn't read them (below): the branch comes right after the project's own row, so the indexes
-  // the gap and the release read are the same with or without it.
+  // pickup to the drag's end. The project's own row is among them, and it is the ghost. Three lists
+  // place against it: the gap is a row's place in these drawn rows (`resolveGap`), where the rows
+  // after a branch sit as many places nearer the top as it has rows; the projection reads `rows`, below;
+  // and the release's own-slot lookup reads `flatItems`, where the project's own index is the same, the
+  // branch coming right after it.
   const drawnItems = branch ? flatItems.filter(i => !branch.ids.has(i.id)) : flatItems;
   // The project and its whole subtree are never a Top/Bottom candidate:
   // `rows`, what a gap is computed against, is every rendered row (a collapsed
@@ -141,8 +147,9 @@ export function useProjectDragReorder(
 
   // The projection's depth (the top level is 0) is the dropped project's parent's
   // depth in the cap's count (a root is 1), so it is the cap's `targetDepth` as it stands.
-  const overCap =
-    depthCap !== null && projected !== null && !isWithinDepthCap(projected.depth, subtreeHeight, depthCap);
+  const isOverCap = (projection: Projection) =>
+    depthCap !== null && !isWithinDepthCap(projection.depth, subtreeHeight, depthCap);
+  const overCap = projected !== null && isOverCap(projected);
 
   // The line is drawn once there is a gap (something is `over`) and a row to place against, which
   // is none only when the dragged subtree holds every project.
@@ -157,29 +164,47 @@ export function useProjectDragReorder(
     setGap(null);
   }
 
-  function handleDragMove({ delta, over }: DragMoveEvent) {
-    if (!over || !activeItem) {
-      setProjected(null);
-      setGap(null);
-      return;
-    }
-
-    // dnd-kit reports the active row itself as `over` while the copy rests on its own slot, and
-    // `resolveGap` reads that as the project's own gap (wiki project-tree §1).
-    const g = resolveGap(drawnItems, String(over.id));
-    const proj = computeProjection(rows, g, activeItem.depth, delta.x, INDENT_WIDTH, null, childrenOf, exclude);
-    setProjected(proj);
-    setGap(g);
+  // The gap the ghost's slot is, and the projection there, for the row dnd-kit says the copy is nearest
+  // (`over`) and how far it has travelled sideways since the pickup (`deltaX`). Null with nothing over.
+  // dnd-kit reports the active row itself as `over` while the copy rests on its own slot, and
+  // `resolveGap` reads that as the project's own gap (wiki project-tree §1).
+  function placementAt(over: Over | null, deltaX: number): { gap: number; projection: Projection } | null {
+    if (!over || !activeItem) return null;
+    const gap = resolveGap(drawnItems, String(over.id));
+    return {
+      gap,
+      projection: computeProjection(rows, gap, activeItem.depth, deltaX, INDENT_WIDTH, null, childrenOf, exclude),
+    };
   }
 
-  function handleDragEnd({ over }: DragEndEvent) {
-    if (!over || !activeItem || !projected || gap === null || overCap) {
+  function drawPlacement({ delta, over }: DragMoveEvent | DragOverEvent) {
+    const placed = placementAt(over, delta.x);
+    setProjected(placed?.projection ?? null);
+    setGap(placed?.gap ?? null);
+  }
+
+  // A move event carries the `over` of the render before it: the move that crosses into a new row still
+  // names the old one. `onDragOver` announces the new one, with the pointer still or not, and the
+  // sortable draws the ghost by it, so both place the ghost.
+  function handleDragMove(event: DragMoveEvent) {
+    drawPlacement(event);
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    drawPlacement(event);
+  }
+
+  // The release places the ghost from its own event, not from what the last render held, so it saves
+  // the gap and depth the ghost shows now.
+  function handleDragEnd({ delta, over }: DragEndEvent) {
+    const placed = placementAt(over, delta.x);
+    if (!placed || !activeItem || isOverCap(placed.projection)) {
       clearDrag();
       return;
     }
 
     // prevId/nextId come off the projection's one anchor (`siblingIdsFromAnchor`, via `releaseOf`).
-    const release = releaseOf(flatItems, activeItem.id, gap, projected);
+    const release = releaseOf(flatItems, activeItem.id, placed.gap, placed.projection);
     if (release) {
       // A project dropped into a collapsed parent opens it (wiki project-tree §2).
       if (release.parentId) expand(release.parentId);
@@ -218,6 +243,7 @@ export function useProjectDragReorder(
     dropInvalid: overCap,
     handleDragStart,
     handleDragMove,
+    handleDragOver,
     handleDragEnd,
     handleDragCancel: clearDrag,
   };
