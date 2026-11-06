@@ -17,6 +17,11 @@
 //     `popInDelayMs`, and is in the middle band when that runs out.
 //   - Zoom in, a column/sub-row → a Card's Descendants layer: the named
 //     relation holds through the dwell and then the cue (`namedCardCandidate`).
+// A sample enters each context at most once. A transition re-evaluates the same sample in the context it
+// lands in, so a zoom into a Card the cursor is far from would pop straight back out, and zoom in again,
+// for as long as the clocks and the distance allow. A transition to a context the sample has already been
+// in, the one it started in included, takes that context and stops: the sample settles where the cycle
+// began. An outward cascade enters each context once, so it runs as before.
 // Not a layer change: the hold that opens the hierarchy modal (wiki board-drag-interaction
 // §7.3). It runs inside the Descendants layer, keyed on the projection's gap and depth beside
 // an overflow row (`advanceModalHold`), and the owner opens the modal when it has elapsed.
@@ -176,6 +181,24 @@ export function advancePopSession(
   namedAnchor: AnchorRelation | null = null,
   parentKeyOf: ParentKeyOf = NO_PARENT_LOOKUP,
 ): PopSession {
+  const sample: Sample = { pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf };
+  return advance(session, sample, new Set([session.contextKey]));
+}
+
+// Everything one pointer sample reads, bar the session, which changes as it transitions.
+interface Sample {
+  pointer: Point;
+  regions: readonly DragRegion[];
+  tuning: DragTuning;
+  metrics: ShortCardMetrics;
+  now: number;
+  namedAnchor: AnchorRelation | null;
+  parentKeyOf: ParentKeyOf;
+}
+
+// `entered`: the contexts this sample has been in so far, `null` for Board (see `transitionTo`).
+function advance(session: PopSession, sample: Sample, entered: ReadonlySet<string | null>): PopSession {
+  const { pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf } = sample;
   if (session.contextKey === null) {
     // Board layer: a Card is never a target here (one layer at a time) —
     // only a column/sub-row is hoverable, both for its own band and for the
@@ -184,7 +207,7 @@ export function advancePopSession(
     if (!region) return session.hover ? { ...session, hover: null } : session;
     const hover = hoverFor(session.hover, region, pointer, metrics, now);
     if (hover.poppable && now - hover.since >= tuning.popInDelayMs) {
-      return transitionTo(region.key, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
+      return transitionTo(region.key, sample, entered);
     }
     return hover === session.hover ? session : { ...session, hover };
   }
@@ -207,7 +230,7 @@ export function advancePopSession(
         : null;
     if (hover) {
       if (hover.poppable && now - hover.since >= zoomInDelay(tuning)) {
-        return transitionTo(hover.regionKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
+        return transitionTo(hover.regionKey, sample, entered);
       }
       return hover === session.hover && session.outsideSince === null
         ? session
@@ -221,7 +244,7 @@ export function advancePopSession(
   const outsideSince = session.outsideSince ?? now;
   if (popOutDue(contextRegion, pointer, tuning, now, session.outsideSince)) {
     const parentKey = contextRegion ? contextRegion.parentRegionKey : parentKeyOf(session.contextKey);
-    return transitionTo(parentKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
+    return transitionTo(parentKey, sample, entered);
   }
   // Resting outside the context is no hold on anything inside it.
   return session.hover === null && session.outsideSince === outsideSince && session.modalHold === null
@@ -232,18 +255,11 @@ export function advancePopSession(
 // Every "pop into/out of `key`": a fresh session at `key`, re-evaluated
 // against this same pointer sample right away (see the comment above
 // `advancePopSession` on why that re-evaluation can't wait for the next
-// `pointermove`).
-function transitionTo(
-  key: string | null,
-  pointer: Point,
-  regions: readonly DragRegion[],
-  tuning: DragTuning,
-  metrics: ShortCardMetrics,
-  now: number,
-  namedAnchor: AnchorRelation | null,
-  parentKeyOf: ParentKeyOf,
-): PopSession {
-  return advancePopSession(startPopSession(key), pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
+// `pointermove`), unless this sample has been in `key` already: then the fresh session is the
+// answer, and the sample is done (see the header).
+function transitionTo(key: string | null, sample: Sample, entered: ReadonlySet<string | null>): PopSession {
+  const session = startPopSession(key);
+  return entered.has(key) ? session : advance(session, sample, new Set(entered).add(key));
 }
 
 // A locked column/sub-row's own zoom-in candidate: not whichever Card the

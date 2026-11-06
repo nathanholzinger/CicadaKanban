@@ -326,6 +326,107 @@ describe('popping out of a context the sample has no region for', () => {
   });
 });
 
+// The two shapes of a pop-out bound for Card P's column K: a merged column's outer body, which reaches past
+// the content-sized rect its Cards fill, and an expanded column's sub-row. P sits in the top of each.
+const KINDS = [
+  { name: 'a merged column', K: region('column:m', rect(0, 0, 100, 120), { boundsRect: rect(0, 0, 100, 400) }) },
+  { name: 'an expanded column’s sub-row', K: region('subrow:m:w1', rect(0, 0, 100, 400)) },
+].map(({ name, K }) => ({ name, K, PK: descendantsRegion('card-p', rect(10, 10, 80, 100), K.key) }));
+const ZERO_CLOCKS: DragTuning = {
+  ...tuning,
+  cardZoomDwellMs: 0,
+  cardPopInDelayMs: 0,
+  popInDelayMs: 0,
+  popDelayMs: 0,
+  popDistancePx: 10,
+};
+const SET_CLOCKS: DragTuning = { ...tuning, popDistancePx: 10 };
+// Inside K and well outside P's box; and inside P; and far outside both P and K's bound.
+const awayFromP = { x: 50, y: 200 };
+const insideP = { x: 50, y: 100 };
+const yanked = { x: 50, y: 500 };
+
+describe.each(KINDS)('$name, with a positive popDistancePx', ({ K, PK }) => {
+  const regionsOf = [K, PK];
+  const namedP = { anchorId: PK.cardId, side: 'after' as const };
+  const sampleAt = (
+    session: ReturnType<typeof startPopSession>,
+    tuningUsed: DragTuning,
+    pointer: typeof yanked,
+    now = 0,
+  ) => advancePopSession(session, pointer, regionsOf, tuningUsed, metrics, now, namedP);
+
+  describe('DRAG-1.37: a zero-delay pop cycle settles in the context it returns to', () => {
+    it('DRAG-1.37: a sample inside K, far from the Card P it names, zooms into P and pops back out to settle in K', () => {
+      const settled = sampleAt(startPopSession(K.key), ZERO_CLOCKS, awayFromP);
+
+      expect(settled).toEqual(startPopSession(K.key));
+    });
+
+    it('DRAG-1.37: the same sample settles in K from any state K was in, a hold or an exit clock running', () => {
+      const holding = {
+        ...startPopSession(K.key),
+        hover: { regionKey: PK.key, since: 0, poppable: true, phase: 'cue' as const },
+      };
+      const leaving = { ...startPopSession(K.key), outsideSince: 0 };
+
+      expect(sampleAt(holding, ZERO_CLOCKS, awayFromP, 1)).toEqual(startPopSession(K.key));
+      expect(sampleAt(leaving, ZERO_CLOCKS, awayFromP, 1)).toEqual(startPopSession(K.key));
+    });
+
+    it('DRAG-1.37: a later sample inside P, with P still named, zooms into its Descendants layer: settling the earlier one bars nothing', () => {
+      const settled = sampleAt(startPopSession(K.key), ZERO_CLOCKS, awayFromP);
+
+      expect(sampleAt(settled, ZERO_CLOCKS, insideP, 1).contextKey).toBe(PK.key);
+    });
+
+    it('DRAG-1.37: each sample far from P settles in K again, never in P', () => {
+      let session = startPopSession(K.key);
+      for (let now = 0; now < 5; now++) {
+        session = sampleAt(session, ZERO_CLOCKS, awayFromP, now);
+        expect(session.contextKey).toBe(K.key);
+      }
+    });
+  });
+
+  describe('DRAG-1.19: a distant yank out of a Card cascades through two pops, one layer at a time', () => {
+    // Locked in P as a drag that zoomed in from outside leaves it, and as a Stub's pickup starts it.
+    const zoomedIn = (tuningUsed: DragTuning) => {
+      const holding = advancePopSession(startPopSession(K.key), insideP, regionsOf, tuningUsed, metrics, 0, namedP);
+      return advancePopSession(holding, insideP, regionsOf, tuningUsed, metrics, DWELL + CUE, namedP);
+    };
+    const origins = [
+      { origin: 'zoomed in from outside', from: (tuningUsed: DragTuning) => zoomedIn(tuningUsed) },
+      { origin: 'picked up as P’s Stub', from: () => startPopSession(PK.key) },
+    ];
+
+    describe.each([
+      { clocks: 'set clocks', tuningUsed: SET_CLOCKS },
+      { clocks: 'zero clocks', tuningUsed: ZERO_CLOCKS },
+    ])('at $clocks', ({ tuningUsed }) => {
+      it.each(origins)('DRAG-1.19: $origin, one sample past both bounds pops to K and on to Board', ({ from }) => {
+        const inP = from(tuningUsed);
+        expect(inP.contextKey).toBe(PK.key);
+
+        const out = advancePopSession(inP, yanked, regionsOf, tuningUsed, metrics, DWELL + CUE + 1);
+
+        expect(out.contextKey).toBeNull();
+      });
+
+      it.each(origins)(
+        'DRAG-1.19: $origin, a sample that rests inside K, far from P, pops once and stays in K',
+        ({ from }) => {
+          const inP = from(tuningUsed);
+
+          const out = advancePopSession(inP, awayFromP, regionsOf, tuningUsed, metrics, DWELL + CUE + 1);
+
+          expect(out.contextKey).toBe(K.key);
+        },
+      );
+    });
+  });
+});
+
 describe('popped out', () => {
   const outInB = runPop([
     [bMiddle, 0],

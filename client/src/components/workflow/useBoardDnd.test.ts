@@ -1,7 +1,8 @@
 // The drag hook's cases that need its live session: the hierarchy modal reporting its placement,
 // where a Stub's drag starts, what a drag's targets are classified against, the branch a Stub's
-// pickup takes with it, the row a Stub's drag names as the ghost's neighbor, a column reorder whose
-// save fails, and a drag the board stops. The
+// pickup takes with it, the row a Stub's drag names as the ghost's neighbor, a pointer sample that
+// would cycle through the pop machine, a column reorder whose save fails, and a drag the board
+// stops. The
 // gesture itself is tested through the pure modules it runs and the E2E drag specs.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -9,8 +10,10 @@ import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
+import { column, rect, regionEl } from '../../test/dragFixtures';
 import { makeItem } from '../../test/itemFixture';
 import { columnData, itemRowData } from './dragCollision';
+import { columnRegionKey, descendantsRegionKey, subrowRegionKey } from './dragRegions';
 import { DEFAULT_DRAG_TUNING } from './dragTuning';
 import { NO_PLACEMENTS, getAttachedChildrenFrom, type Placement, type Placements } from './itemListOps';
 import { useBoardDnd, type BoardDndDeps } from './useBoardDnd';
@@ -270,6 +273,88 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
     // names B, after which the ghost is the last row.
     act(() => result.current.handleDragOver(eventOver('b') as unknown as DragOverEvent));
     expect(result.current.session?.projection?.gap).toBe(2);
+  });
+});
+
+// A sample far from the Card the drag names, with every clock at zero: the machine zooms into the
+// Card and pops straight back out, which it used to repeat until the stack overflowed. The sample
+// settles in the column or sub-row, the drag goes on, and nothing is written.
+describe.each([
+  { name: 'a merged column', merged: true },
+  { name: 'an expanded column’s sub-row', merged: false },
+])('useBoardDnd: a zero-delay pop cycle in $name', ({ merged }) => {
+  const ZERO_CLOCKS = {
+    ...DEFAULT_DRAG_TUNING,
+    cardZoomDwellMs: 0,
+    cardPopInDelayMs: 0,
+    popInDelayMs: 0,
+    popDelayMs: 0,
+    popDistancePx: 10,
+  };
+  const listKey = merged ? columnRegionKey('a') : subrowRegionKey('a', 'todo');
+  const cardKey = descendantsRegionKey('p');
+  const items = [makeItem('x', { position: 1 }), makeItem('p', { position: 2 })];
+  const awayFromP = { x: 50, y: 200 };
+  const insideP = { x: 50, y: 100 };
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    vi.mocked(moveItem).mockReset();
+    // The list's box, with the Card P in its top, as the board's DOM has them.
+    container = document.createElement('div');
+    container.append(regionEl(listKey, rect(0, 0, 100, 400), regionEl(cardKey, rect(10, 10, 80, 100))));
+    document.body.append(container);
+  });
+  afterEach(() => container.remove());
+
+  // The drag of X picked up inside the list, far from P, with P named as the ghost's neighbor.
+  function dragNamingP() {
+    const deps: BoardDndDeps = {
+      ...depsWith(async () => {}),
+      board: {
+        columns: [column('a', ['todo'], { displayMode: merged ? 'merged' : 'expanded' })],
+        itemDepthCap: 4,
+      } as unknown as BoardWithDetails,
+      items,
+      tuning: ZERO_CLOCKS,
+      rootRef: { current: container },
+    };
+    const { result } = renderHook(() => useBoardDnd(deps));
+    const pickup = {
+      active: { id: 'x', data: { current: {} } },
+      activatorEvent: { clientX: awayFromP.x, clientY: awayFromP.y },
+    } as unknown as DragStartEvent;
+    act(() => result.current.handleDragStart(pickup));
+    const overP = {
+      active: { id: 'x', data: { current: {} }, rect: { current: { translated: { top: 190, height: 26 } } } },
+      over: { id: 'p', rect: { top: 10, height: 100 }, data: { current: itemRowData('card') } },
+    } as unknown as DragMoveEvent;
+    return { result, overP };
+  }
+  const pointerTo = (point: { x: number; y: number }) =>
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: point.x, clientY: point.y }));
+    });
+
+  it('DRAG-1.37: completes the sample, which settles in the list with the drag still running', () => {
+    const { result, overP } = dragNamingP();
+    expect(result.current.session?.pop.contextKey).toBe(listKey);
+
+    act(() => result.current.handleDragMove(overP));
+
+    expect(result.current.session?.pop.contextKey).toBe(listKey);
+    expect(result.current.session?.pop.hover).toBeNull();
+    expect(moveItem).not.toHaveBeenCalled();
+  });
+
+  it('DRAG-1.37: a later sample inside P, which is still named, zooms into its Descendants layer', () => {
+    const { result, overP } = dragNamingP();
+    act(() => result.current.handleDragMove(overP));
+
+    pointerTo(insideP);
+
+    expect(result.current.session?.pop.contextKey).toBe(cardKey);
+    expect(moveItem).not.toHaveBeenCalled();
   });
 });
 
