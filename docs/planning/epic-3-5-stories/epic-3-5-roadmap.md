@@ -1348,9 +1348,12 @@ Epic 3.5". Story 8 ends with Story 8.13.
 
 ### Story 10 — DnD automation catch-up (no skipped Playwright tests)
 **Plan:** [`story-10-dnd-automation-catch-up.md`](story-10-dnd-automation-catch-up.md)
-(2026-11-04). The items below stay here until the plan's Phase 2, the
-inventory, which moves them into the plan. New items aren't routed here
-any more: since 2026-11-05 they go to the plan's Inbound deferrals.
+(2026-11-04), and its second part,
+[`story-10-batches.md`](story-10-batches.md). Since 2026-11-06 the second
+part's inventory routes every case the items below name, by ID, from the
+baseline reconciliation, and it's the later word on each. The items stay
+here as the history of each route. New items aren't routed here any
+more: since 2026-11-05 they go to the plan's Inbound deferrals.
 
 **Goal:** bring the drag automation suites up to the test-plan catalogs
 once the gesture has stopped moving, and decide — case by case — what the

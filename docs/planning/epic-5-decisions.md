@@ -209,3 +209,21 @@ independently as part of the bucket system's own design, is an open question
 first as a low-risk proof; `columns`/`workphases` need one small migration
 each (`updatedAt`); `labels`/tags needs a `position` column added as part of
 whatever Epic 5 does with the table regardless of this decision.
+
+---
+
+## Test-plan cases routed here by ID
+
+Nathan routed this here on 2026-11-06, from Epic 3.5's Story 10
+(`epic-3-5-stories/story-10-dnd-automation-catch-up.md`, D10). That
+story closes only once every case in the catalog is `Automated` or
+`Manual`, or held by a later plan that names it.
+
+- **ATT-1.10: a Card shows its tags** (P2, `Planned`). Wiki
+  item-attachment §12 marks the passage `**Planned:**`: a Card also shows
+  its item's tags. A Card draws no tags today, and this epic replaces
+  labels with tags, so the passage is built here.
+  - The case stays `Planned` until then.
+  - Once the passage is built, the PO takes the marker off and the case
+    goes `Open`.
+  - The story that builds it automates the case.
