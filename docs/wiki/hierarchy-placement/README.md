@@ -207,7 +207,10 @@ whether its parent is.
   three, wherever the surface draws it.
 - **One tier for the whole drag,** from pickup to the drag's end. What an
   entry can be is computed once, at pickup, so a write that lands
-  mid-drag redraws no tier.
+  mid-drag redraws no tier. An entry first drawn after the pickup, such
+  as the row an earlier create's answer adds, has none: it's drawn at
+  full strength until the drag ends, whatever it could be, and the next
+  pickup tiers it.
 - **A tier is only drawn.** Which gaps and states a drag offers is §1's
   to §6's, whatever the entries beside them are drawn at. A gap beside a
   Low entry can still hold a valid state, at another depth.

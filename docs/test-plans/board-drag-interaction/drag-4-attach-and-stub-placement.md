@@ -124,9 +124,13 @@ A `P` with no attached children offers the empty hierarchy's one state ([DRAG-4.
 
 ## DRAG-4.13 — Placement among a done Card's Stubs works normally
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §6, wiki board-drag-interaction §7.1, wiki item-positioning §7.4, wiki item-attachment §10
 
-*Given* Card `P` in a terminal workphase, with Stubs `S1, S2` that keep their positions, *when* `X` is released immediately after zooming into `P` ([DRAG-4.1](drag-4-attach-and-stub-placement.md)) or placed in another gap and depth after cursor movement ([DRAG-4.34](drag-4-attach-and-stub-placement.md)), *then* the requests are made and accepted exactly as for a parent that isn't done: `P`'s Stubs can be named as anchors ([TC-7.15](../item-positioning/part-7-board-placement-intents.md)).
+*Given* Card `P` in terminal workphase `W_done`, with attached leaf children `S1, S2` in that order, and Free item `X` zoomed into `P`'s Descendants layer, each of these from that starting state:
+- *when* `X` is released immediately after the zoom without cursor movement, *then* the request attaches `X` to `P` after `S2`, and the saved attached-child order is `S1, S2, X`;
+- *when* the cursor moves the ghost above `S1`, at `P`'s own children's depth, and releases, *then* the request attaches `X` to `P` with `{anchorId: S1, side: before}`, and the saved attached-child order is `X, S1, S2`.
+
+In both, `X.parentId = P`, `X.isAttached` is true, `X.workphaseId = W_done`, `X.completedAt` is null, and `X` has a position in `P`'s attached-sibling scope. `P` and the existing siblings' positions are unchanged. The terminal workphase does not prevent naming `S1` or `S2` as an anchor ([TC-7.15](../item-positioning/part-7-board-placement-intents.md)).
 
 **Automation test:** —
 

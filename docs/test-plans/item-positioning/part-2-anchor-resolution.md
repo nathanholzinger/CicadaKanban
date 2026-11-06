@@ -20,7 +20,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.13 | `positionScope` is `"attached-siblings"` for an attached child | P1 | Automated |
 | TC-2.14 | `positionScope` is `"workflow"` for a Free item in an active workphase | P1 | Automated |
 | TC-2.15 | `positionScope` is `"none"` for a done Free item | P1 | Automated |
-| TC-2.16 | `positionScope` is `"none"` for an item with no workphase | P1 | Automated |
+| TC-2.16 | `positionScope` is `"none"` for a Free item with no workphase | P1 | Automated |
 | TC-2.17 | `positionScope` is `"workflow"` for a parentless item that holds the attachment flag | P1 | Automated |
 | TC-2.18 | `position` is a number or `null` | P2 | Automated |
 | TC-2.19 | Detaching reassigns a fresh workflow-scoped position | P0 | Automated |
@@ -76,7 +76,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki positioning §3, wiki item-positioning §2
 
-*Given* a workflow whose true last Free item is at `4.2`, in any of its workphases, *when* a top-level item is created in the workflow with no anchor, *then* its position is `5`, as if placed after that item ([TC-2.4](part-2-anchor-resolution.md)).
+*Given* a workflow whose true last active Free item is at `4.2`, in any of its non-terminal workphases, *when* a top-level item is created in one of those non-terminal workphases with no anchor, *then* its position is `5`, as if placed after that item ([TC-2.4](part-2-anchor-resolution.md)). A create that names no workphase is [ATT-10.3](../item-attachment/att-10-creating-an-item.md)'s.
 
 **Automation test:** `server/tests/routes/items.positioning.test.ts`
 
@@ -152,11 +152,11 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 **Automation test:** `server/tests/routes/items.positioning.test.ts`
 
-## TC-2.16 — `positionScope` is `"none"` for an item with no workphase
+## TC-2.16 — `positionScope` is `"none"` for a Free item with no workphase
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* an item whose `workphaseId` is empty, because its workphase was deleted, *when* its `positionScope` is computed, *then* it is `"none"`: the same value as a done item's, for a different reason.
+*Given* a Free item, top-level or a detached child, whose `workphaseId` is null because its workphase was deleted or it was created without one, *when* it is read through the API, *then* its `positionScope` is `"none"`: the same value as a done Free item's, for a different reason. An Attached child instead remains in its parent's attached-sibling scope ([TC-2.13](part-2-anchor-resolution.md)), even when it has no workphase.
 
 **Automation test:** `server/tests/routes/boards.test.ts`
 
@@ -164,7 +164,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* an item in a non-terminal workphase with no `parentId`, whose attachment flag is set, *when* its `positionScope` is computed, *then* it is `"workflow"`, not `"attached-siblings"`, which needs both the flag and a parent.
+*Given* a direct database edit has left an item in a non-terminal workphase of its project's workflow with no `parentId` and its attachment flag set, *when* its `positionScope` is computed, *then* it is `"workflow"`, not `"attached-siblings"`, which needs both the flag and a parent. A create, edit or move cannot make this stored state ([ATT-1.8](../item-attachment/att-1-free-attached-state.md), [ATT-1.14](../item-attachment/att-1-free-attached-state.md)).
 
 **Automation test:** `server/tests/routes/items.positioning.test.ts`
 

@@ -25,11 +25,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.19 | The cue expires at its configured lifetime, with the last quarter a fade | P1 | Open |
 | DRAG-6.20 | The stopped item flashes wherever the reloaded board draws it | P1 | Open |
 | DRAG-6.21 | A hidden stopped item is not revealed for its flash | P1 | Open |
-| DRAG-6.22 | Cancels, no-write releases and resyncs without an item drag show no stop cue | P1 | Open |
+| DRAG-6.22 | Cancels, no-write releases and resyncs without a live drag show no stop cue | P1 | Open |
 | DRAG-6.23 | A pending row pulses from its own strength to half of it | P1 | Open |
 | DRAG-6.24 | A pending pulse leaves the drop line and nested rows independent | P1 | Open |
 | DRAG-6.25 | A reload stops a column drag without saving its interrupted reorder | P1 | Open |
-| DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Planned |
+| DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Open |
 | DRAG-6.27 | The flash window starts with the reloaded board and ends independently of the banner | P1 | Open |
 | DRAG-6.28 | A stopped item brought into view flashes only for the window's remaining time | P1 | Open |
 | DRAG-6.29 | Answers for different items preserve positions set by the later write | P0 | Automated |
@@ -195,7 +195,7 @@ This case asserts the lifecycle using `T` as a parameter, not whether today's tu
 
 **Automation test:** —
 
-## DRAG-6.22 — Cancels, no-write releases and resyncs without an item drag show no stop cue
+## DRAG-6.22 — Cancels, no-write releases and resyncs without a live drag show no stop cue
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
@@ -203,8 +203,7 @@ This case asserts the lifecycle using `T` as a parameter, not whether today's tu
 
 - the user ends an item drag with Escape or another cancel;
 - the user releases where the drag writes nothing, such as nowhere or a Stub's original gap and depth;
-- an earlier failed item drop, failed column reorder or stale response resyncs the board with no drag running, including when the preceding drag has already been released or cancelled;
-- a column is being dragged, with no item drag running, when a resync lands.
+- an earlier failed item drop, failed column reorder or stale response resyncs the board with no drag running, including when the preceding drag has already been released or cancelled.
 
 An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
 
@@ -232,13 +231,13 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki boards-columns-unsorted §7
 
-*Given* a board whose server-saved column order is `A, C, E`, with `E` currently being dragged toward the first slot, *when* a reload lands because an earlier item drop failed, a stale response carries reindex pairs, or a column reorder released just before this drag failed, *then* the column drag ends at once and the board shows the server-saved order `A, C, E`. The interrupted drag sends no reorder request, including when the pointer is subsequently released. No item is moved by ending this drag. The current cue boundary is [DRAG-6.22](drag-6-preview-reconciliation.md)'s; the column banner is [DRAG-6.26](drag-6-preview-reconciliation.md)'s.
+*Given* a board whose server-saved column order is `A, C, E`, with `E` currently being dragged toward the first slot, *when* a reload lands because an earlier item drop failed, a stale response carries reindex pairs, or a column reorder released just before this drag failed, *then* the column drag ends at once and the board shows the server-saved order `A, C, E`. The interrupted drag sends no reorder request, including when the pointer is subsequently released. No item is moved by ending this drag. Its banner and lack of a flash are [DRAG-6.26](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
 ## DRAG-6.26 — A stopped column drag shows a cause-specific banner and no flash
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
 *Given* a column is being dragged when any of the three resyncs in [DRAG-6.25](drag-6-preview-reconciliation.md) stops it, *when* the stop occurs, *then* the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it up; the next drag clears it. Otherwise it lasts for configured lifetime `T`, fully visible for its first three quarters and fading for the last quarter, without restarting when the reload finishes. Neither the stopped column nor any item receives a forced-stop flash.
 

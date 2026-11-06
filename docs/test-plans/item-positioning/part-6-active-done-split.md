@@ -45,7 +45,7 @@
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6, wiki board-drag-interaction §10
 
-*Given* done Free items `D1`, `D2` and `D3`, created in that order but completed in the order `D2`, `D3`, `D1`, *when* their done list is sorted, *then* it reads `D2, D3, D1`: by `completedAt`, oldest first. Neither position nor creation time plays a part.
+*Given* done Free items `D1`, `D2` and `D3`, created in that order but completed at distinct times in the order `D2`, `D3`, `D1`, *when* their done list is sorted, *then* it reads `D2, D3, D1`: by `completedAt`, oldest first, regardless of their creation order. They have no stored positions. When completion times tie, creation order breaks the tie ([TC-6.10](part-6-active-done-split.md)).
 
 **Automation test:** `tests/ui/item-positioning.spec.ts`
 
@@ -93,6 +93,6 @@
 
 **Priority:** P2 · **Status:** Pending PO
 
-*Given* workphase `W` holding Free items `X1` (`1.0`) and `X2` (`2.0`), with `X2` created first, *when* `W` is made terminal and later non-terminal again ([TC-6.11](part-6-active-done-split.md)), *then* — **question for the PO:** making `W` terminal completes both in one write. If they tie on `completedAt`, the done list reads `X2, X1`, in creation order ([TC-6.10](part-6-active-done-split.md)). The server today gives them increasing `completedAt` in position order instead, so it reads `X1, X2`. Should one flag change tie them? Clearing the flag reopens them, and wiki item-positioning §2 gives each a fresh position by the append fallback, but doesn't say in which order. Do they come back as `X1, X2`, their order before, or as `X2, X1`, the done list's? The server restores `X1, X2` today.
+*Given* workphase `W` holding Free items `X1` (`1.0`) and `X2` (`2.0`), with `X2` created first, *when* `W` is made terminal and later non-terminal again ([TC-6.11](part-6-active-done-split.md)), *then* — **question for the PO:** making `W` terminal completes both in one write. Should both receive the same `completedAt`, making the done list read `X2, X1` by creation order ([TC-6.10](part-6-active-done-split.md)), or should the write preserve their former position order through different completion times? Clearing the flag reopens both, and wiki item-positioning §2 gives each a fresh position by the append fallback, but doesn't say in which order. Do they come back as `X1, X2`, their order before, or as `X2, X1`, if that is the done list's order?
 
 **Automation test:** —

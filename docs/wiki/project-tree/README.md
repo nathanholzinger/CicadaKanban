@@ -80,9 +80,11 @@ move (§6). What the sidebar adds:
   still land mid-drag is a change no drag drew: the answer to an
   earlier create (§5) or parent edit (§7), and a refused move going back
   (§4), with the read of the tree that follows it. If one puts a project
-  under the dragged one, that project's row stays a place to drop, and a
-  release that would make a cycle, or put the grown subtree past the
-  cap, is refused by the server (§3), and nothing changes. It's the one
+  under the dragged one, that project's row stays a place to drop. A
+  row such a change adds is drawn untiered
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §7). A release
+  that would make a cycle, or put the grown subtree past the cap, is
+  refused by the server (§3), and nothing changes. It's the one
   place a cycle is reachable by a drag
   ([`../hierarchy-placement/`](../hierarchy-placement/) §4). Why not
   stop the drag, as the board does at a reload: the window is one

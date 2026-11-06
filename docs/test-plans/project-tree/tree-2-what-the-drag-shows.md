@@ -1,6 +1,6 @@
 # TREE-2 — What the drag shows
 
-**Next ID:** TREE-2.14
+**Next ID:** TREE-2.15
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -17,6 +17,7 @@
 | TREE-2.11 | The count line is cut short in a narrow sidebar | P2 | Open |
 | TREE-2.12 | Every end of the drag draws the branch again under the project | P1 | Open |
 | TREE-2.13 | The line starts at the ghost's name on its top edge in every gap after the first move | P1 | Open |
+| TREE-2.14 | A project first drawn after pickup has a defined drag tier | P2 | Pending PO |
 
 ---
 
@@ -155,5 +156,13 @@ The copy's second line ends with the drag. If `A` was collapsed at pickup, its c
 *Given* the sidebar has other projects outside dragged `X`'s branch, *when* `X` is picked up before the pointer's first move in the drag, *then* the ghost is at its pickup depth and no drop line is drawn. *When* the pointer moves and the ghost takes any gap, above the first row, between rows or below the last row, *then* exactly one drop line rides the ghost's top edge, between the ghost and Top when Top exists. It never switches to the ghost's bottom edge at a list boundary.
 
 *Given* the ghost is in the gap between `A1a` and `B` in [TREE-1.2](tree-1-gap-and-depth.md), *when* each of depths 0, 1, 2 and 3 is selected, *then* the ghost is drawn at that depth, and the line starts in the same column as its name. Each deeper state starts farther right. The line keeps full strength while its ghost is dimmed. When `X`'s subtree holds every project instead, no line appears even after pointer movement ([TREE-1.4](tree-1-gap-and-depth.md)).
+
+**Automation test:** —
+
+## TREE-2.14 — A project first drawn after pickup has a defined drag tier
+
+**Priority:** P2 · **Status:** Pending PO
+
+*Given* project cap `PCAP >= 3`, dragged project `X` with subtree height 1, unrelated project `T` at absolute depth `PCAP - 2`, and an earlier create of child `Y` under `T` that has not yet answered in the sidebar, *when* `X` is picked up before that answer and the answer then adds `Y` at depth `PCAP - 1`, *then* — **question for the PO:** wiki project-tree §1 allows the earlier create's answer to add a row during the drag, while wiki hierarchy-placement §7 gives every other entry a tier computed once at pickup. `Y` had no row or tier then. Does its first appearance use Mid at `projectAnchorOpacity`, because `Y` cannot parent `X` but `T` can, while all existing pickup tiers stay fixed? Or does the new row have no tier until the next pickup? The drag continues and `Y` is outside the held branch; the question is its strength during this drag, not whether to stop the drag or change its membership.
 
 **Automation test:** —

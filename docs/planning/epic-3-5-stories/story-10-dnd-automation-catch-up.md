@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** planning. Story 8 closed on 2026-11-06, so Phase 1 can start (When it runs)
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 step 1 are applied; the baseline Reconciler run is next.
 
 ## Goal
 
@@ -62,13 +62,15 @@ Phase 2 starts from those reports.
 
 ## Scope
 
-- **Wiki passages:** board-drag-interaction §10's Planned passage, "a column drag the board stops shows the banner too". The PO takes its marker off after Phase 1.
+- **Wiki passages:** board-drag-interaction §10's column-stop banner rule. The PO removed its Planned marker after Phase 1.
 - **Test-plan cases:** settled in Phase 2. The starting list:
   - the roadmap entry's items 1, 4, 9 and 10, by ID;
   - ATT-4.9 (item 1);
   - DRAG-6.26 (item 11);
   - DRAG-7.28, 7.32 and 7.33 (Inbound deferrals, Story 8.13's modal-Sheet cases);
   - TREE-9.4, and TREE-11.2, 11.4, 11.6, 11.7 and 11.8 (What it starts from).
+  - **Phase 2 step 1 additions:** BCU-5.6, BCU-5.7 and TREE-4.15, Open; TREE-2.14, Pending PO. Each is this story's to settle, or route under D10.
+  - **Cases revised in that pass:** ATT-4.9; TC-2.6, TC-2.16, TC-2.17 and TC-6.4; DRAG-3.9, DRAG-3.10, DRAG-3.20 and DRAG-4.13; DRAG-6.22, DRAG-6.25 and DRAG-6.26. The baseline run rechecks the existing automation claims against the revised cases. TC-6.13's question was also rewritten without implementation observations; its Quick Items routing under D10 is unchanged.
 
 ## Inbound deferrals
 
@@ -251,7 +253,7 @@ Within a batch, the two work side by side on separate files: the Automator on `t
 ### Phase 2: the inventory
 
 1. **The Planner's end-of-epic pass** (epic-done checklist, Tests, its first two items). It covers the features the epic touched: board-drag-interaction, project-tree, item-attachment and item-positioning. boards-columns-unsorted is one too, since the close-out's #5 changed its §3 and added BCU-1.7 and 1.8. After the pass, the case IDs hold still.
-2. **A baseline Reconciler run** over the drag suites, ATT-4.9, and the six cases outside the drag work (What it starts from). For each Open case, it lists the tests that carry its ID and what each one misses. It starts from what the earlier reports found, not from scratch. All of them are in `docs/archive/`:
+2. **A baseline Reconciler run** over the drag suites, ATT-4.9, the six cases outside the drag work (What it starts from), and the new or revised cases listed in step 1's results below. Pending PO cases wait for a ruling before coverage can be confirmed. For each Open case, it lists the tests that carry its ID and what each one misses. It starts from what the earlier reports found, not from scratch. All of them are in `docs/archive/`:
    - A3's and A6's;
    - 8.1's;
    - 8.9's follow-up and final runs;
@@ -263,6 +265,26 @@ Within a batch, the two work side by side on separate files: the Automator on `t
    - each skip's fate (D3);
    - and moves the roadmap entry's items in.
 4. **Nathan approves** the inventory, its proposed Manual calls and internal mappings, and the bar (D2). Then a stop.
+
+#### Step 1 results — Test Planner, 2026-11-06
+
+Re-read all five feature pages and all 44 suites (478 existing cases), with positioning, hierarchy-placement and row-references as their shared rules. The pass reads no app or test code. The suites remain coherent: no case moves, retired IDs or old → new ID map, and no test re-titling is required. Existing IDs stay fixed; the four additions take each suite's Next ID.
+
+| Feature | Result |
+|---|---|
+| board-drag-interaction | Apply the PO's Phase 1 handoff to DRAG-6.22, DRAG-6.25 and DRAG-6.26. Clarify incoming-item fixtures for DRAG-3.9 and DRAG-3.10, limit DRAG-3.20's two-divider assertion to positional regions, and give DRAG-4.13 concrete saved child orders for the two placements. |
+| project-tree | Add TREE-4.15 for an older tree read after a successful create or subtree delete, complementing TREE-4.14's rename and move scenarios. Add TREE-2.14, Pending PO, for a row first drawn after pickup and its drag tier. |
+| item-attachment | Clarify ATT-4.9's exhaustive comparison: every visible item target, from the same starting state, with the moving item ending Attached. Overflow controls are not item-parent references. No additional settled rule lacks a case. |
+| item-positioning | Clarify TC-2.6's active-workphase create, restrict TC-2.16's no-workphase `none` scope to Free items, and make TC-2.17's impossible-through-API fixture explicitly a direct database edit. Clarify TC-6.4's distinct completion times and tie-break; remove implementation observations from TC-6.13's unresolved question. |
+| boards-columns-unsorted | Add BCU-5.6 for D11: filing the Unknown-status parent clears attention for its attached descendants without a reload. Add BCU-5.7 for the boundary: a detached descendant and its attached child stay Unknown and keep attention raised. |
+
+**Status boundaries:** DRAG-6.26 moves from Planned to Open because the PO cleared its passage's marker. The other pre-existing automation mappings and statuses are left for the Reconciler; this pass makes no coverage judgment. BCU-5.6, BCU-5.7 and TREE-4.15 are Open, with no test mapping claimed. TREE-2.14 has no Rule field until the PO settles it. ATT-1.10 stays Planned for the tags passage. TC-5.15, TC-6.11, TC-6.13 and ATT-5.11 keep their D10 destinations and statuses; the Architect's inventory still needs to name a destination for ATT-1.10.
+
+**For step 2:** include the three new Open cases and all twelve revised live cases named in Scope, even those currently stamped Automated. BCU-5.6 is the case D11's Coder handoff awaits; the Reconciler assesses the candidate tests named there before any mapping is claimed. Revisit DRAG-6.22's tests against its narrower no-cue rule, and assess DRAG-6.26 now that it is Open. TREE-2.14 is routed to the PO in Open questions. No test layer or future test file is assigned by this pass.
+
+**Catalog conventions:** the README now names the Coder, Automator and Reconciler split, the writer who re-titles a moved case's tests, and how an Automator's removed IDs reach the story handoff. The Planner still reads and writes no test code.
+
+**Validation:** `npm run check:docs` passes (418 files, zero hits), the changed catalog tables match their case titles, priorities and statuses, and `git diff --check` passes. App and test suites were not run for this documentation pass.
 
 ### Phase 3: the helpers (D4)
 
@@ -348,6 +370,12 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
   Checked and unchanged: D4's helpers (only `dragGesture.ts`'s comment changed); TREE-1.14's `toRows(flatItems, exclude)`; #12's TREE-2.1 skip; and #8's lines.
 
+- **2026-11-06 — Phase 1's marker cleared (PO).** Read against `3952dfe`: `useBoardDnd.ts::resyncBoard` reports a live column drag (`columnDragRef`) with its cause and a null `itemId`, and `useForcedStop.ts::report` sets no flash for it. The banner reads only the cause. So board-drag-interaction §10's Planned paragraph is replaced by a bullet in the cue's list. My deduction, for Nathan to overrule: the wiki says nothing of the armed stop or `STOP_WORDING`'s sharing, since the panel is temporary and the wording is already stated by cause. DRAG-6.22's column clause and DRAG-6.26's status are the Planner's. The Planned marker at item-attachment §12 (tags) is unrelated and stays.
+
+- **2026-11-06 — Phase 2 step 1 (Test Planner).** Completed the five-feature end-of-epic catalog pass, with the shared rules, and recorded its results under Phase 2. Added BCU-5.6, BCU-5.7, TREE-4.15 and Pending PO TREE-2.14; clarified the cases listed in Scope; applied Phase 1's live column-banner rule after the PO cleared its marker. No cases moved or retired. The README's Automator handoff is applied. The baseline Reconciler run and the Architect's inventory have not run as part of this pass.
+
+- **2026-11-06 — TREE-2.14 ruled (PO, at Nathan's choice).** A row first drawn after pickup, such as the one an earlier create's answer adds, has no tier: it's drawn at full strength until the drag ends, and the next pickup tiers it. Every pickup tier stays fixed. Nathan chose this over tiering the row by the table, as recommended. It matches the build: `ProjectSidebar.tsx` reads `drag.tiers.get(item.id) ?? null`, and the map is built once at pickup (`useProjectDragReorder.ts::drawnAtPickup`), so no code change is needed. The rule is on the shared page, hierarchy-placement §7, with a pointer from project-tree §1. My deduction, for Nathan to overrule: the board follows the same rule, since its tier lookup (`DragSessionContext.ts`) also returns none for an id missing from the pickup's classification, so the shared page states it for both surfaces. The Planner can resolve TREE-2.14 against it: Mid is wrong for `Y`, and the case asserts `Y` untiered. No Rule field is needed beyond wiki project-tree §1 and hierarchy-placement §7.
+
 ## Open questions
 
 - **For Nathan, during the batches: the bar (D2).** It's the starting point, revisited once it's clear how many specs miss it.
@@ -356,8 +384,6 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - **Weigh the cost against what it would find.** This story is mostly test files. So much of an epic-wide audit right after it would re-read code the close-out audit read in full, little changed since.
 
   This story's own audit (Phase 5) is part of the same question: what it reads, and whether the epic-wide audit takes it in.
-- **For the Planner: `docs/test-plans/README.md` and the Test Automator.** Its opening section says "Developers write the tests", and its handoff line says "The developer doesn't edit the plan". Both still hold, but with the Automator, the first could say who writes which: the Coder the Vitest suites, and the Test Automator, which the Planner spawns, the Playwright suites (`.claude/guides/testing-strategy.md`, "Who writes which"). The Planner writes no test code either way.
-- **For the Planner: the end-of-epic pass's reach (Phase 2):** which features it covers, and whether any suite is regrouped. A regrouping renumbers cases, so it lands before any test is titled.
 
 ## Living-docs handoff
 
@@ -366,5 +392,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **Passages superseded:**
 - **Implementation passages to place:**
 - **Test-plan cases affected:** DRAG-6.22, whose column, no-cue clause the Planner removes, and DRAG-6.26, which becomes Open (Phase 1).
+  - **Planner applied in Phase 2 step 1:** the column clause is removed, DRAG-6.26 is Open, and DRAG-6.25 points to its banner and no-flash rule.
 - **A case for D11's fix, for the Planner to write** (Phase 1). The probe failed: filing a parent out of Unknown status left the Unsorted bucket's "needs attention" badge up until a reload, since the client moved only the written row, where the server also moves its attached descendants. Wiki boards-columns-unsorted §10 already states the rule (`needsAttention` counts an Attached item whose own workphase is unknown). The case: *given* a parent and its Attached descendants in Unknown status, *when* the parent is filed into a workflow workphase and the write's answer lands, *then* the badge goes without a reload. The Coder's tests carry no ID yet and take the Planner's: `useItemManagement.test.ts` ("filing a parent out of Unknown status") and `itemWriteReconciliation.test.ts` ("the workphase cascade").
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **Planner applied in Phase 2 step 1:** BCU-5.6 is the case for the fix; BCU-5.7 holds the detached-descendant boundary. Both are Open. The baseline Reconciler assesses the candidate tests above and names which need the ID or more assertions; no mapping is presumed here.
+- **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §10 (Phase 1). The Planned passage is gone, its marker with it. A column drag the board stops now sits in the cue's own list: the banner is the same, and a bullet says it flashes nothing. The cue's opening line says the three resyncs show it on an item's drag or a column's. Nothing else on the page changed. Phase 2 step 1: hierarchy-placement §7 gains a sentence in its "One tier for the whole drag" bullet (an entry first drawn after pickup has no tier), and project-tree §1's mid-drag paragraph points to it (TREE-2.14).

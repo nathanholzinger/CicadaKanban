@@ -1,6 +1,6 @@
 # TREE-4 — A project's position compares among its siblings
 
-**Next ID:** TREE-4.15
+**Next ID:** TREE-4.16
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -18,6 +18,7 @@
 | TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Automated |
 | TREE-4.13 | A late response preserves positions already set by a newer saved write | P1 | Automated |
 | TREE-4.14 | An older tree read preserves a write already applied in the sidebar | P1 | Automated |
+| TREE-4.15 | An older tree read cannot remove a successful create or restore a deleted subtree | P1 | Open |
 
 ---
 
@@ -153,3 +154,15 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 *Given* instead expanded `P` with children `A, B` and top-level `X`, and both reads holding that starting tree, *when* a move saves `X` under `P`, directly after `A`, and its answer is applied before the first read lands, *then* `P`'s children stay `A, X, B`, `X.parentId` stays `P`, and no top-level copy of `X` returns. The displayed order and parent continue to agree with the saved move. An older read cannot undo an applied write whether it is an initial read or a later refresh.
 
 **Automation test:** `client/src/components/sidebar/useProjectCollection.test.ts`
+
+## TREE-4.15 — An older tree read cannot remove a successful create or restore a deleted subtree
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki project-tree §5, wiki project-tree §9
+
+*Given* expanded top-level project `P` at position `1`, with only child `C` at `1`, unrelated top-level `Q` at `2`, and a read of that tree begun but still unanswered, each of these from that starting state:
+- *when* a create of `N` under `P` succeeds and its answer has put `N` after `C` in the sidebar, then the older tree read arrives, *then* `P`'s children remain `C, N`, with `N.parentId = P` and `N.position = 2`. No intervening sidebar render removes `N`;
+- *when* deleting `P` succeeds and the sidebar has removed `P` and `C`, then the older tree read arrives, *then* neither `P` nor `C` reappears, even for an intervening render. No row is shown under deleted `P`, and the next project list still finds neither deleted row.
+
+`Q` retains its name, top-level parent and saved position in both scenarios. This holds for an initial read that a later read overtook, as well as for a refresh of an already loaded sidebar. If a fresh read is needed to establish the current tree, the old snapshot still never undoes the applied create or delete while it is awaited.
+
+**Automation test:** —

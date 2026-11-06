@@ -100,7 +100,7 @@
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
 
-*Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, *when* Card `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-6.1](../item-positioning/part-6-active-done-split.md), [TC-6.3](../item-positioning/part-6-active-done-split.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)).
+*Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, and Free Card `X` coming from a non-terminal workphase outside that set, *when* `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-6.1](../item-positioning/part-6-active-done-split.md), [TC-6.3](../item-positioning/part-6-active-done-split.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)). A covered member set back down is [DRAG-3.12](drag-3-card-column-bands.md)'s.
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
@@ -108,7 +108,7 @@
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.1
 
-*Given* a column region with no items, *when* Card `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server keeps the item's position, or gives an item with none the append fallback ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)).
+*Given* a non-terminal column region with no items, and Free Card `X` from a workphase outside its covered set, *when* `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server keeps the item's position, or gives an item with none the append fallback ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)). An empty terminal region has the same one-zone geometry but completes the incoming item as in [DRAG-3.9](drag-3-card-column-bands.md).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
@@ -189,7 +189,7 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §1.1
 
-*Given* a drag at Board layer, *then* every column and sub-row region shows its two band dividers ([DRAG-3.5](drag-3-card-column-bands.md)). Which band a release resolves by is shown by the ghost, not by the guides ([DRAG-3.11](drag-3-card-column-bands.md)). *When* the drag locks into a column, sub-row or a Card's Descendants, *then* no region shows any dividers. This case asserts where guides appear, not how they look.
+*Given* a drag at Board layer and non-terminal column and sub-row regions with real cards, *then* those positional regions show their two band dividers ([DRAG-3.5](drag-3-card-column-bands.md), [DRAG-3.15](drag-3-card-column-bands.md)). Empty and terminal regions retain their single-band geometry ([DRAG-3.9](drag-3-card-column-bands.md), [DRAG-3.10](drag-3-card-column-bands.md)); the two-divider assertion concerns positional regions. Which band a release resolves by is shown by the ghost, not by the guides ([DRAG-3.11](drag-3-card-column-bands.md)). *When* the drag locks into a column, sub-row or a Card's Descendants, *then* no region shows any dividers. This case asserts where guides appear, not how they look.
 
 **Automation test:** —
 

@@ -1131,7 +1131,7 @@ the user never saw.
 
 **A drag the board stops shows a cue that says so,** so the drag's end
 doesn't read as a slip of the user's hand. Each of the three resyncs
-shows it on an item's drag.
+shows it, on an item's drag or a column's.
 - **It's a banner along the window's top edge,** over the board and over
   the "Loading board…" that replaces it, and it stays up across the
   reload. Its look is a working placeholder (Open questions).
@@ -1152,6 +1152,8 @@ shows it on an item's drag.
   drawn, so a slow reload doesn't use it up. It closes early at the next
   drag's start, or when another reload starts, so a reload with no stop
   behind it flashes nothing.
+- **A column drag has no item, so a stopped one flashes nothing,** and
+  its banner is the same one, worded by the same cause.
 - **An item the board doesn't draw there gets no flash,** such as one
   inside a collapsed section, past an overflow row or in a closed modal,
   and nothing is scrolled or opened to reveal it. One the user brings
@@ -1160,10 +1162,6 @@ shows it on an item's drag.
 - **No cue shows for Escape, any other cancel, a release that writes
   nothing, or a failed drop with no drag running.** Nothing was in the
   user's hand to stop, and that resync stays silent.
-
-**Planned:** a column drag the board stops shows the banner too, worded
-by its cause, as an item's does, and has no flash. Today a stopped
-column drag ends with no cue.
 
 **The placement a release implies is shown at the moment of release**,
 before the request is even sent, so the board never shows its pre-drop

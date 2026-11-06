@@ -8,7 +8,7 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 
 - **Rules come from the wiki.** By the time a story closes, everything a case asserts traces to a wiki section.
 - **The story plan gives scope, and detail that is still settling.** The Test Planner reads it to decide which cases to add, change or delete, and lists the IDs of the cases in scope in the plan's Scope.
-- **The Test Planner reads no code, test code included, and writes no test code.** A case derived from code only proves that the code does what it does. Developers write the tests.
+- **The Test Planner reads no code, test code included, and writes no test code.** A case derived from code only proves that the code does what it does. The Coder writes the Vitest suites. The Test Automator, which the Planner spawns, writes the Playwright suites from the cases. The Reconciler judges both.
 - **Past the wiki's edges.** Thinking through what the wiki doesn't say, such as where two rules meet, is part of the job. When the wiki is silent, the case is still written, with status `Pending PO`, and its question goes to the PO in the story plan's Open questions. The answer lands in the wiki first; then the case is kept, changed or deleted. The Test Planner never edits the wiki to match a case.
 - **Everything the wiki states as settled gets a case, feel included.** Nothing in a page's Open questions does.
 - **One standing exclusion:** no case differs from another only in being made through an MCP tool. A rule the wiki states once holds on every surface.
@@ -64,7 +64,7 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 - **A case is written by its full ID everywhere,** in its own suite file as in every other place. A search for an ID then finds the case, every test that carries it, and every reference to it.
 - **IDs are never reused.** Each suite's `**Next ID:**` line gives the next number; the Test Planner uses it and advances it. Gaps in the numbering are expected.
 - **When a case's behavior is removed, the case is deleted.** No tombstone, and no "was" note. The ID stays retired.
-- **A case that moves to another suite gets a new ID.** That happens only in the end-of-epic pass, or in a story that moves the wiki rules the case derives from. The epic's close-out, or the story's plan, lists old → new IDs, and a developer re-titles the tests before the Reconciler runs.
+- **A case that moves to another suite gets a new ID.** That happens only in the end-of-epic pass, or in a story that moves the wiki rules the case derives from. The epic's close-out, or the story's plan, lists old → new IDs, and the test's writer re-titles it before the Reconciler runs: the Coder for a Vitest test, the Test Automator for a Playwright test.
 
 ## Statuses
 
@@ -110,7 +110,7 @@ test.describe('DRAG-4.9, DRAG-4.10: placement between two rows', …)
 
 - **A case's `**Automation test:**` line lists repo-relative file paths,** not individual tests. For a `Manual` case, it reads `none — manual: <reason>`. A case with no test yet shows `—`.
 - **The ID in the test's title is the reference that matters.** It runs from the side that changes more to the side that changes less, so moving or splitting a test file carries it along. The file path is a convenience the Reconciler keeps current.
-- **Deleting a test that carries an ID, or dropping the ID from its title,** goes in the story's living-docs handoff. The developer doesn't edit the plan.
+- **Deleting a test that carries an ID, or dropping the ID from its title,** goes in the story's living-docs handoff. The Coder records its Vitest changes there; the Automator names its Playwright changes in its message, and the Planner records them in the handoff. Neither test writer edits the catalog.
 - **`npm run check:docs` checks the IDs themselves.** It flags a case ID, in a test title, a code comment or the test plans, that isn't a case in the catalog; a bare `TC-n` in a test title or comment; and a suite's `**Next ID:**` that isn't past every case in that suite. It can't tell whether a case still has a test; the Reconciler checks that.
 
 ## What the Reconciler writes
