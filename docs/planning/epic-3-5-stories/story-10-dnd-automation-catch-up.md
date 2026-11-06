@@ -89,6 +89,8 @@ The roadmap entry's items 1–11; item 5 is done (A3). They stay in the roadmap 
 
 **Story 8.13 audit — #8 (2026-11-05).** [Code quality audit](../../audits/code-quality-audit-story-8-13.md), finding #8: `tests/ui/drag-7-hierarchy-modal.spec.ts:635–661` (DRAG-7.10) asserts two 800 ms excursions and returns against a literal 1,500 ms delay. The clock-reset sequence belongs in deterministic pop-machine tests under the existing drag-testing convention; browser automation retains reachability/write outcomes and reads thresholds from `seedDragTuning`'s returned values. Carry this exact issue with Inbound deferrals item 9 and D2's flakiness/test-layer work; any Manual conversion remains Nathan's decision. This accepts the route without requiring a separate 8.13 rewrite.
 
+**Story 8 close-out audit — #18 (Nathan, 2026-11-06).** [Code quality audit](../../audits/code-quality-audit-story-8-close-out.md), Watch List finding #18, optional: the E2E helpers' request controls have a lifecycle of their own, apart from the pointer's geometry. These are `dragGesture.ts::delayMoveResponses` and `refuseMoves`, and `projectTreeDrag.ts::watchWrites` and `settledWrites`. A request harness beside `holdRequests.ts` could own them. It's taken here because D4 reworks these helpers first, and this story's specs are their main callers (about 60 uses across 8 specs today), so a move now would have every import touched twice. Phase 3 decides whether to make it. Either way, it needs no case and no audit row.
+
 ## Approach and phases
 
 ### Decisions

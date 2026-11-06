@@ -1,8 +1,8 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.29
+**Next ID:** DRAG-6.30
 
-The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
+The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses for the same or different items, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -32,6 +32,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Planned |
 | DRAG-6.27 | The flash window starts with the reloaded board and ends independently of the banner | P1 | Open |
 | DRAG-6.28 | A stopped item brought into view flashes only for the window's remaining time | P1 | Open |
+| DRAG-6.29 | Answers for different items preserve positions set by the later write | P0 | Planned |
 
 ---
 
@@ -258,5 +259,22 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
 *Given* the reloaded board is drawn at time `t0` with stopped item `X` inside a collapsed descendants section and flash-window length `F`, *when* the user opens the section at `t0 + d`, where `0 < d < F`, *then* `X` flashes at its saved place only until `t0 + F`, for the remaining `F - d`; mounting it does not start a fresh window. No other item flashes and opening the section changes no saved placement. *Starting again, when* the section is first opened at or after `t0 + F`, *then* `X` is drawn without the flash, even if the stop banner is still visible. The same boundary holds for a stopped item brought into view from behind overflow or in a previously closed hierarchy modal. No section, overflow or modal is opened automatically ([DRAG-6.21](drag-6-preview-reconciliation.md)).
+
+**Automation test:** —
+
+## DRAG-6.29 — Answers for different items preserve positions set by the later write
+
+**Priority:** P0 · **Status:** Planned · **Rule:** wiki positioning §7, wiki positioning §8, wiki board-drag-interaction §10
+
+*Given* active Free items `X = 1`, `Y = 998` and `Z = 999` in one workflow, with the board showing all three in a position-ordered column, *when* these two moves are sent and saved in this order, with their answers held:
+
+- move `X` after `Z`, returning `X = 3` and disclosing `Y = 1`, `Z = 2`, `X = 3`;
+- move `Y` after `X`, returning `Y = 4` without a reindex;
+
+*then*, when `Y`'s answer is applied first and `X`'s older answer arrives second, `Y` keeps `4`. The applicable values `Z = 2` and `X = 3` still take effect, and the final board order is `Z, X, Y`, matching the server. It never applies the older pair `Y = 1` over the newer `4`.
+
+*Given* instead the same initial values, *when* the server first saves `X` between `Y` and `Z`, returning `X = 998.5` without a reindex, then saves `Y` after `Z`, returning `Y = 3` and disclosing `X = 1`, `Z = 2`, `Y = 3`, *then* applying the second answer before the first leaves `X = 1`, `Z = 2`, `Y = 3`, in order `X, Z, Y`. The older written-row value `X = 998.5` never replaces the newer disclosed `1`.
+
+Answering either pair in its saved order ends in the same respective positions and order. Where currency cannot be established, a fresh read may supply the saved result instead; the older answer still never restores a superseded position. These fixtures specify the successful responses, not a fixed reindex threshold. The rule covers the board's position-bearing answers from drags, inline creates and Sheet writes, rather than only re-drags of one item.
 
 **Automation test:** —

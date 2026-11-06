@@ -269,6 +269,16 @@ response to a position write in this order:
 **The order matters.** A comparison made before the pairs land mixes old
 values with new ones, and reports an order that was never wrong.
 
+**Planned:** Answers may land in any order, and the list still shows the
+order the server saved. Writes in flight together can be answered out
+of the order they were sent, and a reindex one discloses can renumber
+an entry another write has since set. An answer never overwrites a
+position a later-sent write set, whether the entry it wrote or a pair
+it discloses. Where a client can't tell that an answer is current, it
+reads the list again instead. **Why:** applied as they land, an older
+answer puts back a number the server has since replaced, and the list
+shows an order the server doesn't hold, with nothing erroring.
+
 ---
 
 ## Open questions

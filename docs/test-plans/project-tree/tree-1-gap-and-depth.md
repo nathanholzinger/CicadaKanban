@@ -37,9 +37,11 @@ X        (0)
 
 ## TREE-1.1 — The ghost shows the gap and depth, and a release saves exactly that placement
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §2, wiki hierarchy-placement §1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §2, wiki project-tree §6, wiki hierarchy-placement §1
 
 *Given* the tree, *when* `X`'s ghost moves to the gap between `A1a` and `B`, at `A1a`'s depth, *then* `X`'s own row is that ghost, drawn there at depth 2. `B` slides down by one row to make room; `A`, `A1` and `A1a` stay where they were. No extra row is added for the ghost and no second `X` row remains at pickup. A full-strength line rides the ghost's top edge, starting where its name starts. *When* `X` is released there, *then* it is drawn and saved as `A1`'s child, directly after `A1a`, exactly where the ghost showed it.
+
+*Given* instead three top-level leaves `A, B, C`, *when* `A` is picked up and its last movement makes `B` the nearest row, with the ghost shown after `B` at the top level, and the user releases without moving again, *then* the saved order is `B, A, C`, with `A.parentId = null`. The move names `B` as the anchor, with side `after`; it neither writes nothing as though the ghost were still at pickup nor requires another movement to catch up. The sidebar keeps `B, A, C` after the answer and a reload.
 
 **Automation test:** —
 

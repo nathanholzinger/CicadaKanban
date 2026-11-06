@@ -11,10 +11,11 @@ row)
 
 This page answers "what is a board, which items does it show, what does a
 column cover, and where does an item go that no column covers." Its
-numbered sections state what the API does. How the board presents it is a
-working placeholder: how columns merge and subdivide, the column editor,
-the Unsorted bucket's look and the inherited view are under Open
-questions, and no test case is derived from them. A drop into a column is
+numbered sections state what the API does, and §3 which board the
+client shows. How the board presents it is a working placeholder: how
+columns merge and subdivide, the column editor, the Unsorted bucket's
+look and the inherited view are under Open questions, and no test case
+is derived from them. A drop into a column is
 [`../board-drag-interaction/`](../board-drag-interaction/)'s, and how a
 column orders its items is
 [`../item-positioning/`](../item-positioning/)'s.
@@ -58,6 +59,15 @@ show them. What the move does to their positions isn't a rule yet
 
 What a project that inherits its workflow sees of its ancestor's board is
 a placeholder (Open questions).
+
+**Planned:** The board shown is the board selected. An answer to a write
+or a load begun on another board, however late it lands, doesn't
+replace the selected board's items or columns, end its loading, or
+finish its cue. A change made from the other board that the selected
+board shows too, such as a workphase's (§1), shows on the selected
+board, which is read again for it. **Why:** otherwise one board's
+columns would show under another's name and controls, and those
+controls would act on the other board.
 
 ## 4. A column covers a range of workphases
 

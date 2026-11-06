@@ -15,6 +15,10 @@ Decide whether the board offers a drop that reparents a Free item and keeps it F
 
 **Out of scope:** dual position values, which Epic 3.5's Story 9 also raised. They're `positioning-on-create-and-edit.md`'s, under "Two position values", and Story 9's note on them went to that story's Inbound deferrals.
 
+## Inbound deferrals
+
+- **Story 8's close-out audit, #16 (Nathan, 2026-11-06), optional, if this story builds the gesture:** `client/src/components/workflow/useBoardDnd.ts`'s region cache could become a DOM adapter of its own, beside the gesture's orchestration: structure resolution, element invalidation, sampling and parent lookup. The hook is about 900 lines. A third meaning of a drop would make it larger, and this is the time the audit named for the split, "if this hook grows". From `docs/audits/code-quality-audit-story-8-close-out.md`, which moves to `docs/archive/` when that audit closes.
+
 ## Decisions
 
 None yet. To groom:

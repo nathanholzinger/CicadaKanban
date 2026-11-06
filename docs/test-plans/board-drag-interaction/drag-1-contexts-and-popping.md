@@ -1,6 +1,6 @@
 # DRAG-1 — Contexts, the layer stack, and popping
 
-**Next ID:** DRAG-1.37
+**Next ID:** DRAG-1.38
 
 **Terms.** *Sustained* means the cursor stays for at least the named tunable value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
 
@@ -38,6 +38,7 @@
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
 | DRAG-1.35 | One full Card zoom-in hold reaches Descendants directly, with no further layer inside it | P1 | Open |
 | DRAG-1.36 | A Stub's starting context follows its containing Card as pending attachments preview it | P0 | Open |
+| DRAG-1.37 | A zero-delay pop cycle settles in the context it returns to | P0 | Planned |
 
 ---
 
@@ -235,7 +236,7 @@ The case holds at whatever values the test sets; its pass never depends on the t
 
 *Given* `popDistancePx` above 0 and item `X` at Card `P`'s Descendants layer in column `K`, either zoomed in from outside or picked up as `P`'s Stub, *when* the cursor is yanked to a point at least `popDistancePx` outside `P`'s box and at least `popDistancePx` outside `K`'s pop-out bound (its outer body when merged, its sub-row when expanded), *then* `X` pops out to `K`, and `K`'s own pop out, judged afresh against the same distant cursor, fires straight after, leaving `X` at Board layer. Both pops happen, in that order: Descendants → Column/sub-row → Board. *When* the cursor instead comes to rest inside `K` but at least `popDistancePx` outside `P`, *then* only the first pop happens, and `X` stays locked in `K` as shortCard.
 
-A single cursor sample decides both pops, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
+A single cursor sample decides both pops, without another movement or a later sample between them. This also holds with zero pop and zoom clocks: preventing a cycle never truncates an outward cascade at Column layer. The case holds at whatever values the test sets; its pass never depends on the tuned values.
 
 **Automation test:** —
 
@@ -367,5 +368,15 @@ The exceptions:
 *Given* Free Card `P` with attached Stub `X`, and a pending attach or reparent of `P` into Free Card `Q`, so the board previews `P` and `X` inside `Q`, *when* `X` is picked up before the response arrives, *then* its drag starts at **Q's Descendants layer**, bounded by `Q`'s whole box. It doesn't start in `P`'s former Descendants layer or in the column. The containing Card is the nearest ancestor previewed Free at pickup.
 
 *And given* instead `P` is attached to `Q` with `X` attached beneath `P`, and `P`'s detach is pending, so `P` previews as its own Free Card while retaining `parentId = Q`, *when* `X` is picked up, *then* its drag starts at **P's Descendants layer**, bounded by `P`'s whole box. The kept `parentId` doesn't move `X`'s pickup context back into `Q`.
+
+**Automation test:** —
+
+## DRAG-1.37 — A zero-delay pop cycle settles in the context it returns to
+
+**Priority:** P0 · **Status:** Planned · **Rule:** wiki board-drag-interaction §3.1, wiki board-drag-interaction §6.1
+
+*Given* `cardZoomDwellMs = 0`, `cardPopInDelayMs = 0`, `popInDelayMs = 0`, `popDelayMs = 0` and a positive `popDistancePx`, with Free item `X` locked in column `K` and the side highlight naming Valid Card `P`, *when* one pointer sample is inside `K` but more than `popDistancePx` outside `P`'s box, *then* the immediate zoom into `P` and pop back out settle in `K`, at Column layer. Processing that sample completes, with the drag still usable and no repeated zoom into `P` from the same sample. No attachment is saved merely by processing it.
+
+*When* a subsequent sample instead puts the pointer inside `P` with the side highlight still naming it, *then* the zero-delay zoom reaches `P`'s Descendants layer normally. Settling the earlier sample does not bar entry on a later one. The same outcomes hold for an expanded column's sub-row in place of `K`. The positive distance is a parameter; the case does not judge the tuned values' feel. Outward cascades are [DRAG-1.19](drag-1-contexts-and-popping.md)'s.
 
 **Automation test:** —

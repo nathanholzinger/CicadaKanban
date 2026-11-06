@@ -324,6 +324,17 @@ committed. Each edge of §1.1's stack has its own clock:
   can mean a reparent, so it can be tuned to a more deliberate hold than
   an ordinary column pop-in.
 
+**Planned:** Whatever the values, zero included, a pointer sample
+settles. With the clocks at 0 and `popDistancePx` small, a transition
+fires the moment its condition holds, and one sample can satisfy a
+zoom-in and a pop-out in turn: the cursor in the column, but more than
+`popDistancePx` outside the Card the side highlight names. A sample that
+would carry the drag back to a context it has already been in during
+that sample leaves it there, so that example ends in the context the
+sample started in. Outward cascades, one layer after another, are
+unchanged. **Why:** without the rule, the two transitions would answer
+each other forever.
+
 The cursor's region is the bounded box of §1 — outside every box, over
 Unsorted or a broken column, the cursor is nowhere and a release there
 writes nothing (subject to §2's "always the locked context's own
@@ -1091,6 +1102,10 @@ re-drag — or releasing it where nothing is written — restores the earlier
 write's pending marker rather than clearing it. A response landing
 mid-drag of the same item clears the ghost only for the instant it takes
 the board to notice.
+
+**Planned:** Responses for different items are sequenced too: an older
+answer never overwrites a position a later write set, whichever item
+that write moved ([`../positioning/`](../positioning/) §8).
 
 **The client never keeps a guess the server rejected.** A failed drop
 resyncs the board from the server. §3.2 should make this nearly
