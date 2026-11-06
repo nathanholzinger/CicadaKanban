@@ -45,7 +45,7 @@ export interface DragTuning {
   /**
    * How many levels below a Card its Descendants section shows. The children of a row at the
    * last shown level are stood in for by one overflow row
-   * (`itemListOps.ts::sectionEntries`). Read through `itemListOps.ts::shownLevels`, which
+   * (`descendantsSection.ts::sectionEntries`). Read through `descendantsSection.ts::shownLevels`, which
    * holds it to a whole number of at least 1.
    */
   sectionLevels: number;

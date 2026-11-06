@@ -24,7 +24,7 @@ import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { DRAG_CARD_ATTR, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import type { CarriedBranch } from '../lib/hierarchyPlacement';
-import { hierarchyRows, sectionEntries } from './workflow/itemListOps';
+import { hierarchyRows, sectionEntries } from './workflow/descendantsSection';
 import { useHierarchyModal } from './workflow/HierarchyModalContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
@@ -222,7 +222,7 @@ export default function KanbanCard({
   //
   // The whole section, every depth, as one flat DFS list (what the board places
   // against; `entries` below is the part of it drawn) —
-  // `itemListOps.ts::hierarchyRows` walks `getAttachedChildren`, which is
+  // `descendantsSection.ts::hierarchyRows` walks `getAttachedChildren`, which is
   // placement-aware: a childless Card the drag has zoomed into already has the
   // carried item's ghost as its one child, its one spot.
   const rows =

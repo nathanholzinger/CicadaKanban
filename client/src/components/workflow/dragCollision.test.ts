@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { CollisionDetection, Over } from '@dnd-kit/core';
 import { rect } from '../../test/dragFixtures';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
-import { overflowRowId } from './itemListOps';
+import { overflowRowId } from './descendantsSection';
 import {
   dropAnchorFor,
   resolveBoardCollisions,

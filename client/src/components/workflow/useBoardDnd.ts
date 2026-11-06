@@ -1,7 +1,7 @@
 // The board drag's gesture layer, for the board's DndContext. The rules live in
 // pure modules (popSession.ts, placement.ts, dragStructure.ts, dragBands.ts,
 // dragCollision.ts, dragRequest.ts, dragClassification.ts, dragOverlayGeometry.ts,
-// descendantsProjection.ts, itemListOps.ts, forcedStop.ts, lib/hierarchyPlacement.ts); this hook
+// descendantsProjection.ts, descendantsSection.ts, itemListOps.ts, forcedStop.ts, lib/hierarchyPlacement.ts); this hook
 // owns the clocks, the DOM measurements, and the dnd-kit plumbing, with the hooks
 // usePendingGhostGuard.ts, useSnapTween.ts and useLatest.ts:
 //
@@ -92,9 +92,8 @@ import {
 } from './popSession';
 import type { ModalReading } from './modalPlacement';
 import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
+import { EVERY_LEVEL, descendantsChildrenOf } from './descendantsSection';
 import {
-  EVERY_LEVEL,
-  descendantsChildrenOf,
   renderedIsStub,
   renderedParentId,
   renderedWorkphaseId,

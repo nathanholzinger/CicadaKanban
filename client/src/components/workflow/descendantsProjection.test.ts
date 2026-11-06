@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
+import { overflowTree } from '../../test/overflowTreeFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
 import { columnRegionKey, descendantsRegionKey } from './dragRegions';
 import type { DescendantsProjection } from './DragSessionContext';
-import { EVERY_LEVEL, getAttachedChildrenFrom, overflowRowId } from './itemListOps';
+import { EVERY_LEVEL, overflowRowId } from './descendantsSection';
+import { getAttachedChildrenFrom } from './itemListOps';
 import {
   NO_PROJECTION,
   advanceProjection,
@@ -201,20 +203,7 @@ describe('advanceProjection on the entry sample', () => {
 //   B (0)
 // plus a Free Card X from outside, and R's Free child F.
 describe('advanceProjection under a cut-off section', () => {
-  const deep = [
-    makeItem(P),
-    makeItem('A', { parentId: P, position: 1 }),
-    makeItem('B', { parentId: P, position: 2 }),
-    makeItem('Q', { parentId: 'A' }),
-    makeItem('R', { parentId: 'Q', position: 1 }),
-    makeItem('T', { parentId: 'Q', position: 2 }),
-    makeItem('R1', { parentId: 'R', position: 1 }),
-    makeItem('R2', { parentId: 'R', position: 2 }),
-    makeItem('R1a', { parentId: 'R1' }),
-    makeItem('F', { parentId: 'R', isAttached: 0 }),
-    makeItem('G', { parentId: 'T', isAttached: 0 }),
-    makeItem('X'),
-  ];
+  const deep = [...overflowTree(), makeItem('X')];
   const deepSample = (fields: Partial<ProjectionSample> = {}): ProjectionSample => ({
     previousContextKey: null,
     contextKey: section,

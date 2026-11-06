@@ -23,7 +23,7 @@ import ModalShell from './ModalShell';
 import { SectionRows } from './StubRows';
 import { useDragSession, useIsLockedAtCard, type DragSession } from './workflow/DragSessionContext';
 import { DRAG_BOUNDS_ATTR, descendantsRegionKey, dragRegionProps, type Point } from './workflow/dragRegions';
-import { EVERY_LEVEL, hierarchyRows, sectionEntries, type SectionEntry } from './workflow/itemListOps';
+import { EVERY_LEVEL, hierarchyRows, sectionEntries, type SectionEntry } from './workflow/descendantsSection';
 import {
   centerModal,
   cursorXInList,

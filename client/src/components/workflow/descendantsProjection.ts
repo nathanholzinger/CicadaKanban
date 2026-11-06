@@ -24,7 +24,8 @@ import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import type { DragClassification } from '../../lib/dragTargets';
 import { isValidParent } from './dragClassification';
 import { descendantsCardIdOf } from './dragRegions';
-import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels, type PlacementSlot } from './itemListOps';
+import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels } from './descendantsSection';
+import type { PlacementSlot } from './itemListOps';
 import type { DescendantsProjection } from './DragSessionContext';
 import type { ModalHoldTarget } from './popSession';
 
@@ -70,7 +71,7 @@ export interface ProjectionSample {
   pointerX: number | null;
   pointerY: number | null;
   getAttachedChildren: (parentId: string) => readonly Item[];
-  /** How many levels the section draws (`itemListOps.ts::shownLevels`): the tuning value, or `EVERY_LEVEL` in the hierarchy modal. */
+  /** How many levels the section draws (`descendantsSection.ts::shownLevels`): the tuning value, or `EVERY_LEVEL` in the hierarchy modal. */
   sectionLevels: number;
 }
 

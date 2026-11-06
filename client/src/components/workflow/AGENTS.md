@@ -68,7 +68,7 @@ its own header.
   element: `dragStructure.ts` reads the Card's column off the Card's own element
   (`DRAG_CARD_ATTR`). The Card's root gives up the key and its section draws static, so one
   element carries the key and each item registers one row. The drop math draws every level there
-  (`useBoardDnd.ts::levelsDrawnAt`, `itemListOps.ts::EVERY_LEVEL`). Its own `descendantsSectionRect` and Card id bound the
+  (`useBoardDnd.ts::levelsDrawnAt`, `descendantsSection.ts::EVERY_LEVEL`). Its own `descendantsSectionRect` and Card id bound the
   collision candidates: the modal sits over the board, so another Card's rows can lie inside
   its box. Leaving its box is the usual pop out of Descendants, to the Card's column, and closes
   it; a drag that ends in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
@@ -167,9 +167,11 @@ The drag gesture's pure, unit-tested modules:
   measures the DOM.
 - `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
   across a form switch, and its clamp to the current context.
-- `itemListOps.ts` — list selectors and ordinal placements over the board's items, and the
-  rows a Card's section draws (`sectionEntries`), without the branch a carried item takes
-  with it.
+- `itemListOps.ts` — list selectors and ordinal placements over the board's items.
+- `descendantsSection.ts` — a Card's section: its flat rows (`hierarchyRows`), and the rows
+  it draws (`sectionEntries`), cut at the last shown level with an overflow row under it,
+  without the branch a carried item takes with it. It reads the children `itemListOps.ts`
+  gives it, and `itemListOps.ts` never reads it.
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
 - `forcedStop.ts` — a stopped drag's signal, its wording and the armed stop, and the
   flash's length.
@@ -260,7 +262,7 @@ the carried copy's second line and its wording).
   re-derive it by filtering for cycle-forming states.
 - **What a carried item takes with it:** `lib/hierarchyPlacement.ts::carriedBranchOf`, read
   once at pickup (`useBoardDnd.ts::handleDragStart`) from the board's placement-aware
-  children (`itemListOps.ts::descendantsChildrenOf`) and held on the session as `branch`,
+  children (`descendantsSection.ts::descendantsChildrenOf`) and held on the session as `branch`,
   for a Card's pickup and a Stub's alike. Attached links only, so it is not `subtreeIds`,
   which also holds the Free descendants: those stay drawn where they are, at their tier.
   The project sidebar's pickup walks the same function over its real tree
@@ -289,13 +291,13 @@ the carried copy's second line and its wording).
   the stored one, so a pending detach keeps its parent (not `renderedParentId`'s `null`).
   `handleDragStart` builds it once, for `classifyDragTargets` and the walk to a Stub's
   containing Card. Never hand either the stored `items`.
-- **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
+- **A Card's descendants as rows:** `descendantsSection.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
 - **Where the hierarchy modal opens during a drag:** `modalPlacement.ts`
   (`placeModal`, `centerModal`, `slotForGap`, `gapAtSlot`, `depthAtCursor`). The same
   functions place it and read it, so a modal that fitted reads back the spot it was placed
   for.
-- **What the section draws:** `itemListOps.ts::sectionEntries` over those rows, cut at
+- **What the section draws:** `descendantsSection.ts::sectionEntries` over those rows, cut at
   `shownLevels(tuning.sectionLevels)`. The render and the drop math both read the level
   count through `shownLevels`, so they can't disagree about which levels exist. The
   overflow row's id is `overflowRowId(ownerId)`, read back with `overflowOwnerOf`.

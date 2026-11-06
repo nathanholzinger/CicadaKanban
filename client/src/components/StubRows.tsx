@@ -12,7 +12,7 @@ import { OVERFLOW_TEXT_CLASS, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
 import { useModalHoldPhase, type DescendantsProjection } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
+import type { OverflowRowData, SectionEntry } from './workflow/descendantsSection';
 
 // The type pill + one-line title every Stub-tier render
 // shares — AttachedChildRow and StaticStubRow below, and
