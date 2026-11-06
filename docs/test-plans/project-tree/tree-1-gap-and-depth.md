@@ -14,14 +14,14 @@ X        (0)
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
-| TREE-1.1 | The ghost shows the gap and depth, and a release saves exactly that placement | P1 | Open |
+| TREE-1.1 | The ghost shows the gap and depth, and a release saves exactly that placement | P1 | Automated |
 | TREE-1.2 | A gap offers the depths from Bottom's to Top's + 1, and each places the project differently | P0 | Open |
 | TREE-1.3 | The boundaries: above the first row, below a nested last row, clamping, and the top level as the floor | P1 | Automated |
 | TREE-1.4 | When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn | P2 | Open |
 | TREE-1.5 | A collapsed project hides its subtree from view, not from placement | P1 | Open |
 | TREE-1.6 | Nearest the dragged project's own row means its own gap, with its descendants absent | P1 | Open |
 | TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Open |
-| TREE-1.9 | Coming back nearest the dragged project's own row returns the ghost to its own gap | P1 | Open |
+| TREE-1.9 | Coming back nearest the dragged project's own row returns the ghost to its own gap | P1 | Automated |
 | TREE-1.10 | Nearest the dragged project's own row, horizontal offset picks among its own gap's depths | P2 | Open |
 | TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Open |
 | TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Open |
@@ -37,13 +37,13 @@ X        (0)
 
 ## TREE-1.1 — The ghost shows the gap and depth, and a release saves exactly that placement
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §2, wiki project-tree §6, wiki hierarchy-placement §1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki project-tree §2, wiki project-tree §6, wiki hierarchy-placement §1
 
 *Given* the tree, *when* `X`'s ghost moves to the gap between `A1a` and `B`, at `A1a`'s depth, *then* `X`'s own row is that ghost, drawn there at depth 2. `B` slides down by one row to make room; `A`, `A1` and `A1a` stay where they were. No extra row is added for the ghost and no second `X` row remains at pickup. A full-strength line rides the ghost's top edge, starting where its name starts. *When* `X` is released there, *then* it is drawn and saved as `A1`'s child, directly after `A1a`, exactly where the ghost showed it.
 
 *Given* instead three top-level leaves `A, B, C`, *when* `A` is picked up and its last movement makes `B` the nearest row, with the ghost shown after `B` at the top level, and the user releases without moving again, *then* the saved order is `B, A, C`, with `A.parentId = null`. The move names `B` as the anchor, with side `after`; it neither writes nothing as though the ghost were still at pickup nor requires another movement to catch up. The sidebar keeps `B, A, C` after the answer and a reload.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-drag.spec.ts`, `client/src/components/sidebar/SortableProjectRow.test.tsx`
 
 ## TREE-1.2 — A gap offers the depths from Bottom's to Top's + 1, and each places the project differently
 
@@ -112,11 +112,11 @@ The ghost stays in its pickup slot and depth throughout: no move of the carried 
 
 ## TREE-1.9 — Coming back nearest the dragged project's own row returns the ghost to its own gap
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §5, wiki hierarchy-placement §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §5, wiki hierarchy-placement §8
 
 *Given* the tree, *when* `X` is dragged until its ghost is in another gap, between `A1a` and `B`, and the carried copy then comes back nearest `X`'s own row, *then* the ghost returns to `X`'s own gap, below `B`, and the line returns with it on its top edge. *When* `X` is released there at the top level, its own depth, *then* no request is sent, as in [TREE-1.8](tree-1-gap-and-depth.md). `X`'s branch has no drawn rows to be nearest; its own row is the only row of that block left ([TREE-1.6](tree-1-gap-and-depth.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-drag.spec.ts`, `client/src/components/sidebar/SortableProjectRow.test.tsx`
 
 ## TREE-1.10 — Nearest the dragged project's own row, horizontal offset picks among its own gap's depths
 

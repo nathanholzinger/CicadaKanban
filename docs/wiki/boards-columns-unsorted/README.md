@@ -60,14 +60,14 @@ show them. What the move does to their positions isn't a rule yet
 What a project that inherits its workflow sees of its ancestor's board is
 a placeholder (Open questions).
 
-**Planned:** The board shown is the board selected. An answer to a write
-or a load begun on another board, however late it lands, doesn't
-replace the selected board's items or columns, end its loading, or
-finish its cue. A change made from the other board that the selected
-board shows too, such as a workphase's (§1), shows on the selected
-board, which is read again for it. **Why:** otherwise one board's
-columns would show under another's name and controls, and those
-controls would act on the other board.
+**The board shown is the board selected.** An answer to a write or a
+load begun on another board, however late it lands, doesn't replace the
+selected board's items or columns, end its loading, or finish its cue.
+A change made from the other board that the selected board shows too,
+such as a workphase's (§1), shows on the selected board, which is read
+again for it. **Why:** otherwise one board's columns would show under
+another's name and controls, and those controls would act on the other
+board.
 
 ## 4. A column covers a range of workphases
 

@@ -56,6 +56,16 @@ const boardB = (w1Name = 'Ready', x1Title = 'Current') =>
     { id: 'CB2', rows: [{ workphase: phase('W2', 'Review', 2), items: [x2] }] },
   ]);
 
+// What a board draws, column by column: the workphases each covers and the items under them. Board B's, as
+// the case lays it out: CB1 is W1 with X1, and CB2 is W2 with X2.
+const placedIn = (board: BoardWithDetails | null) =>
+  Object.fromEntries(
+    (board?.columns ?? []).map(c => [c.id, c.subRows.map(r => [r.workphase.id, r.items.map(item => item.id)])]),
+  );
+const B_PLACED = { CB1: [['W1', ['X1']]], CB2: [['W2', ['X2']]] };
+// The items the board was handed, each with the workphase it sits in and its title.
+const handedOver = (items: Item[] | undefined) => (items ?? []).map(item => [item.id, item.workphaseId, item.title]);
+
 // The loader with board `first` selected, and the cue's callbacks and the board's state as spies.
 function mountLoader(first: string | null) {
   const setWorkphases = vi.fn<(workphases: Workphase[]) => void>();
@@ -96,8 +106,13 @@ describe('BCU-1.7: a late load for another board cannot replace the selected boa
 
     expect(shown()?.id).toBe('B');
     expect(columnIds()).toEqual(['CB1', 'CB2']);
+    // CB1 holds W1 with X1 and CB2 holds W2 with X2, and the items the board holds sit in those workphases.
+    expect(placedIn(shown())).toEqual(B_PLACED);
     expect(replaceItems).toHaveBeenCalledOnce();
-    expect(replaceItems.mock.calls[0][0].map(item => item.id)).toEqual(['X1', 'X2']);
+    expect(handedOver(replaceItems.mock.calls[0][0])).toEqual([
+      ['X1', 'W1', 'Current'],
+      ['X2', 'W2', 'Second'],
+    ]);
   });
 
   it('keeps B’s items, not A’s older snapshot of them: X1 stays Current', async () => {
@@ -174,7 +189,7 @@ describe('BCU-1.8: a shared change begun on another board refreshes the board cu
   }
 
   it('reads B again when the follow-up load starts after B loaded, and B shows CB1 as Doing', async () => {
-    const { handlersLoader, shown, columnIds, setWorkphases } = await renamedWhileBIs('loaded');
+    const { handlersLoader, shown, columnIds, setWorkphases, replaceItems } = await renamedWhileBIs('loaded');
     vi.mocked(fetchBoard).mockResolvedValueOnce(boardB('Doing'));
 
     await act(async () => handlersLoader());
@@ -184,10 +199,16 @@ describe('BCU-1.8: a shared change begun on another board refreshes the board cu
     expect(columnIds()).toEqual(['CB1', 'CB2']);
     expect(setWorkphases.mock.lastCall?.[0].map(w => w.name)).toEqual(['Doing', 'Review']);
     expect(shown()?.columns[0].subRows[0].workphase.name).toBe('Doing');
+    // CB1 still holds W1 with X1 and CB2 holds W2 with X2, and the board's items are still in those workphases.
+    expect(placedIn(shown())).toEqual(B_PLACED);
+    expect(handedOver(replaceItems.mock.lastCall?.[0])).toEqual([
+      ['X1', 'W1', 'Current'],
+      ['X2', 'W2', 'Second'],
+    ]);
   });
 
   it('shows B with the new name when B was still loading, whichever read lands last', async () => {
-    const { handlersLoader, firstB, shown, hook, columnIds } = await renamedWhileBIs('loading');
+    const { handlersLoader, firstB, shown, hook, columnIds, replaceItems } = await renamedWhileBIs('loading');
     vi.mocked(fetchBoard).mockResolvedValueOnce(boardB('Doing'));
 
     await act(async () => handlersLoader());
@@ -198,6 +219,12 @@ describe('BCU-1.8: a shared change begun on another board refreshes the board cu
     expect(shown()?.id).toBe('B');
     expect(columnIds()).toEqual(['CB1', 'CB2']);
     expect(shown()?.columns[0].subRows[0].workphase.name).toBe('Doing');
+    // The older read, landing last, leaves B as the follow-up drew it: the same columns, workphases and items.
+    expect(placedIn(shown())).toEqual(B_PLACED);
+    expect(handedOver(replaceItems.mock.lastCall?.[0])).toEqual([
+      ['X1', 'W1', 'Current'],
+      ['X2', 'W2', 'Second'],
+    ]);
   });
 
   it('never returns the selection to A: the handler’s load asks for the board selected now', async () => {

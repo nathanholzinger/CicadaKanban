@@ -32,7 +32,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Planned |
 | DRAG-6.27 | The flash window starts with the reloaded board and ends independently of the banner | P1 | Open |
 | DRAG-6.28 | A stopped item brought into view flashes only for the window's remaining time | P1 | Open |
-| DRAG-6.29 | Answers for different items preserve positions set by the later write | P0 | Planned |
+| DRAG-6.29 | Answers for different items preserve positions set by the later write | P0 | Automated |
 
 ---
 
@@ -264,7 +264,7 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 ## DRAG-6.29 — Answers for different items preserve positions set by the later write
 
-**Priority:** P0 · **Status:** Planned · **Rule:** wiki positioning §7, wiki positioning §8, wiki board-drag-interaction §10
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki positioning §7, wiki positioning §8, wiki board-drag-interaction §10
 
 *Given* active Free items `X = 1`, `Y = 998` and `Z = 999` in one workflow, with the board showing all three in a position-ordered column, *when* these two moves are sent and saved in this order, with their answers held:
 
@@ -277,4 +277,4 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 Answering either pair in its saved order ends in the same respective positions and order. Where currency cannot be established, a fresh read may supply the saved result instead; the older answer still never restores a superseded position. These fixtures specify the successful responses, not a fixed reindex threshold. The rule covers the board's position-bearing answers from drags, inline creates and Sheet writes, rather than only re-drags of one item.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useItemManagement.test.ts`

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { DropSide } from '../../lib/hierarchyPlacement';
+import type { DragRegion } from './dragRegions';
 import type { DragTuning } from './dragTuning';
 import {
   advanceModalHold,
@@ -10,6 +11,7 @@ import {
   startPopSession,
   type ModalHoldTarget,
 } from './popSession';
+import { overlayFormFor, placementRegion } from './placement';
 import { descendantsRegion, rect, region } from '../../test/dragFixtures';
 import {
   POP_TEST_METRICS as metrics,
@@ -345,6 +347,24 @@ const SET_CLOCKS: DragTuning = { ...tuning, popDistancePx: 10 };
 const awayFromP = { x: 50, y: 200 };
 const insideP = { x: 50, y: 100 };
 const yanked = { x: 50, y: 500 };
+// Past K's bound by 5px, under the 10px popDistancePx the cases set, and far from P all the same.
+const nearK = { x: 50, y: 405 };
+
+// The regions with the `parentRegionKey` a pop out reads logged as `<layer left> → <layer it led to>`. A pop
+// out reads the layer it leaves for its parent there and nowhere else, so the log is the layers one sample
+// left, in order, and where each led. A layer read twice in a row is logged once: how often it is asked
+// is not what the cases are about.
+function readingParents(regions: readonly DragRegion[], log: string[]): DragRegion[] {
+  return regions.map(r =>
+    Object.defineProperty({ ...r }, 'parentRegionKey', {
+      get: () => {
+        const left = `${r.key} → ${r.parentRegionKey ?? 'Board'}`;
+        if (log[log.length - 1] !== left) log.push(left);
+        return r.parentRegionKey;
+      },
+    }),
+  );
+}
 
 describe.each(KINDS)('$name, with a positive popDistancePx', ({ K, PK }) => {
   const regionsOf = [K, PK];
@@ -407,19 +427,63 @@ describe.each(KINDS)('$name, with a positive popDistancePx', ({ K, PK }) => {
       it.each(origins)('DRAG-1.19: $origin, one sample past both bounds pops to K and on to Board', ({ from }) => {
         const inP = from(tuningUsed);
         expect(inP.contextKey).toBe(PK.key);
+        expect(overlayFormFor(placementRegion(inP, regionsOf))).toBe('stub');
+        const layersLeft: string[] = [];
 
-        const out = advancePopSession(inP, yanked, regionsOf, tuningUsed, metrics, DWELL + CUE + 1);
+        const out = advancePopSession(
+          inP,
+          yanked,
+          readingParents(regionsOf, layersLeft),
+          tuningUsed,
+          metrics,
+          DWELL + CUE + 1,
+        );
 
-        expect(out.contextKey).toBeNull();
+        // Descendants → K → Board, in that order: P's pop led to K, then K's own pop, judged on this same
+        // sample, led to Board.
+        expect(layersLeft).toEqual([`${PK.key} → ${K.key}`, `${K.key} → Board`]);
+        expect(out).toEqual(startPopSession(null));
+        expect(overlayFormFor(placementRegion(out, regionsOf))).toBe('short-card');
       });
 
       it.each(origins)(
-        'DRAG-1.19: $origin, a sample that rests inside K, far from P, pops once and stays in K',
+        'DRAG-1.19: $origin, a sample that rests inside K, far from P, pops once and stays in K as a shortCard',
         ({ from }) => {
           const inP = from(tuningUsed);
+          const layersLeft: string[] = [];
 
-          const out = advancePopSession(inP, awayFromP, regionsOf, tuningUsed, metrics, DWELL + CUE + 1);
+          const out = advancePopSession(
+            inP,
+            awayFromP,
+            readingParents(regionsOf, layersLeft),
+            tuningUsed,
+            metrics,
+            DWELL + CUE + 1,
+          );
 
+          expect(layersLeft).toEqual([`${PK.key} → ${K.key}`]);
+          expect(out.contextKey).toBe(K.key);
+          expect(overlayFormFor(placementRegion(out, regionsOf))).toBe('short-card');
+        },
+      );
+
+      // The second pop is judged against K's own bound: a cursor far from P that is past K's bound by less
+      // than popDistancePx pops P, and not K.
+      it.each(origins)(
+        'DRAG-1.19: $origin, a sample far from P but short of popDistancePx outside K pops once and stays in K',
+        ({ from }) => {
+          const layersLeft: string[] = [];
+
+          const out = advancePopSession(
+            from(tuningUsed),
+            nearK,
+            readingParents(regionsOf, layersLeft),
+            tuningUsed,
+            metrics,
+            DWELL + CUE + 1,
+          );
+
+          expect(layersLeft).toEqual([`${PK.key} → ${K.key}`]);
           expect(out.contextKey).toBe(K.key);
         },
       );

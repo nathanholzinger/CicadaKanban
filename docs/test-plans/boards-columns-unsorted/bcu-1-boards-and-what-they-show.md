@@ -10,8 +10,8 @@
 | BCU-1.4 | No board or column write changes an item | P0 | Automated |
 | BCU-1.5 | A board shows the items of every project that uses its workflow, its own or inherited | P1 | Automated |
 | BCU-1.6 | A project that comes to use another workflow takes its items to that workflow's boards | P1 | Automated |
-| BCU-1.7 | A late load for another board cannot replace the selected board or complete its loading or cue | P0 | Planned |
-| BCU-1.8 | A shared change begun on another board refreshes the board currently selected | P1 | Planned |
+| BCU-1.7 | A late load for another board cannot replace the selected board or complete its loading or cue | P0 | Automated |
+| BCU-1.8 | A shared change begun on another board refreshes the board currently selected | P1 | Automated |
 
 ---
 
@@ -82,7 +82,7 @@
 
 ## BCU-1.7 — A late load for another board cannot replace the selected board or complete its loading or cue
 
-**Priority:** P0 · **Status:** Planned · **Rule:** wiki boards-columns-unsorted §3, wiki board-drag-interaction §10
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §3, wiki board-drag-interaction §10
 
 *Given* workflow `WF` with workphases `W1, W2`, board `A` with column `CA` covering both, and board `B` with separate columns `CB1` for `W1` and `CB2` for `W2`, with items `X1` in `W1` and `X2` in `W2`, *when* a load for selected `A` is held, the user selects `B`, `B` loads, and the held `A` answer then arrives, *then* `B` stays selected and shows `CB1` with `X1` and `CB2` with `X2`. No `CA` replaces those columns, and no answer for `A` supplies the displayed board under `B`'s name or controls.
 
@@ -92,14 +92,14 @@
 
 *Given* instead `B` has loaded while `A`'s old answer is still held, then a forced stop on `B` starts its own reload with a cue waiting for that reload, *when* `A`'s answer arrives before `B`'s reload, *then* `B` stays loading and its cue keeps waiting. `A`'s completion does not start the stopped item's flash window. `B`'s own successful reload draws `B` and allows its cue to proceed. The cue's subsequent lifetime is [DRAG-6.27](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useBoardLoad.test.ts`
 
 ## BCU-1.8 — A shared change begun on another board refreshes the board currently selected
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki boards-columns-unsorted §1, wiki boards-columns-unsorted §3, wiki boards-columns-unsorted §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §1, wiki boards-columns-unsorted §3, wiki boards-columns-unsorted §4
 
 *Given* `A` and `B` of the same workflow, laid out as in [BCU-1.7](bcu-1-boards-and-what-they-show.md), with `W1` named `Ready` and `CB1` using its workphase's name, *when* a rename of `W1` to `Doing` begins while `A` is selected, the user selects `B` and lets it load, and the rename then succeeds, *then* the selected board is read again as `B`. It still shows `CB1` with `X1` and `CB2` with `X2`, and `CB1` now shows `Doing`. `CA` never replaces `B`'s columns, and selection never returns to `A`.
 
 This holds even though the successful write's follow-up load starts after the selection change: starting later does not make `A` the selected board. If `B` is still loading when the rename succeeds, the completed view is likewise `B` with the shared new workphase name.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useBoardLoad.test.ts`

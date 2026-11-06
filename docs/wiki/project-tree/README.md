@@ -214,11 +214,11 @@ doesn't overwrite a position a later-sent write has set
 ([`../positioning/`](../positioning/) §8), and none shows a deleted
 project back (§9).
 
-**Planned:** A read of the tree that began before a write's answer was
-applied never undoes that write, however late it lands, and the first
-read the sidebar makes is no exception. **Why:** the read holds the
-tree as it was before the write, so applying it would put back a name,
-a parent or an order the user has already changed.
+**A read of the tree that began before a write's answer was applied
+never undoes that write,** however late it lands, and the first read
+the sidebar makes is no exception. **Why:** the read holds the tree as
+it was before the write, so applying it would put back a name, a parent
+or an order the user has already changed.
 
 **After a failed write, the sidebar shows the project where it was
 before the attempt.** A failed create shows no new project, and a failed

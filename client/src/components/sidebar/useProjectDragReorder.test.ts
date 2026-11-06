@@ -338,6 +338,8 @@ describe('TREE-1.8: a project set back down in its own gap, at its own depth, wr
     expect(drag.slot()).toEqual(['A1a', 'B']);
     drag.hover('X', 0);
     expect(drag.slot()).toEqual(['B', null]);
+    // The line moves with the ghost: it is back at the top level, in X's own gap.
+    expect(drag.hook.ghost).toEqual({ depth: 0, line: true, invalid: false });
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
     expect(drag.expand).not.toHaveBeenCalled();
@@ -402,6 +404,8 @@ describe('TREE-1.9: coming back nearest the dragged project’s own row returns 
     expect(drag.slot()).toEqual(['A1a', 'B']);
     drag.hover('X', 0);
     expect(drag.slot()).toEqual(['B', null]);
+    // The line returns with the ghost, at X's own depth.
+    expect(drag.hook.ghost).toEqual({ depth: 0, line: true, invalid: false });
     drag.release();
     expect(drag.onReorderProject).not.toHaveBeenCalled();
   });

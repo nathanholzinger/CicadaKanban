@@ -282,7 +282,11 @@ test('TREE-1.9: coming back nearest the dragged project’s own row returns the 
   await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['A1a', 'B']);
   await hoverTo(page, from);
   await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
+  // The one line is the ghost's own, at its depth. (That it rides the ghost's top edge is the row's:
+  // SortableProjectRow.test.tsx.)
   await expect(projectSidebar.dropLine).toHaveCount(1);
+  await expect(projectSidebar.ghost.locator('[data-drop-line]')).toHaveCount(1);
+  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-line', '0');
   await release(page);
 
   expect(writes).toEqual([]);

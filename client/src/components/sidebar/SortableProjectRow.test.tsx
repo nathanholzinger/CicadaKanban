@@ -209,7 +209,7 @@ describe('TREE-2.13: the line starts at the ghost’s name on its top edge in ev
     expect(new Set(starts).size).toBe(4);
   });
 
-  it('draws one line, on the ghost’s top edge and never its bottom, and none while it has no gap yet', () => {
+  it('TREE-1.1, TREE-1.9: draws one line, on the ghost’s top edge and never its bottom, and none while it has no gap yet', () => {
     renderRow({ ghost: { depth: 1, line: true, invalid: false } });
     expect(document.querySelectorAll('[data-drop-line]')).toHaveLength(1);
     expect(lineIn().classList).toContain('-top-px');
@@ -218,7 +218,7 @@ describe('TREE-2.13: the line starts at the ghost’s name on its top edge in ev
     expect(document.querySelector('[data-drop-line]')).toBeNull();
   });
 
-  it('keeps the line at full strength while the ghost is dimmed: it sits outside the dimmed box', () => {
+  it('TREE-1.1, TREE-1.9: keeps the line at full strength while the ghost is dimmed: it sits outside the dimmed box', () => {
     const box = renderRow({ ghost: { depth: 1, line: true, invalid: false } });
     for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
     expect(box.contains(lineIn())).toBe(false);

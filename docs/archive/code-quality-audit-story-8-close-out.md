@@ -1,6 +1,6 @@
 # Code quality audit — Story 8 close-out
 
-**Status:** review complete; open for required dispositions. **15 Fix Now findings: five runtime defects, with #5 awaiting a PO ruling before its fix, and ten comment/instruction corrections.** Five optional Watch List findings. No application fixes, commits or tags made by this audit.
+**Status:** closed, 2026-11-06: every Fix Now finding is fixed (Close-out). **15 Fix Now findings: five runtime defects, #5 among them, fixed as the PO ruled, and ten comment/instruction corrections.** Five optional Watch List findings. The review itself made no application fixes, commits or tags; the fixes are the close-out plan's batches.
 
 **Range:** `epic-3-5-story-7-rerun-audited..e070ef1af682ce692651580a868db462d90ac35e`, **88 commits**. The base tag resolves to `3ede430f85612b9b87b183c2ab9a5003511bd059`; the endpoint is the committed Story 8.13 close-out. This deliberately overlaps the individual Story 8 audits. The only uncommitted file at scope freeze was the approved close-out plan update, which supplies the config and changes no application code.
 
@@ -226,22 +226,32 @@ These suggest strengthening Correctness's attention to response ordering across 
 
 ## Close-out
 
-Review completion does not close the audit. The Architect plans required batches in `story-8-close-out-audit.md`, with correctness first, then required drift corrections. Optional structural work remains optional. #5 needs the recorded PO answer before its behavior fix. Nathan's endpoint tag is `epic-3-5-story-8-close-out`, without `-audited`; no tag was created here.
+All fifteen required findings are fixed, each checked against the code at `0d13912`. The fixes are the close-out plan's step 4 (`story-8-close-out-audit.md`), decided in its D7 to D12, and each runtime fix's case tests are its D13.
+- **Two commits carry another batch's label:** `09b1581` is 4c's, under 4d's message, and `1ee284a` is 4g's, under 4f's. The table names commits by hash.
+- **The end tag isn't made yet:** `epic-3-5-story-8-close-out` on `e070ef1`, without `-audited` (the plan's D4). It and the config rebuild the scope, so it has to exist before the scope folder is deleted.
 
 | Finding | Disposition | Destination/evidence |
 |---|---|---|
-| #1 | Open — reproduced | This plan's board-response Inbound deferral; fix batches to be planned |
-| #2 | Open — reproduced | Close-out plan, Architect/Coder handoff |
-| #3 | Open — reproduced | Close-out plan, Architect/Coder handoff |
-| #4 | Open — reproduced | Close-out plan, Architect/Coder handoff |
-| #5 | Open — reproduced; PO answer required | Close-out plan, Open questions for PO and Architect |
-| #6 | Open | Close-out plan, Architect/Coder handoff |
-| #7 | Open | Close-out plan, Architect/Coder handoff |
-| #8 | Open | Close-out plan, Architect/Coder handoff |
-| #9 | Open | Close-out plan, Architect/Coder handoff |
-| #10 | Open | Close-out plan, Architect/Coder handoff |
-| #11 | Open | Close-out plan, Architect/Coder handoff |
-| #12 | Open | Close-out plan, Architect/Coder handoff |
-| #13 | Open | Close-out plan, Architect/Coder handoff |
-| #14 | Open | Close-out plan, Architect/Coder handoff |
-| #15 | Open | Close-out plan, Architect/Coder handoff |
+| #1 | Fixed | 4a `ecd46ae`, 4b `6422f24` (D7): `lib/positionedWrite.ts::positionRecord`, shared by the sidebar's `foldWrite` and `useItemManagement.ts`, which numbers each write and passes `newer` to `completeItemWrite`. DRAG-6.29: `useItemManagement.test.ts` |
+| #2 | Fixed | 4c `09b1581` (D8): `popSession.ts::transitionTo` takes the contexts the sample has entered, and leaves the drag in one it has been in. DRAG-1.37, DRAG-1.19: `popSession.test.ts`, `useBoardDnd.test.ts` |
+| #3 | Fixed | 4d `d25e026` (D9): `useProjectDragReorder.ts::placementAt`, run by `handleDragMove`, by `handleDragOver` (wired in `ProjectSidebar.tsx`) and by the release on its own event. TREE-1.1's new scenario: `useProjectDragReorder.test.ts`, `tests/ui/project-tree-drag.spec.ts` |
+| #4 | Fixed | 4e `121e05e` (D10): every tree read goes through `useProjectCollection.ts::readProjects`, the first one included. TREE-4.14: `useProjectCollection.test.ts` |
+| #5 | Fixed, as the PO ruled (wiki boards-columns-unsorted §3) | 4f `ebdc348` (D11): `workflow/useBoardLoad.ts` reads the selection from a ref, and applies, ends loading and finishes the cue only as the latest load of the board still selected. BCU-1.7, BCU-1.8: `useBoardLoad.test.ts` |
+| #6 | Fixed | 4g `1ee284a`: the origin Card's exception, in `popSession.ts`, `useBoardDnd.ts` and `descendantsProjection.ts` |
+| #7 | Fixed | 4g `1ee284a`: `dragCollision.ts`'s anchor comment names the carried attached descendants, and the Free ones that stay |
+| #8 | Fixed | 4g `1ee284a`: `workflow/AGENTS.md`'s DOM summary, while the hierarchy modal is open |
+| #9 | Fixed | 4g `1ee284a`: `itemListOps.ts`'s `Placement.parentId`, a Card or a Stub |
+| #10 | Fixed | 4d `d25e026`: `useProjectDragReorder.ts`'s drawn-rows comment names the three lists placement reads |
+| #11 | Fixed | 4d `d25e026`: `projectTreeUtils.ts::resolveGap`'s header, the list as the sidebar draws it now |
+| #12 | Fixed | 4g `1ee284a`: `KanbanCard.tsx`'s ShortCard description |
+| #13 | Fixed | 4g `1ee284a`: `tests/helpers/dragGesture.ts::dragTo`'s two measurements |
+| #14 | Fixed | 4g `1ee284a`: `useBoardDnd.test.ts`'s fixture comment and `workflow/AGENTS.md` distinguish a Stub's drag |
+| #15 | Fixed | 4g `1ee284a`: `useProjectDragReorder.test.ts`'s TREE-2.6 fixture comment, Q's child Q1 and Q1's child Q2 |
+
+**The optional findings and notes, and where each went:**
+- **#16:** `free-item-reparent-gesture.md`'s Inbound deferrals, for if that story builds the gesture.
+- **#17 and #19:** fixed, 4h `0d13912` (D12): `workflow/descendantsSection.ts`, and `client/src/test/overflowTreeFixture.ts`.
+- **#18:** Story 10's Inbound deferrals (`story-10-dnd-automation-catch-up.md`). Its Phase 3 decides.
+- **#20:** not taken.
+- **#22's notes for the Reconciler** (TREE-2.9, TREE-1.8 and TREE-1.9): the close-out plan's Open questions, for its step 5 Reconciler run.
+- **The Unknown-status candidate Scope and method left out,** and **Earlier-audit attribution's suggested definition changes:** the close-out plan's Open questions, for Nathan.

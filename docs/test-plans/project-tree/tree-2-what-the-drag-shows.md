@@ -12,7 +12,7 @@
 | TREE-2.6 | A response landing mid-drag does not redraw the pickup tiers | P1 | Open |
 | TREE-2.7 | Tiers leave the drop line at full strength and do not remove valid gap states | P1 | Open |
 | TREE-2.8 | The sidebar uses opacity values independent of the board's | P1 | Open |
-| TREE-2.9 | The count line includes the real subtree, including descendants hidden by collapse | P1 | Open |
+| TREE-2.9 | The count line includes the real subtree, including descendants hidden by collapse | P1 | Automated |
 | TREE-2.10 | Only the carried copy has the line, outside its one-row box and taking no pointer | P1 | Open |
 | TREE-2.11 | The count line is cut short in a narrow sidebar | P2 | Open |
 | TREE-2.12 | Every end of the drag draws the branch again under the project | P1 | Open |
@@ -101,7 +101,7 @@ Each tier changes only opacity, adding no relationship color and removing no unr
 
 ## TREE-2.9 — The count line includes the real subtree, including descendants hidden by collapse
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki hierarchy-placement §8
 
 *Given* each tree below, *when* its project `X` is picked up, *then* the carried copy has exactly the following second line:
 
@@ -115,7 +115,7 @@ Each tier changes only opacity, adding no relationship color and removing no unr
 
 *Given* the last tree with `A` collapsed, *when* `X` is picked up, *then* `A1` and `A1a` still count, even though their rows were hidden before pickup. The line is "+ 2 children, 5 total descendants", and all five descendants are out of the drawn list. Picking up collapsed `X` gives that same count, with no descendant rows needing to leave. The counts and branch membership are read at pickup and held for the whole drag; moving the cursor does not recalculate them from the shortened list. `X` itself is never counted.
 
-**Automation test:** —
+**Automation test:** `client/src/components/sidebar/useProjectDragReorder.test.ts`, `client/src/components/sidebar/SortableProjectRow.test.tsx`
 
 ## TREE-2.10 — Only the carried copy has the line, outside its one-row box and taking no pointer
 

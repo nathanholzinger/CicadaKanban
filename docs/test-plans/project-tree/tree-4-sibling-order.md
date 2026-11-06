@@ -17,7 +17,7 @@
 | TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
 | TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Automated |
 | TREE-4.13 | A late response preserves positions already set by a newer saved write | P1 | Automated |
-| TREE-4.14 | An older tree read preserves a write already applied in the sidebar | P1 | Planned |
+| TREE-4.14 | An older tree read preserves a write already applied in the sidebar | P1 | Automated |
 
 ---
 
@@ -146,10 +146,10 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.14 — An older tree read preserves a write already applied in the sidebar
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4
 
 *Given* top-level projects `P` named `Old` and `Q`, where a first read of the tree holds that snapshot and a later read has already returned it and made the sidebar usable, *when* an edit saves `P.name = Renamed` and its successful answer is applied, then the first read's older answer lands, *then* `P` remains named `Renamed`, with `Q` unchanged. No intervening sidebar render restores `Old`; a fresh read, if needed, agrees with the successful edit.
 
 *Given* instead expanded `P` with children `A, B` and top-level `X`, and both reads holding that starting tree, *when* a move saves `X` under `P`, directly after `A`, and its answer is applied before the first read lands, *then* `P`'s children stay `A, X, B`, `X.parentId` stays `P`, and no top-level copy of `X` returns. The displayed order and parent continue to agree with the saved move. An older read cannot undo an applied write whether it is an initial read or a later refresh.
 
-**Automation test:** —
+**Automation test:** `client/src/components/sidebar/useProjectCollection.test.ts`
