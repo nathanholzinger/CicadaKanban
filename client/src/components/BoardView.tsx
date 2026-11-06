@@ -1,11 +1,10 @@
-// Board orchestration: loads the active board, composes the workflow/ hooks,
+// Board orchestration: composes the workflow/ hooks (the board's load among them, `useBoardLoad.ts`),
 // renders the DnD board.
 
 import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from 'react';
 import { DndContext, DragOverlay, type DragStartEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import type { BoardWithDetails, ItemType, Column } from '../types';
-import { fetchBoard } from '../api/boards';
+import type { ItemType, Column } from '../types';
 import { fetchItemTypes } from '../api/itemTypes';
 import BoardColumn from './BoardColumn';
 import UnsortedBucket from './UnsortedBucket';
@@ -16,6 +15,7 @@ import ItemDetailPanel from './ItemDetailPanel';
 import BoardToolbar from './BoardToolbar';
 import WorkphaseManagerPanel from './WorkphaseManagerPanel';
 import { useBoardManagement } from './workflow/useBoardManagement';
+import { useBoardLoad } from './workflow/useBoardLoad';
 import { useWorkphaseManagement } from './workflow/useWorkphaseManagement';
 import { useColumnManagement } from './workflow/useColumnManagement';
 import { hasUnknownStatusItem } from './workflow/itemListOps';
@@ -43,8 +43,6 @@ interface BoardViewProps {
 
 export default function BoardView({ workflowId, projectId, filterProjectId, readOnly }: BoardViewProps) {
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
-  const [board, setBoard] = useState<BoardWithDetails | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [editingColumn, setEditingColumn] = useState<Column | 'new' | null>(null);
   const [showWorkphaseManager, setShowWorkphaseManager] = useState(false);
@@ -140,51 +138,13 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     }
   }, [hierarchyModalCardId, hierarchyModalCard, hierarchyModalHasRows]);
 
-  const loadBoard = useCallback(async () => {
-    reloadStarted();
-    if (!activeBoardId) {
-      setBoard(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await fetchBoard(activeBoardId);
-      setBoard(data);
-
-      // Workphases are workflow-scoped (independent of which board is active) —
-      // derived here from the board response instead of a second fetch, since
-      // every workphase appears exactly once across columns + unsorted.
-      const allWorkphases = [
-        ...data.columns.flatMap(c => c.subRows.map(r => r.workphase)),
-        ...data.unsorted.uncovered.map(r => r.workphase),
-      ].sort((a, b) => a.position - b.position);
-      setWorkphases(allWorkphases);
-
-      const allItems = [
-        ...data.columns.flatMap(c => c.subRows.flatMap(r => r.items)),
-        ...data.unsorted.uncovered.flatMap(r => r.items),
-        ...data.unsorted.invalidItems,
-      ];
-      replaceItems(allItems);
-    } catch (err) {
-      console.error('Failed to load board:', err);
-    } finally {
-      setLoading(false);
-      boardDrawn();
-    }
-  }, [activeBoardId, setWorkphases, replaceItems, reloadStarted, boardDrawn]);
-
-  useEffect(() => {
-    // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
-    // also called imperatively (not from an effect, so unflagged) from the
-    // workphase handlers below, and by useColumnManagement/useBoardDnd, all of
-    // which rely on the same immediate loading flash. Deriving `loading`
-    // from state instead would silently drop that flash from those other
-    // call sites — a real behavior change, not a lint-only fix.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadBoard's sync loading flash is shared with its imperative callers
-    loadBoard();
-  }, [loadBoard]);
+  const { board, setBoard, loading, loadBoard } = useBoardLoad({
+    activeBoardId,
+    setWorkphases,
+    replaceItems,
+    reloadStarted,
+    boardDrawn,
+  });
 
   // Workphase changes affect which statuses a board's columns cover (a new
   // workphase may land in Unsorted, a delete may shrink/remove columns) — the
