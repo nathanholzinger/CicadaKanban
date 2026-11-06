@@ -1,17 +1,26 @@
 // Folding an item write's response into the board's item state
-// (wiki positioning §8): apply the reindexed pairs, upsert the written row,
-// clear its pending placement, and run the inversion tripwire
+// (wiki positioning §8): apply the reindexed pairs, upsert the written row, carry its workphase
+// to its attached descendants as the server does, clear its pending placement, and run the inversion tripwire
 // (wiki board-drag-interaction §10). Every item-write path goes through
 // `completeItemWrite`. The state it folds into, `ItemListState` (items,
 // placements, inversions), is defined here too, with `EMPTY_ITEM_LIST_STATE`
-// and `withPlacement`. Pure; reads `itemListOps.ts`'s placements and
-// `lib/hierarchy.ts::byPositionThenCreatedAt`, and `itemListOps.ts` never reads it.
+// and `withPlacement`. Pure; reads `itemListOps.ts`'s placements and attached children,
+// `lib/hierarchy.ts::byPositionThenCreatedAt` and `lib/hierarchyPlacement.ts::flattenHierarchy`, and
+// `itemListOps.ts` never reads it.
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
 import { byPositionThenCreatedAt } from '../../lib/hierarchy';
+import { flattenHierarchy } from '../../lib/hierarchyPlacement';
 import { applyWriteResponse } from '../../lib/positionedWrite';
-import { NO_PLACEMENTS, applyPlacements, renderedIsStub, type Placement, type Placements } from './itemListOps';
+import {
+  NO_PLACEMENTS,
+  applyPlacements,
+  getAttachedChildrenFrom,
+  renderedIsStub,
+  type Placement,
+  type Placements,
+} from './itemListOps';
 
 // The board-wide rendered order of Free, positioned items — what the ordinal
 // preview makes a claim about. Positions compare workflow-wide, so the
@@ -62,6 +71,24 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
   return { ...state, placements };
 }
 
+// A write that changes an item's workphase is answered with the written row alone, the server having moved
+// the item's attached descendants to it (`attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`). This
+// is the same move over the loaded rows, so their copies agree with the server's: Unsorted's "needs
+// attention" badge counts them (`itemListOps.ts::hasUnknownStatusItem`). It stops at a detached child, as
+// the server's walk does. When the write left the workphase as it was, nothing moves, as on the server,
+// so an Attached item holding a workphase of its own stays there for the badge to count.
+function withWorkphaseCascaded(before: readonly Item[], after: Item[], id: string): Item[] {
+  const was = before.find(i => i.id === id);
+  const written = after.find(i => i.id === id);
+  if (!was || !written || was.workphaseId === written.workphaseId) return after;
+  const attached = flattenHierarchy(id, parentId =>
+    parentId === null ? [] : getAttachedChildrenFrom(after, parentId).map(child => child.id),
+  );
+  if (attached.length === 0) return after;
+  const moved = new Set(attached.map(row => row.id));
+  return after.map(i => (moved.has(i.id) ? { ...i, workphaseId: written.workphaseId } : i));
+}
+
 // A write's response, in reconciliation order: apply the reindex
 // collection, assign the written item, clear its pending placement, then
 // check for an inversion — the check runs on a list where the item is an
@@ -74,11 +101,8 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // `newer` names the rows whose position a later-sent write has already set, which this response, an older
 // one, must leave as they are (`lib/positionedWrite.ts::positionRecord`, which the caller asks).
 //
-// Only the written row is upserted (`lib/positionedWrite.ts::applyWriteResponse`):
-// the server's `workphaseId` cascade to attached descendants isn't mirrored
-// here, so their stored copies stay stale until the next load. A drag never
-// reads those copies — a Stub's drag takes its containing Card's `workphaseId`
-// at drag start (`useBoardDnd.ts`).
+// Only the written row is upserted (`lib/positionedWrite.ts::applyWriteResponse`); the server's
+// `workphaseId` cascade to its attached descendants is mirrored over it (`withWorkphaseCascaded`).
 //
 // `recorded` is the exact placement object `writes.begin` stashed when this
 // write started (undefined for a write that was never placement-tracked —
@@ -96,7 +120,7 @@ export function completeItemWrite(
   recorded?: Placement | null,
   newer?: ReadonlySet<string>,
 ): ItemListState {
-  const items = applyWriteResponse(state.items, response, newer);
+  const items = withWorkphaseCascaded(state.items, applyWriteResponse(state.items, response, newer), response.id);
   if (recorded === undefined || state.placements.get(response.id) !== recorded) return { ...state, items };
 
   const before = freeItemOrder(state.items, state.placements);

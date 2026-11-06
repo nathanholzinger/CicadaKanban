@@ -2,8 +2,8 @@
 // where a Stub's drag starts, what a drag's targets are classified against, the branch a Stub's
 // pickup takes with it, the row a Stub's drag names as the ghost's neighbor, a pointer sample that
 // would cycle through the pop machine, a column reorder whose save fails, and a drag the board
-// stops. The
-// gesture itself is tested through the pure modules it runs and the E2E drag specs.
+// stops, an item's or a column's. The gesture itself is tested through the pure modules it runs
+// and the E2E drag specs.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -33,6 +33,10 @@ const columnDrop = {
 const pickupOf = (id: string): DragStartEvent =>
   ({ active: { id, data: { current: {} } }, activatorEvent: { clientX: 5, clientY: 5 } }) as unknown as DragStartEvent;
 const itemPickup = pickupOf('x');
+const columnPickup = {
+  active: { id: 'a', data: { current: columnData() } },
+  activatorEvent: { clientX: 5, clientY: 5 },
+} as unknown as DragStartEvent;
 const itemRelease = { active: { id: 'x', data: { current: {} } }, over: null } as unknown as DragEndEvent;
 
 function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
@@ -401,9 +405,9 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
   });
 });
 
-// A reload the hook asks for that ends a live item drag is reported once, so the board can say it
-// stopped the drag (wiki board-drag-interaction §10). Nothing else is: not a cancel, not a release
-// that writes nothing, not a reload with no drag running.
+// A reload the hook asks for that ends a live drag, an item's or a column's, is reported once, so the
+// board can say it stopped the drag (wiki board-drag-interaction §10). Nothing else is: not a cancel,
+// not a release that writes nothing, not a reload with no drag running.
 describe('useBoardDnd: a drag the board stops', () => {
   beforeEach(() => {
     vi.mocked(moveItem).mockReset();
@@ -475,6 +479,104 @@ describe('useBoardDnd: a drag the board stops', () => {
 
       expect(deps.onDragStopped).not.toHaveBeenCalled();
       expect(deps.disarmStop).not.toHaveBeenCalled();
+    });
+  });
+
+  // A column drag has no session, and no item to name: its stop is the cause alone.
+  describe('a column drag', () => {
+    function startColumnDrag(overrides: Partial<BoardDndDeps> = {}) {
+      const deps = { ...depsWith(async () => {}), ...overrides };
+      const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(columnPickup));
+      return { deps, result };
+    }
+
+    it('DRAG-6.26: is reported once, with the cause and no item, when a failed column save reloads the board mid-drag', async () => {
+      const { deps, failSave } = failingColumnSave();
+      const { result } = renderHook(() => useBoardDnd(deps));
+      let reorder!: Promise<void>;
+      act(() => {
+        reorder = result.current.handleDragEnd(columnDrop);
+      });
+      act(() => result.current.handleDragStart(columnPickup));
+
+      await act(async () => {
+        failSave();
+        await reorder;
+      });
+
+      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'write-failed', itemId: null });
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+    });
+
+    it('DRAG-6.22: is not reported for one released before the reload, whose own save is what failed', async () => {
+      const { deps, failSave } = failingColumnSave();
+      const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(columnPickup));
+      let reorder!: Promise<void>;
+      act(() => {
+        reorder = result.current.handleDragEnd(columnDrop);
+      });
+
+      await act(async () => {
+        failSave();
+        await reorder;
+      });
+
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+    });
+
+    it('DRAG-6.22: is not reported for one cancelled before the reload', async () => {
+      const { deps, failSave } = failingColumnSave();
+      const { result } = renderHook(() => useBoardDnd(deps));
+      let reorder!: Promise<void>;
+      act(() => {
+        reorder = result.current.handleDragEnd(columnDrop);
+      });
+      act(() => result.current.handleDragStart(columnPickup));
+      act(() => result.current.handleDragCancel());
+
+      await act(async () => {
+        failSave();
+        await reorder;
+      });
+
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+    });
+
+    describe('with a stop armed for the next drag', () => {
+      const armedStop = { cause: 'refresh' as const, afterMs: 1500 };
+      const advance = (ms: number) =>
+        act(() => {
+          vi.advanceTimersByTime(ms);
+        });
+
+      beforeEach(() => vi.useFakeTimers());
+      afterEach(() => vi.useRealTimers());
+
+      it('DRAG-6.26: is reported with the cause "refresh" and no item when an armed stop fires, once, and spends the arm', () => {
+        const { deps } = startColumnDrag({ armedStop });
+
+        advance(1499);
+        expect(deps.onDragStopped).not.toHaveBeenCalled();
+        advance(1);
+
+        expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'refresh', itemId: null });
+        expect(deps.disarmStop).toHaveBeenCalledOnce();
+        expect(deps.loadBoard).toHaveBeenCalledOnce();
+      });
+
+      it('DRAG-6.22: is not reported when the column is released before an armed stop fires, which stays armed', async () => {
+        const { deps, result } = startColumnDrag({ armedStop });
+        await act(() => result.current.handleDragEnd(columnDrop));
+
+        advance(5000);
+
+        expect(deps.onDragStopped).not.toHaveBeenCalled();
+        expect(deps.disarmStop).not.toHaveBeenCalled();
+      });
     });
   });
 });

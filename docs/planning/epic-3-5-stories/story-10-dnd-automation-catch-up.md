@@ -29,20 +29,20 @@ The epic-wide audit comes after this story, by the checklist. Its scope isn't se
 Phase 2 starts from those reports.
 
 **What it starts from** (recounted 2026-11-06, at `b1590b8`, Story 8's last commit):
-- **22 skipped E2E specs,** the same 22 as on 2026-11-04. Each is already routed to an item in the roadmap entry:
+- **24 skipped E2E specs:** the 22 of 2026-11-04, each routed to an item in the roadmap entry, and two that flaked in Phase 1's full runs, routed to 4c (Inbound deferrals):
 
   | Spec | Skips | Item |
   |---|---|---|
   | `drag-7-modal-hold.spec.ts` | 6 | 8, 10 |
+  | `drag-7-hierarchy-modal.spec.ts` | 6 | 10; Inbound deferrals for DRAG-7.9's and DRAG-7.32's |
   | `item-repositioning-cross-project-dnd.spec.ts` | 4 | 3 |
-  | `drag-7-hierarchy-modal.spec.ts` | 4 | 10 |
   | `item-repositioning-cross-column-dnd.spec.ts` | 2 | 3 |
   | `drag-card-zoom-in.spec.ts` | 2 | 7, 10 |
   | `project-tree-drag.spec.ts` | 2 | 10 |
   | `drag-5-stub-detach.spec.ts` | 1 | 10 |
   | `drag-7-overflow-row.spec.ts` | 1 | 10 |
 
-  Neither Story 8.13 nor the close-out's fixes added one. Each fixed the specs its changes broke, rather than skipping them (Nathan, 2026-11-04).
+  Neither Story 8.13 nor the close-out's fixes added one. Each fixed the specs its changes broke, rather than skipping them (Nathan, 2026-11-04). Phase 1's two weren't broken by its changes: they flake at HEAD too.
 - **No skipped unit test.** Story 8 skipped none that are still skipped.
 - **148 Open cases in the drag suites,** and DRAG-6.26 Planned:
   - board-drag-interaction, 113: DRAG-1 21, DRAG-2 13, DRAG-3 11, DRAG-4 17, DRAG-5 10, DRAG-6 16, DRAG-7 13, DRAG-8 12;
@@ -101,7 +101,7 @@ The roadmap entry's items 1–11; item 5 is done (A3). Story 8's close-out added
 
 **Story 8.13 — the modal-Sheet cases left Open (2026-11-05).** DRAG-7.28, 7.32 and 7.33 have specs in `drag-7-hierarchy-modal.spec.ts` that carry their IDs. 8.13's confirming reconciliation found each short of its case and left the rest "to 8.13 or its scheduled Story 8 close-out", but the close-out's reconciliation covered only its own seven cases (`docs/archive/test-reconciliation-story-8-13-confirming.md`, Gaps). What each still needs:
 - **DRAG-7.28:** the saved order after the carried row's release. The spec checks the gap, the depth and the saved parent, but not that `R2` is saved before `R1a`.
-- **DRAG-7.32:** the modal's place on screen, compared before the Sheet opens and after each way of closing it. Its rows, indents, scroll and writes are already checked.
+- **DRAG-7.32:** the modal's place on screen, compared before the Sheet opens and after each way of closing it. Its rows, indents, scroll and writes are already checked. Its spec is skipped now, for flaking (below), so 4c traces the flake first, and then reworks the spec under D3 with this assertion added.
 - **DRAG-7.33:** a check against the case as it now reads. The case was cut to child links only after that run (8.13's Amendment 8), so no run has compared its spec with the child-only case.
 
 They go to batch 4c, with the DRAG-7 suite. None needs a drag past what its spec already does.
@@ -111,7 +111,15 @@ They go to batch 4c, with the DRAG-7 suite. None needs a drag past what its spec
 - Run alone at `ed771e3`, before 8.13 changed anything, DRAG-7.10, 7.3 and 7.29 failed about as often, so 8.13 didn't cause them. DRAG-7.16 and 7.4 weren't tried there.
 - The close-out's batches ran a failing `drag-7` spec alone before blaming the batch, and left these five to this story.
 
-None of the five has a cause yet. Phase 5 needs two green full runs in a row, and D2's bar applies to each of them once 4c touches it. So 4c traces them with DRAG-7.17's, before writing anything new in that suite.
+Phase 1's two full runs added two more, one in each, and Nathan had them skipped until 4c (2026-11-06), so the skips are 24 now:
+- **DRAG-7.9's second test** ("it is R1’s last child, after R1a") timed out once; it passed 6 of 6 run alone.
+  - DRAG-7.9 stays `Automated` for now. Three of its tests still run and carry its ID, so no run's lost-coverage check reopens it.
+  - But a skipped test doesn't count (`docs/test-plans/README.md`), so nothing running checks the last-child state now. Phase 2's baseline run judges whether the other three cover its *Then* without it. If they don't, it goes `Open`, for 4c.
+- **DRAG-7.32** left the Sheet open after a way of closing it, once in the full run and 1 of 8 run alone. At HEAD (`bb7633c`), with Phase 1's changes stashed, it failed 2 of 16, so it isn't Phase 1's.
+
+4c traces them with the five. Under D3, each is reworked to its case, not unskipped as it stands, and both leave the skips with the rest (Goal).
+
+None of the seven has a cause yet. Phase 5 needs two green full runs in a row, and D2's bar applies to each of them once 4c touches it. So 4c traces them with DRAG-7.17's, before writing anything new in that suite.
 
 **Story 8 close-out audit — #18 (Nathan, 2026-11-06).** [Code quality audit](../../archive/code-quality-audit-story-8-close-out.md), Watch List finding #18, optional: the E2E helpers' request controls have a lifecycle of their own, apart from the pointer's geometry. These are `dragGesture.ts::delayMoveResponses` and `refuseMoves`, and `projectTreeDrag.ts::watchWrites` and `settledWrites`. A request harness beside `holdRequests.ts` could own them. It's taken here because D4 reworks these helpers first, and this story's specs are their main callers (about 60 uses across 8 specs today), so a move now would have every import touched twice. Phase 3 decides whether to make it. Either way, it needs no case and no audit row.
 
@@ -270,8 +278,8 @@ Each batch carries its suite's cases from the inventory. The skips and items lis
   - DRAG-6.15: the stale response that lands mid-drag;
   - the forced-stop cases, DRAG-6.16–6.28, with item 11's DRAG-6.26.
 - **4b. DRAG-4 and DRAG-5:** `drag-card-zoom-in.spec.ts`, whose two skips become one parameterized spec (item 7), and `drag-5-stub-detach.spec.ts`, with DRAG-5.13's skip. Items 2 and 4: DRAG-4.1, 4.13, 4.17, 4.32, 4.33 and 5.9, by way of `tabBy`.
-- **4c. DRAG-7:** `drag-7-hierarchy-modal.spec.ts` (4 skips), `drag-7-modal-hold.spec.ts` (6) and `drag-7-overflow-row.spec.ts` (1).
-  - It starts with the traces (item 8): DRAG-7.17's, and those of the five specs that fail in the full run (Inbound deferrals).
+- **4c. DRAG-7:** `drag-7-hierarchy-modal.spec.ts` (6 skips, two of them from Phase 1), `drag-7-modal-hold.spec.ts` (6) and `drag-7-overflow-row.spec.ts` (1).
+  - It starts with the traces (item 8): DRAG-7.17's, and those of the seven specs that fail in the full run, including DRAG-7.9's and DRAG-7.32's skipped ones (Inbound deferrals).
   - Then item 9's cases, and from item 10, 8.3's three skips, DRAG-7.12's revised tiers and DRAG-7.27.
   - Then the modal-Sheet cases DRAG-7.28, 7.32 and 7.33, and the 8.13 audit's #8, with its optional #10 (Inbound deferrals).
 - **4d. DRAG-8,** the carried branch. It has no spec of its own yet.
@@ -307,10 +315,10 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 | Symbol | Carries |
 |---|---|
-| `forcedStop.ts::ForcedStop` (the item named only for an item drag) | D9 |
-| `useBoardDnd.ts` (a live column drag, `resyncBoard`'s report, and the armed stop for either drag) | D9 |
+| `forcedStop.ts::ForcedStop` (`itemId` is null for a column drag) | D9 |
+| `useBoardDnd.ts` (`columnDragRef` and `columnDragLive`, set by `handleDragStart` and cleared by `endSession`; `resyncBoard`'s report; the armed stop's effect, for either drag) | D9 |
 | `useForcedStop.ts::report` (no flash for a stop with no item) and `DragTuningPanel.tsx`'s armed-stop comment | D9 |
-| The probe's test, and `itemWriteReconciliation.ts::completeItemWrite` if it fails | D11 |
+| The probe's test (`useItemManagement.test.ts`, "filing a parent out of Unknown status"), and the fix it called for: `itemWriteReconciliation.ts::withWorkphaseCascaded`, run by `completeItemWrite`, with its tests in `itemWriteReconciliation.test.ts` | D11 |
 | `drag-7-hierarchy-modal.spec.ts`'s Sheet tests (DRAG-7.28, 7.32, 7.33), and `project-tree-expansion.spec.ts` (TREE-11's hidden rows) | Inbound deferrals, What it starts from |
 | `tests/helpers/boardLocators.ts::dragRegion`, `dragGesture.ts::tabBy` and the quarter helpers | D4 |
 | `drag-column-bands.spec.ts`, its helpers module, and the specs split from it | D4 |
@@ -319,6 +327,11 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Amendments
 
+- **2026-11-06 — Phase 1's two skips, into Phase 4 (Architect, at Nathan's direction).** The Coder skipped DRAG-7.9's second test and DRAG-7.32's spec for flaking, and recorded them in Inbound deferrals. Now:
+  - What it starts from counts 24 skips;
+  - 4c's traces take seven specs, not five;
+  - the modal-Sheet deferral notes DRAG-7.32's skip;
+  - Phase 2's baseline run judges whether DRAG-7.9 still has whole-case coverage without its skipped test.
 - **2026-11-06 — Nathan's answers (Architect):**
   - **D10:** the story closes with every case in the catalog `Automated` or `Manual`, or named in the close with its reason and the plan that holds it. A case with no such plan gets a tech-debt story before the close. The Goal, Phase 2's inventory and Phase 5 now say so.
   - **D11:** the Unknown-status probe runs in Phase 1, as recommended. The Open question is removed.
@@ -353,4 +366,5 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **Passages superseded:**
 - **Implementation passages to place:**
 - **Test-plan cases affected:** DRAG-6.22, whose column, no-cue clause the Planner removes, and DRAG-6.26, which becomes Open (Phase 1).
+- **A case for D11's fix, for the Planner to write** (Phase 1). The probe failed: filing a parent out of Unknown status left the Unsorted bucket's "needs attention" badge up until a reload, since the client moved only the written row, where the server also moves its attached descendants. Wiki boards-columns-unsorted §10 already states the rule (`needsAttention` counts an Attached item whose own workphase is unknown). The case: *given* a parent and its Attached descendants in Unknown status, *when* the parent is filed into a workflow workphase and the write's answer lands, *then* the badge goes without a reload. The Coder's tests carry no ID yet and take the Planner's: `useItemManagement.test.ts` ("filing a parent out of Unknown status") and `itemWriteReconciliation.test.ts` ("the workphase cascade").
 - **Wiki sections added, changed, moved or removed** (PO, at close):

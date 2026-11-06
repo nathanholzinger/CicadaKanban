@@ -2,7 +2,8 @@
 //   - the banner is the stop the drag layer reported, until `cueMs` has passed or the next drag starts;
 //   - the flash is the stopped item, named for the reloaded board to draw flashing. It waits for the
 //     reload the stop caused to draw the board, plays for `STOP_FLASH_MS`, and is let go sooner by
-//     another reload starting, so a reload with no stop behind it flashes nothing.
+//     another reload starting, so a reload with no stop behind it flashes nothing. A stop with no item
+//     (a column drag's) names none.
 // Held by `BoardView`, above the reload the stop causes, which swaps the board for "Loading
 // board…" and unmounts everything below it.
 
@@ -41,7 +42,7 @@ export function useForcedStop(cueMs: number) {
 
   const report = useCallback((stop: ForcedStop) => {
     setHeld(prev => ({ stop, key: (prev?.key ?? 0) + 1 }));
-    setFlash({ itemId: stop.itemId, playing: false });
+    setFlash(stop.itemId === null ? null : { itemId: stop.itemId, playing: false });
   }, []);
   const clear = useCallback(() => {
     setHeld(null);

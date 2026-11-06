@@ -87,6 +87,51 @@ describe('completeItemWrite', () => {
   });
 });
 
+// The server answers a write that changes an item's workphase with that row alone, having moved its
+// attached descendants to it. The loaded copies follow, as far as the server's walk goes.
+describe('completeItemWrite: the workphase cascade', () => {
+  // P holds C (attached), which holds G (attached), and F (detached), which holds FG (attached). Y is apart.
+  const branch = () => [
+    item('P', { workphaseId: 'todo' }),
+    item('C', { parentId: 'P', workphaseId: 'todo' }),
+    item('G', { parentId: 'C', workphaseId: 'todo' }),
+    item('F', { parentId: 'P', isAttached: 0, workphaseId: 'todo' }),
+    item('FG', { parentId: 'F', workphaseId: 'todo' }),
+    item('Y', { workphaseId: 'todo' }),
+  ];
+  const workphases = (items: readonly { id: string; workphaseId: string | null }[]) =>
+    Object.fromEntries(items.map(i => [i.id, i.workphaseId]));
+
+  it('moves the attached descendants of an item whose workphase the write changed, at any depth', () => {
+    const next = completeItemWrite({ ...EMPTY_ITEM_LIST_STATE, items: branch() }, item('P', { workphaseId: 'doing' }));
+
+    expect(workphases(next.items)).toMatchObject({ P: 'doing', C: 'doing', G: 'doing' });
+  });
+
+  it('stops at a detached child, which keeps its workphase with everything under it, and leaves other items', () => {
+    const next = completeItemWrite({ ...EMPTY_ITEM_LIST_STATE, items: branch() }, item('P', { workphaseId: 'doing' }));
+
+    expect(workphases(next.items)).toMatchObject({ F: 'todo', FG: 'todo', Y: 'todo' });
+  });
+
+  it('moves nothing when the write left the workphase as it was, so an Attached item with its own stays put', () => {
+    const items = branch().map(i => (i.id === 'C' ? { ...i, workphaseId: 'doing' } : i));
+
+    const next = completeItemWrite(
+      { ...EMPTY_ITEM_LIST_STATE, items },
+      item('P', { workphaseId: 'todo', position: 3 }),
+    );
+
+    expect(workphases(next.items)).toMatchObject({ P: 'todo', C: 'doing', G: 'todo' });
+  });
+
+  it('gives them no workphase when the write took the item out of one', () => {
+    const next = completeItemWrite({ ...EMPTY_ITEM_LIST_STATE, items: branch() }, item('P', { workphaseId: null }));
+
+    expect(workphases(next.items)).toMatchObject({ P: null, C: null, G: null });
+  });
+});
+
 // The preview against the responses: what the list reads before a write
 // lands, and after it's folded in.
 describe('the preview through its responses', () => {

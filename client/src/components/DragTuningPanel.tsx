@@ -18,7 +18,7 @@ interface DragTuningPanelProps {
   onChange: (next: DragTuning) => void;
   session: DragSession | null;
   inversions: readonly Inversion[];
-  /** The stop armed for the next item drag (`useBoardDnd.ts`), kept by `BoardView` so a reload does not lose it. */
+  /** The stop armed for the next drag, an item's or a column's (`useBoardDnd.ts`), kept by `BoardView` so a reload does not lose it. */
   armedStop: ArmedStop | null;
   onArmStop: (stop: ArmedStop | null) => void;
   onClose: () => void;

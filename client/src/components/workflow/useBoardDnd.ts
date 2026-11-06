@@ -32,8 +32,9 @@
 // intent and the server's number lands through the write tracker. A column
 // dropped on another goes to `onColumnDrop`, which owns the reorder.
 //
-// A reload the hook asks for (`resyncBoard`) ends a live item drag, and reports it once to
-// `onDragStopped` as a `forcedStop.ts::ForcedStop`, for the cue `BoardView.tsx` holds.
+// A reload the hook asks for (`resyncBoard`) ends a live drag, an item's or a column's, and reports it
+// once to `onDragStopped` as a `forcedStop.ts::ForcedStop`, for the cue `BoardView.tsx` holds. A column
+// drag has no session: the hook only knows that one is live (`columnDragRef`).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
@@ -153,9 +154,9 @@ export interface BoardDndDeps {
    */
   onColumnDrop: (activeId: string, overId: string, resync: () => Promise<void>) => Promise<void>;
   loadBoard: () => Promise<void>;
-  /** Told once when a reload the hook asked for ended a live item drag (`resyncBoard`). */
+  /** Told once when a reload the hook asked for ended a live drag, an item's or a column's (`resyncBoard`). */
   onDragStopped: (stop: ForcedStop) => void;
-  /** The stop the dev/test panel has armed for the next item drag, if any. */
+  /** The stop the dev/test panel has armed for the next drag, an item's or a column's, if any. */
   armedStop: ArmedStop | null;
   /** Called as an armed stop fires, so it is spent. */
   disarmStop: () => void;
@@ -180,9 +181,14 @@ function clearPopTimer(popTimer: RefObject<ReturnType<typeof setTimeout> | null>
 export function useBoardDnd(deps: BoardDndDeps) {
   const { board } = deps;
   const [session, setSession] = useState<DragSession | null>(null);
+  // Whether a column is being dragged. A column drag has no session (no pop machine, no ghost), so this
+  // is all the hook holds of it: the state starts the armed stop's timer, and the ref is what
+  // `resyncBoard` reads, from closures that outlive the render they were made in.
+  const [columnDragLive, setColumnDragLive] = useState(false);
 
   // Mirrors for the closures that run outside React's render of this hook.
   const sessionRef = useRef<DragSession | null>(null);
+  const columnDragRef = useRef(false);
   const { setGhost, restorePriorPlacement } = usePendingGhostGuard(sessionRef, deps);
   const regionsRef = useRef<DragRegion[]>([]);
   // The board's structural facts (elements, kinds, parent chains, scroll
@@ -237,17 +243,23 @@ export function useBoardDnd(deps: BoardDndDeps) {
     setSession(next);
   }
 
+  function updateColumnDrag(live: boolean) {
+    columnDragRef.current = live;
+    setColumnDragLive(live);
+  }
+
   // One end of a drag — clear the pop timer, cancel any snap in flight, and
-  // clear the session — for `handleDragCancel` and `handleDragEnd`. The
-  // pointer-tracking effect's cleanup shares the two clock steps but not the
-  // session write: it runs after the session is already null, or on
-  // unmount.
+  // clear the session and any live column drag — for `handleDragCancel` and
+  // `handleDragEnd`. The pointer-tracking effect's cleanup shares the two
+  // clock steps but not the session write: it runs after the session is
+  // already null, or on unmount.
   function endSession() {
     clearPopTimer(popTimer);
     cancelSnap();
     // The projection outlives nothing: the next drag seeds its own.
     projectionRef.current = NO_PROJECTION;
     updateSession(null);
+    updateColumnDrag(false);
   }
 
   // `classification` decides which Cards resolve as regions at all (an
@@ -438,19 +450,21 @@ export function useBoardDnd(deps: BoardDndDeps) {
     };
   }, [machineActive, cancelSnap, evaluateRef]);
 
-  // The dev/test panel's armed stop: the next item drag asks for a reload `afterMs` after it
-  // starts, down the same path a failed write takes. A drag released first leaves it armed.
+  // The dev/test panel's armed stop: the next drag, an item's or a column's, asks for a reload
+  // `afterMs` after it starts, down the same path a failed write takes. A drag released first leaves
+  // it armed.
   const resyncRef = useLatest(resyncBoard);
   const armedCause = deps.armedStop?.cause ?? null;
   const armedAfterMs = deps.armedStop?.afterMs ?? null;
+  const dragLive = machineActive || columnDragLive;
   useEffect(() => {
-    if (!machineActive || armedCause === null || armedAfterMs === null) return;
+    if (!dragLive || armedCause === null || armedAfterMs === null) return;
     const timer = setTimeout(() => {
       latest.current.disarmStop();
       resyncRef.current(armedCause);
     }, armedAfterMs);
     return () => clearTimeout(timer);
-  }, [machineActive, armedCause, armedAfterMs, latest, resyncRef]);
+  }, [dragLive, armedCause, armedAfterMs, latest, resyncRef]);
 
   // dnd-kit calls this during its own render; it reads the mirrors.
   const collisionDetection = useCallback<CollisionDetection>(args => {
@@ -596,7 +610,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
   }
 
   function handleDragStart(event: DragStartEvent) {
-    if (isColumnData(event.active.data.current) || !board) return;
+    const isColumn = isColumnData(event.active.data.current);
+    updateColumnDrag(isColumn);
+    if (isColumn || !board) return;
     const activeId = String(event.active.id);
     const stored = deps.items.find(i => i.id === activeId);
     if (!stored) return;
@@ -651,13 +667,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (renderedIsStub(stored, placements)) {
       const containingCardId = containingCardIdOf(activeId, tree, placements);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
-      // A Stub's own stored `workphaseId` is a cache that goes stale the
-      // moment its containing Card is moved through a client-observed write
-      // this session (`itemWriteReconciliation.ts::completeItemWrite`
-      // upserts only the written row). An attached item's `workphaseId`
-      // always equals its nearest Free ancestor's, and a parent move writes
-      // that ancestor's row directly, so the containing Card's *current* row
-      // is the fresh one. Snapshotted onto `activeItem` itself, once, here —
+      // A Stub's own stored `workphaseId` is a cache of its containing
+      // Card's: it follows the Card's once the Card's write has landed
+      // (`itemWriteReconciliation.ts::completeItemWrite`), not before. An
+      // attached item's `workphaseId` always equals its nearest Free
+      // ancestor's, so the containing Card's row, read as drawn, is the
+      // fresh one. Snapshotted onto `activeItem` itself, once, here —
       // every downstream `placementFor`/`toRequest` call in this drag
       // (mid-drag and at release alike) reads `session.activeItem.workphaseId`
       // and gets the fresh value for free, rather than the Stub's own copy.
@@ -760,13 +775,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // re-add its ghost into the reloaded board. So every reload this hook asks
   // for ends a live drag first, the way Escape would
   // (wiki board-drag-interaction §10). A drag it ends is reported once, with the cause the
-  // caller gives, for the cue that says the board stopped it; a reload with no drag running
-  // reports nothing.
+  // caller gives, for the cue that says the board stopped it, and the item's id if it was an item's:
+  // a column drag has none. A reload with no drag running reports nothing.
   function resyncBoard(cause: StopCause) {
-    const current = sessionRef.current;
-    if (current) {
+    const item = sessionRef.current;
+    if (item || columnDragRef.current) {
       handleDragCancel();
-      latest.current.onDragStopped({ cause, itemId: current.activeItem.id });
+      latest.current.onDragStopped({ cause, itemId: item?.activeItem.id ?? null });
     }
     return latest.current.loadBoard();
   }

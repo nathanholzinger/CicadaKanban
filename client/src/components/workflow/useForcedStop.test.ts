@@ -126,6 +126,38 @@ describe('useForcedStop', () => {
       expect(result.current.stop).toBeNull();
     });
 
+    // A column drag's stop names no item, so the banner is all it has.
+    describe('for a stop with no item', () => {
+      const columnStop: ForcedStop = { cause: 'refresh', itemId: null };
+
+      it('DRAG-6.26: holds the banner and names no row to flash, through the reload and after it', () => {
+        const { result } = renderHook(() => useForcedStop(5000));
+
+        act(() => result.current.report(columnStop));
+        expect(result.current.stop).toBe(columnStop);
+        expect(result.current.flashItemId).toBeNull();
+
+        act(() => result.current.reloadStarted());
+        act(() => result.current.boardDrawn());
+        expect(result.current.flashItemId).toBeNull();
+        advance(5000 - 1);
+        expect(result.current.stop).toBe(columnStop);
+        advance(1);
+        expect(result.current.stop).toBeNull();
+      });
+
+      it('DRAG-6.26: takes the place of a stop with an item, with a fresh banner and no flash', () => {
+        const { result } = renderHook(() => useForcedStop(5000));
+        act(() => result.current.report(stop));
+        const first = result.current.stopKey;
+
+        act(() => result.current.report(columnStop));
+
+        expect(result.current.stopKey).not.toBe(first);
+        expect(result.current.flashItemId).toBeNull();
+      });
+    });
+
     it('goes to a second stop’s item, which waits for its own reload', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       act(() => result.current.report(stop));

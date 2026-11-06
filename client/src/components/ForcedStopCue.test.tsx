@@ -42,6 +42,15 @@ describe('ForcedStopCue', () => {
     expect(said).toEqual([SENTENCE['write-failed'], SENTENCE.refresh]);
   });
 
+  it.each(['write-failed', 'refresh'] as const)(
+    'DRAG-6.26: says the same for a column drag’s stop, which names no item, when the cause is %s',
+    cause => {
+      render(<ForcedStopCue stop={{ cause, itemId: null }} cueMs={5000} />);
+
+      expect(screen.getByRole('status')).toHaveTextContent(SENTENCE[cause]);
+    },
+  );
+
   it('DRAG-6.19: times its fade to the cue time', () => {
     render(<ForcedStopCue stop={stopOf('refresh')} cueMs={3000} />);
 

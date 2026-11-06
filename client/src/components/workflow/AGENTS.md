@@ -172,7 +172,8 @@ The drag gesture's pure, unit-tested modules:
   it draws (`sectionEntries`), cut at the last shown level with an overflow row under it,
   without the branch a carried item takes with it. It reads the children `itemListOps.ts`
   gives it, and `itemListOps.ts` never reads it.
-- `itemWriteReconciliation.ts` — folding an item write's response into the item state.
+- `itemWriteReconciliation.ts` — folding an item write's response into the item state,
+  with the server's workphase cascade to the item's attached descendants.
 - `forcedStop.ts` — a stopped drag's signal, its wording and the armed stop, and the
   flash's length.
 - `dragTuning.ts` — every tunable threshold, band and overlay value, the project
@@ -182,13 +183,15 @@ The hooks and contexts that run it:
 
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
   plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`,
-  which is handed `resyncBoard` to call if the save fails, so that a live item drag ends
-  before the reload. A drag `resyncBoard` ends is reported once to `onDragStopped`
-  (`forcedStop.ts::ForcedStop`: the cause and the item), for the
-  cue `ForcedStopCue.tsx` draws. `BoardView.tsx` holds it (`useForcedStop.ts`), above
-  the reload, which unmounts everything below.
+  which is handed `resyncBoard` to call if the save fails, so that a live drag ends
+  before the reload. A drag `resyncBoard` ends, an item's or a column's, is reported once
+  to `onDragStopped` (`forcedStop.ts::ForcedStop`: the cause, and the item if it was an
+  item's), for the cue `ForcedStopCue.tsx` draws. `BoardView.tsx` holds it
+  (`useForcedStop.ts`), above the reload, which unmounts everything below. A column drag
+  has no session, so the hook only knows that one is live.
 - `useForcedStop.ts` — the cue's lifetime, held by `BoardView.tsx`: the banner's, and the
   flash's, which waits for the stop's reload to draw the board and is let go by the next.
+  A stop with no item, a column drag's, has a banner and no flash.
 - `ForcedStopContext.ts` — which item a stopped drag was on, for its row to flash.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.

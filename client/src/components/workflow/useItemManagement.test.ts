@@ -7,6 +7,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { Item } from '../../types';
 import { createItem, type ItemWriteResponse } from '../../api/items';
 import { makeItem } from '../../test/itemFixture';
+import { hasUnknownStatusItem } from './itemListOps';
 import { useItemManagement } from './useItemManagement';
 
 vi.mock('../../api/items');
@@ -201,5 +202,27 @@ describe('DRAG-6.29: answers for different items preserve positions set by the l
 
       expect(positions()).toEqual({ X: 3, Y: 1, Z: 2 });
     });
+  });
+});
+
+// The Unsorted bucket's "needs attention" badge counts an Attached item whose own workphase is unknown, as
+// the API's `needsAttention` does (wiki boards-columns-unsorted §10). The server gives an Attached item its
+// parent's workphase, so filing a parent files them too, and the badge goes with the answer.
+describe('filing a parent out of Unknown status', () => {
+  // P has no workphase, and nor do C under it and G under C, as the server leaves them.
+  const unknownBranch = () => [
+    makeItem('P', { workphaseId: null }),
+    makeItem('C', { parentId: 'P', workphaseId: null }),
+    makeItem('G', { parentId: 'C', workphaseId: null }),
+  ];
+
+  it('takes the badge down once P’s answer lands, with its Attached descendants no longer unknown', () => {
+    const { board, sendMove } = openBoard(unknownBranch());
+    const badge = () => hasUnknownStatusItem(board().items, ['todo']);
+    expect(badge()).toBe(true);
+
+    sendMove('P')(makeItem('P', { workphaseId: 'todo' }));
+
+    expect(badge()).toBe(false);
   });
 });
