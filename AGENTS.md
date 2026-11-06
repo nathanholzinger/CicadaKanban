@@ -105,9 +105,11 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   board's item writes by way of
   `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`, the
   sidebar's project writes by way of
-  `client/src/components/sidebar/useProjectCollection.ts::foldWrite`. Its `newer` names
-  the rows a later write has already set, so an older answer leaves them as they are;
-  the sidebar passes it.
+  `client/src/components/sidebar/useProjectCollection.ts::foldWrite`. Answers for
+  different rows can land out of order, so the board and the sidebar both number each
+  write as it's sent and ask the same file's `positionRecord` which rows a later-sent
+  write has already set. That's `applyWriteResponse`'s `newer`, the rows an older answer
+  leaves as they are.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **A reference in a request is checked in one order: present, a string, names a row**

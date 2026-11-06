@@ -1,6 +1,9 @@
 // Item state atom + per-item write tracker: the tracker sequences writes so a
 // stale response can't clobber a newer one, and folds a current one in through
-// `itemWriteReconciliation.ts::completeItemWrite`.
+// `itemWriteReconciliation.ts::completeItemWrite`. Writes of different items aren't sequenced, so every write
+// the board sends is also numbered across items (`lib/positionedWrite.ts::positionRecord`): an answer that
+// lands after a later-sent write's leaves the positions that write set, whether a disclosed pair or its own
+// row.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
@@ -14,6 +17,7 @@ import {
   removeItemAndDescendants,
   type Placement,
 } from './itemListOps';
+import { positionRecord } from '../../lib/positionedWrite';
 import { EMPTY_ITEM_LIST_STATE, completeItemWrite, withPlacement } from './itemWriteReconciliation';
 
 // A position write in flight, tracked per item so a stale response can never
@@ -45,7 +49,11 @@ export interface ItemWriteTracker {
 export function useItemManagement(projectId: string | undefined, filterProjectId: string | undefined) {
   const [list, setList] = useState(EMPTY_ITEM_LIST_STATE);
   const { items, placements, inversions } = list;
-  const writeSeq = useRef(new Map<string, number>());
+  // Each item's latest tracked write: its sequence among that item's writes, and the number it was sent with
+  // among every write the board sends.
+  const writeSeq = useRef(new Map<string, { seq: number; sent: number }>());
+  // The writes sent, numbered, and which one last set each item's position.
+  const positionWrites = useRef(positionRecord());
   // Item ids with a write currently outstanding — from `begin` until the
   // matching non-stale `complete`/`fail` — backing `isPending`.
   // `placements` alone can't answer this: a live drag's ghost occupies the
@@ -74,17 +82,16 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   const writes = useMemo<ItemWriteTracker>(
     () => ({
       begin(itemId, pending) {
-        const seq = (writeSeq.current.get(itemId) ?? 0) + 1;
-        writeSeq.current.set(itemId, seq);
+        const seq = (writeSeq.current.get(itemId)?.seq ?? 0) + 1;
+        writeSeq.current.set(itemId, { seq, sent: positionWrites.current.send() });
         inFlight.current.add(itemId);
         recordedPlacement.current.set(itemId, pending);
         setList(s => withPlacement(s, itemId, pending));
         return seq;
       },
       complete(itemId, seq, response) {
-        const isLatest = writeSeq.current.get(itemId) === seq;
-        if (isLatest) inFlight.current.delete(itemId);
-        if (!isLatest) {
+        const latest = writeSeq.current.get(itemId);
+        if (latest?.seq !== seq) {
           // The row is discarded — a newer write supersedes it — but a
           // reindex it disclosed renumbered *other* rows too, and those
           // are real, committed changes this response is the only carrier
@@ -92,13 +99,15 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
           // wrong, not merely stale. The caller resyncs instead.
           return { applied: false, needsResync: Boolean(response.reindexed?.length) };
         }
+        inFlight.current.delete(itemId);
         const recorded = recordedPlacement.current.get(itemId) ?? null;
         recordedPlacement.current.delete(itemId);
-        setList(s => completeItemWrite(s, response, recorded));
+        const newer = positionWrites.current.answer(latest.sent, response);
+        setList(s => completeItemWrite(s, response, recorded, newer));
         return { applied: true, needsResync: false };
       },
       fail(itemId, seq) {
-        if (writeSeq.current.get(itemId) !== seq) return;
+        if (writeSeq.current.get(itemId)?.seq !== seq) return;
         inFlight.current.delete(itemId);
         recordedPlacement.current.delete(itemId);
         setList(s => withPlacement(s, itemId, null));
@@ -131,15 +140,27 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   // board, the Sheet, or an inline create.
   async function handleCreateItem(workphaseId: string, title: string, type: string | null) {
     try {
+      const sent = positionWrites.current.send();
       const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
-      setList(s => completeItemWrite(s, newItem));
+      const newer = positionWrites.current.answer(sent, newItem);
+      setList(s => completeItemWrite(s, newItem, undefined, newer));
     } catch (err) {
       console.error('Failed to create item:', err);
     }
   }
 
+  // The Sheet sends its own writes and passes only the answer up, so its answers are numbered as they land:
+  // each is the latest write there is, and an answer for a drag or an inline create that lands after it
+  // leaves the positions it set. That holds while the board sends nothing between a Sheet write and its
+  // answer, which the Sheet's covering the board makes so; a drag finished in the moment after the Sheet
+  // closes could still be numbered after a write that went out before it.
+  function foldSheetAnswer(response: ItemWriteResponse) {
+    positionWrites.current.answer(positionWrites.current.send(), response);
+    setList(s => completeItemWrite(s, response));
+  }
+
   function handleItemUpdated(updated: ItemWriteResponse) {
-    setList(s => completeItemWrite(s, updated));
+    foldSheetAnswer(updated);
   }
 
   function handleItemDeleted(id: string) {
@@ -147,7 +168,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   }
 
   function handleChildCreated(item: ItemWriteResponse) {
-    setList(s => completeItemWrite(s, item));
+    foldSheetAnswer(item);
   }
 
   const childCounts = computeChildCounts(items, placements);

@@ -71,6 +71,9 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // only fires for a write the board previewed; a Sheet edit that reassigns a
 // position made no ordinal claim.
 //
+// `newer` names the rows whose position a later-sent write has already set, which this response, an older
+// one, must leave as they are (`lib/positionedWrite.ts::positionRecord`, which the caller asks).
+//
 // Only the written row is upserted (`lib/positionedWrite.ts::applyWriteResponse`):
 // the server's `workphaseId` cascade to attached descendants isn't mirrored
 // here, so their stored copies stay stale until the next load. A drag never
@@ -91,8 +94,9 @@ export function completeItemWrite(
   state: ItemListState,
   response: ItemWriteResponse,
   recorded?: Placement | null,
+  newer?: ReadonlySet<string>,
 ): ItemListState {
-  const items = applyWriteResponse(state.items, response);
+  const items = applyWriteResponse(state.items, response, newer);
   if (recorded === undefined || state.placements.get(response.id) !== recorded) return { ...state, items };
 
   const before = freeItemOrder(state.items, state.placements);

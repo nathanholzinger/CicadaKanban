@@ -131,7 +131,11 @@ its own header.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
   may carry `reindexed: {id, position}[]`; every write path folds it through
   `itemWriteReconciliation.ts::completeItemWrite` (pairs first, written item last)
-  before clearing the placement.
+  before clearing the placement. Writes of different items aren't ordered, so
+  `useItemManagement.ts` numbers every write the board sends (`lib/positionedWrite.ts::positionRecord`)
+  and hands the fold `newer`, the rows a later-sent write has set: an older answer leaves their
+  positions, a pair and its own row alike. A drag's and an inline create's are numbered as they are
+  sent, the Sheet's as its answer lands.
 
 ## Where each concern lives
 
@@ -198,7 +202,8 @@ The hooks and contexts that run it:
 
 The board's own state, outside the gesture:
 
-- `useItemManagement.ts` — the item state and the per-item write tracker.
+- `useItemManagement.ts` — the item state, the per-item write tracker, and the numbering of
+  every write across items.
 - `useBoardManagement.ts`, `useColumnManagement.ts`, `useWorkphaseManagement.ts` —
   board, column and workphase CRUD for `BoardView.tsx`; `useColumnManagement.ts` also
   holds the column-reorder drop.
