@@ -1,12 +1,12 @@
 # Epic 3.5 Story 10 — the inventory and the batches
 
-**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation · **Status:** inventory approved (Phase 2 step 4, 2026-11-06). The Planner's D13 rewording (step 5) comes next, then Phase 3, then batch 4a.
+**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation · **Status:** inventory approved; the Planner's D13 rewording (Phase 2 step 5) is applied. At the step 5 stop, before Phase 3 and batch 4a.
 
 [Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D13), Phases 1–3 and Phase 5. This doc holds the part that grows while the work runs: each Open case's batch and how it closes, each skip's fate, the checkpoint after 4a, and each batch's results. A change to a decision is amended in the plan. A change to a case's route is amended here.
 
 ## How to read it
 
-- **The report owns what each case misses.** The [baseline reconciliation](../../audits/test-reconciliation-story-10-baseline.md)'s Coverage Mapping gives each Open case's ID-bearing tests and the exact clauses they miss. This doc routes the case and doesn't restate the clauses, so a batch's brief starts from the report's row. Once a batch has run, its confirming run's report is the later word for its cases.
+- **The report owns what each case misses.** The [baseline reconciliation](../../audits/test-reconciliation-story-10-baseline.md)'s Coverage Mapping gives each Open case's ID-bearing tests and the exact clauses they miss. This doc routes the case and doesn't restate the clauses, so a batch's brief starts from the report's row. D13's current catalog wording supersedes the baseline's paint obligations: those now belong to the shared Manual cases below. Saved outcomes, target/state selection, positions and sizes still belong to the automated cases. Once a batch has run, its confirming run's report is the later word for its cases.
 - **The roadmap entry's items** (1–11) reach this doc by case, through the report, which read every case they route. Their non-case items are D3's, D4's and D8's.
 - **Every case ends `Automated` by a surface test,** a Playwright test written by the Test Automator, unless its batch's notes say otherwise. A Split case's look ends `Manual`, in a shared case (D13).
 - **The kinds of work:**
@@ -32,17 +32,17 @@ Each batch's cases are below in run order, which D5 sets: a later batch reuses a
 
 | Batch | Extend | New | Rework | Split | Coder | Cases |
 |---|---:|---:|---:|---:|---:|---:|
-| 4a. DRAG-1, DRAG-3, TC-6.4, BCU-5.6 and 5.7 | 10 | 22 | 0 | 3 | 0 | 35 |
+| 4a. DRAG-1, DRAG-3, TC-6.4, BCU-5.6 and 5.7 | 10 | 22 | 0 | 2 | 0 | 34 |
 | 4b. DRAG-4 and DRAG-5 | 4 | 21 | 2 | 0 | 0 | 27 |
 | 4c. DRAG-7 | 2 | 3 | 9 | 1 | 0 | 15 |
 | 4d. DRAG-6 | 0 | 12 | 0 | 5 | 0 | 17 |
 | 4e. DRAG-8 | 0 | 11 | 0 | 1 | 0 | 12 |
 | 4f. DRAG-2 and ATT-4.9 | 4 | 1 | 0 | 9 | 0 | 14 |
-| 4g. TREE | 7 | 18 | 1 | 7 | 1 | 34 |
+| 4g. TREE | 7 | 18 | 1 | 6 | 1 | 33 |
 | 4h. The six legacy skips | — | — | — | — | — | 0 |
-| **All** | 27 | 88 | 12 | 26 | 1 | 154 |
+| **All** | 27 | 88 | 12 | 24 | 1 | 152 |
 
-The Coder column counts cases closed by Coder work alone. A batch's notes name the Coder halves of other cases.
+The Coder column counts cases closed by Coder work alone. A batch's notes name the Coder halves of other cases. These are the 152 Open cases after step 5. DRAG-1.27 and TREE-2.8 are now shared Manual cases rather than automation assignments; the three new Manual IDs are listed under The shared looks. The 26 original Split IDs are all retained.
 
 ### 4a. DRAG-1 and DRAG-3, with TC-6.4 and BCU-5.6 and 5.7
 
@@ -52,7 +52,7 @@ The Coder column counts cases closed by Coder work alone. A batch's notes name t
 |---|---|
 | Extend | DRAG-1.3, 1.9, 1.12, 1.24; DRAG-3.9, 3.10, 3.11, 3.17, 3.18; TC-6.4 |
 | New | DRAG-1.1, 1.2, 1.5, 1.6, 1.13, 1.16, 1.17, 1.18, 1.20, 1.22, 1.28, 1.33, 1.35, 1.36; DRAG-3.12, 3.16, 3.19, 3.20, 3.23, 3.24; BCU-5.6, 5.7 |
-| Split | DRAG-1.26, 1.27, 3.22 |
+| Split | DRAG-1.26, 3.22 |
 
 - **DRAG-1.14 and DRAG-3.25 go to 4c,** since what each misses is the modal's.
 - **DRAG-1.18 and 1.20** seed their thresholds with `seedDragTuning` and never assert a duration (`.claude/guides/testing-strategy.md`, "What stays manual").
@@ -60,7 +60,7 @@ The Coder column counts cases closed by Coder work alone. A batch's notes name t
 - **DRAG-3.9 and 3.10:** the single band shows as no divider (`data-carve-divider`) and the same release at several aims, so neither the `dragBands.test.ts` mappings nor `dragRequest.test.ts`'s DRAG-3.9 stamp is needed.
 - **DRAG-3.17 and 3.19** measure their heights with `dragGesture.ts::boxOf` (D13: sizes stay automated).
 - **DRAG-3.22:** the held shadow is its look. The form switching (`data-drag-overlay-form`), the pointer's continuity and the heights are automated.
-- **DRAG-1.26:** one outline, on the current context, read from `data-active-context`. Its colour is the look, so D8 keeps the attribute. **DRAG-1.27** is all look; the Planner decides whether it becomes the shared case's or stays a case of its own.
+- **DRAG-1.26:** exactly one current context is marked active, read from `data-active-context`. Its outline colour is the look, so D8 keeps the attribute. **DRAG-1.27** is the shared Manual case for the carried copy's tilt/held shadow and the outline colour; it needs no automation assignment.
 - **BCU-5.6 and 5.7** are here because their filing gesture is DRAG-1.13's Unsorted pickup.
   - Deleting the workphase puts the items in Unknown status, as TC-2.16's test does. If that can't set up the case, the Coder adds a test route.
   - The new tests cover the D11 hook and cascade candidates, so neither mapping is needed.
@@ -118,7 +118,7 @@ The Coder column counts cases closed by Coder work alone. A batch's notes name t
 - **Each stop has a genuine cause,** from Phase 3's cause helper (D4): a refused drop, a stale response with reindex pairs, or a refused column reorder. The armed stop stands in for none of them. A case that names all three runs once per cause.
 - **D9's surface spec is written here,** with DRAG-6.22 and 6.25.
 - **DRAG-6.26:** the new tests cover Phase 1's hook and component candidates, so those mappings aren't needed.
-- **DRAG-6.27:** the flash's window is automated with `data-stop-flash`. Its pulses are DRAG-6.20's look.
+- **DRAG-6.27:** the flash's window is automated with `data-stop-flash`. DRAG-6.20 holds the target-row state; DRAG-6.30 holds the painted pulses and banner fade. DRAG-6.23 and DRAG-6.24 hold pending-state ownership, with the painted pulse in DRAG-6.31.
 - **None of these cases needs a tuned duration or the final look** (the roadmap entry's item 10, "From Story 8.4").
 
 ### 4e. DRAG-8
@@ -157,14 +157,15 @@ The Coder column counts cases closed by Coder work alone. A batch's notes name t
 | Extend | TREE-1.8, 1.11, 1.12; TREE-2.2, 2.3; TREE-4.7; TREE-11.7 |
 | New | TREE-1.2, 1.5, 1.6, 1.10, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18, 1.19; TREE-2.10, 2.11, 2.12, 2.13; TREE-4.9, 4.11, 4.15 |
 | Rework | TREE-1.4 |
-| Split | TREE-2.1, its skip reworked; TREE-2.4, 2.5, 2.6, 2.7, 2.8, 2.14 |
+| Split | TREE-2.1, its skip reworked; TREE-2.4, 2.5, 2.6, 2.7, 2.14 |
 | Coder | TREE-9.4 |
 
 - **TREE-1.14** starts with the Coder's fix: leave out the held rows only, not their children (Inbound deferrals). The depths a gap beside `Y` offers are a behaviour question. If the wiki doesn't settle them, they go to the PO (D6).
 - **TREE-9.4:** the Coder fixes its fixture and expected outcome. `X`, already saved in the deleted subtree, is deleted with it and stays absent. Each of the variants with several answers rechecks `Q` and that nothing else was written. If the confirming run still finds no fresh read, a surface test follows.
 - **TREE-2.2, 2.3, 4.7 and 4.15** hold the answer with `holdRequests.ts`.
 - **TREE-1.19, the shuffle under a still cursor,** is the likeliest to miss D2's bar. If it does, the Planner checks the case's wording before anyone proposes `Manual`.
-- **TREE-2.13** measures the line against the ghost's top edge with `boxOf`. The Planner checks whether its "name column" needs a pixel check.
+- **TREE-2.13** measures both the line's top-edge position and its start in the ghost name's column with `boxOf`. Name-column alignment is geometry under D13 and stays automated; only the line's painted strength is Manual.
+- **TREE-2.8** is the shared Manual sidebar appearance case; the remaining Split cases keep tier, ghost and line state, branch presence, saved outcomes and geometry. TREE-2.13 keeps its top-edge and name-column measurements; its painted line strength is TREE-2.8's.
 - **TREE-2.1's skip** carries #12 from the 8.8, 8.11 and 8.12 audit: its title and reason say "dimmed", so both are replaced (Inbound deferrals).
 - **TREE-1.8, 1.11, 1.12, 1.14, 1.19, 2.12, 2.14, 4.9 and 11.7:** the new or extended surface tests cover their App, hook and component candidates, so none of those mappings is needed.
 - **The copy's hold, pixel step, styling and glide** are wiki Open questions, not gaps (the roadmap entry's item 10, "From Story 8.12").
@@ -177,15 +178,17 @@ No case carries their IDs. As item 3 says:
 
 ## The shared looks (D13)
 
-For the Planner, in Phase 2 step 5. Each Split case is reworded to what a test can pin, and its look goes to one of these shared cases. The Planner decides which cases hold a look, how each is reworded, and each shared case's wording and suite.
+Applied by the Planner in Phase 2 step 5. The 26 original IDs stay in place: 24 keep their automatable behavior, and DRAG-1.27 and TREE-2.8 become the shared Manual cases for their looks. Three new IDs complete the five shared look families. No case moves, deletion, renumbering or test-ID re-titling is required. Each shared case has a present-tense Manual reason and a concrete Given/When/Then at the current configured values.
 
-| Look | Its Split cases |
-|---|---|
-| The board's tiers: Full, Mid, Low and the ghost each at its configured strength, on a Card and a Stub, in the section and the modal, with no relationship colour; a Stub nested in a dimmed Card isn't dimmed twice; drop lines stay at full strength | DRAG-2.14, 2.15, 2.16, 2.17, 2.18, 2.19, 2.20, 2.21, 2.23, 7.12, 8.2 |
-| The pending pulse, at each tier | DRAG-6.23, 6.24 |
-| The forced stop: the flash's two pulses, and the banner at full strength, then fading | DRAG-6.19, 6.20, 6.26 |
-| The carried copy: a Free pickup's tilt, the held shadow, and the active context's outline colour | DRAG-1.26, 1.27, 3.22 |
-| The sidebar's tiers and ghost, with the line at full strength, from the sidebar's own values | TREE-2.1, 2.4, 2.5, 2.6, 2.7, 2.8, 2.14 |
+| Shared Manual case | Look checked by hand | Behavior cases whose look it holds |
+|---|---|---|
+| DRAG-2.24 | Board Full/Mid/Low and ghost strengths across Cards, Stubs, overflow rows, sections and the modal; no relationship colour or compounded dimming; full-strength drop lines | DRAG-2.14, DRAG-2.15, DRAG-2.16, DRAG-2.17, DRAG-2.18, DRAG-2.19, DRAG-2.20, DRAG-2.21, DRAG-2.23, DRAG-7.12, DRAG-8.2 |
+| DRAG-6.31 | Pending pulses from each row's own strength to half, with nested rows and the line independent | DRAG-6.23, DRAG-6.24 |
+| DRAG-6.30 | The flash's two amber pulses and the banner's full-strength/final-quarter fade | DRAG-6.19, DRAG-6.20, DRAG-6.26; DRAG-6.27 points to it while retaining the automated flash-window rule |
+| DRAG-1.27 | A Free pickup's tilt, the carried Stub's held shadow and the active-context outline colour | DRAG-1.26, DRAG-3.22; DRAG-1.27 retains its own tilt obligation in this shared case |
+| TREE-2.8 | Sidebar Full/Mid/Low, ghost and untiered-new-row strengths from its own values; full-strength line without relationship colour | TREE-2.1, TREE-2.4, TREE-2.5, TREE-2.6, TREE-2.7, TREE-2.14; TREE-2.8 retains independent sidebar values. TREE-1.1 and TREE-2.13 point to it while retaining their placement/line geometry |
+
+**Batch handoff:** read the current case first, then the baseline residuals. Do not add an appearance assertion back to a state case, and do not use the shared Manual case to defer its saved result, affected row, state, location or size. Existing Automated statuses and pointers are unchanged; these rewrites make no new coverage claim. The later confirming runs judge each revised Open case against its current Then.
 
 ## The skips (D3)
 
@@ -255,6 +258,12 @@ D13's shared cases are `Manual` by the Planner's judgment (README), since whethe
 
 Each batch's stop adds its results here: the cases closed, the specs that missed the bar, the helpers added, and what's routed on.
 
+**Phase 2 step 5 — 2026-11-06 (Planner):** all 26 listed Split cases are processed, with five shared Manual cases in the table above. Twenty-four existing IDs remain Open for their automatable clauses; two retain their IDs as shared Manual cases. Three new Manual IDs are allocated, and all Next ID lines are advanced. There are now 152 Open batch assignments, plus the five shared Manual appearance checks. No app or test code was read or changed in this pass. This is the step 5 stop; Phase 3 has not started.
+
+**Validation:** documentation checks pass (418 files, zero hits), all 485 catalog cases agree with their summary tables and required metadata, and all 152 in-scope Open cases have exactly one batch assignment. `git diff --check` passes. No runtime or manual test run is claimed.
+
 ## Amendments
+
+- **2026-11-06 — Phase 2 step 5 (Planner).** Applied D13, recorded the five shared Manual IDs, removed DRAG-1.27 and TREE-2.8 from automation assignments and adjusted the table to 152 Open cases. Clarified the three supporting references in DRAG-6.27, TREE-1.1 and TREE-2.13, preserving their timing, placement and geometry assertions. The baseline remains a pre-D13 reconciliation snapshot; current catalog wording governs the next briefs. No existing ID is retired or reassigned to another suite.
 
 ## Open questions

@@ -10,14 +10,14 @@
 | TREE-2.4 | Legal parents are Full, the cap boundary is Mid, and deeper rows are Low | P1 | Open |
 | TREE-2.5 | Top-level rows take the root's legal-parent answer | P1 | Open |
 | TREE-2.6 | A response landing mid-drag does not redraw the pickup tiers | P1 | Open |
-| TREE-2.7 | Tiers leave the drop line at full strength and do not remove valid gap states | P1 | Open |
-| TREE-2.8 | The sidebar uses opacity values independent of the board's | P1 | Open |
+| TREE-2.7 | Tiers do not remove the drop line or valid gap states | P1 | Open |
+| TREE-2.8 | Sidebar tiers and the ghost use their own configured strengths | P1 | Manual |
 | TREE-2.9 | The count line includes the real subtree, including descendants hidden by collapse | P1 | Automated |
 | TREE-2.10 | Only the carried copy has the line, outside its one-row box and taking no pointer | P1 | Open |
 | TREE-2.11 | The count line is cut short in a narrow sidebar | P2 | Open |
 | TREE-2.12 | Every end of the drag draws the branch again under the project | P1 | Open |
 | TREE-2.13 | The line starts at the ghost's name on its top edge in every gap after the first move | P1 | Open |
-| TREE-2.14 | A project first drawn after pickup has a defined drag tier | P2 | Pending PO |
+| TREE-2.14 | A project first drawn after pickup stays untiered until the next drag | P2 | Open |
 
 ---
 
@@ -25,7 +25,9 @@
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7, wiki hierarchy-placement §8
 
-*Given* top-level projects `A`, `X` and `B`, where expanded `X` has child `X1`, expanded `X1` has child `X1a`, and there is enough room under the project cap for `A` to take `X`'s whole subtree, *when* `X` is picked up, *then* `X1` and `X1a` are absent for the whole drag, not drawn at Low. At pickup `B` moves up by the height their rows occupied, including row spacing, with no empty branch-sized space left. Neither descendant is a placement neighbor. `A` and `B` are Full on this shallow fixture; unrelated rows nearer the cap may instead be Mid or Low ([TREE-2.4](tree-2-what-the-drag-shows.md)). `X`'s own row is its ghost, drawn at `projectDraggedOpacity` without a target tier; it follows the gap and chosen depth while the branch stays absent. *When* the drag ends, by a release or a cancel, *then* the tiers and ghost dim clear, and the branch is drawn again under `X` at its resulting place, with the projects' collapsed or expanded states respected.
+*Given* top-level projects `A`, `X` and `B`, where expanded `X` has child `X1`, expanded `X1` has child `X1a`, and there is enough room under the project cap for `A` to take `X`'s whole subtree, *when* `X` is picked up, *then* `X1` and `X1a` are absent for the whole drag. At pickup `B` moves up by the height their rows occupied, including row spacing, with no empty branch-sized space left. Neither descendant is a placement neighbor. `A` and `B` are assigned Full on this shallow fixture; unrelated rows nearer the cap may instead be Mid or Low ([TREE-2.4](tree-2-what-the-drag-shows.md)). `X`'s own row has ghost state and no target tier; it follows the gap and chosen depth while the branch stays absent. *When* the drag ends, by a release or a cancel, *then* the target tiers and ghost state clear, and the branch is drawn again under `X` at its resulting place, with collapsed or expanded states respected.
+
+Painted tier and ghost strengths are [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
 
@@ -49,14 +51,14 @@
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §3, wiki hierarchy-placement §7, wiki hierarchy-placement §8
 
-*Given* the project cap `CAP >= 4`, a chain `P1` through `P_CAP`, with `P1` top-level at absolute depth 1 and each following project the previous one's child, and unrelated top-level `X` with one child `X1`, *when* `X` is picked up, *then*:
+*Given* project cap `CAP >= 4`, a chain `P1` through `P_CAP`, with `P1` top-level at absolute depth 1 and each following project the previous one's child, and unrelated top-level `X` with one child `X1`, *when* `X` is picked up, *then*:
 
-- `P1` through `P_(CAP-2)` are Full: each can take `X` with subtree height 1 without exceeding `CAP`;
-- `P_(CAP-1)` is Mid at `projectAnchorOpacity`: it cannot take `X` as a child, but its parent can, so `X` can be its sibling;
-- `P_CAP` is Low at `projectNeitherOpacity`: neither it nor its parent can take `X`;
-- `X1` is absent as part of the carried branch, and `X`'s ghost takes `projectDraggedOpacity` without a target tier.
+- `P1` through `P_(CAP-2)` are assigned Full: each can take `X` with subtree height 1 without exceeding `CAP`;
+- `P_(CAP-1)` is assigned Mid: it cannot take `X` as a child, but its parent can, so `X` can be its sibling;
+- `P_CAP` is assigned Low: neither it nor its parent can take `X`;
+- `X1` is absent as part of the carried branch, and `X`'s own row has ghost state without a target tier.
 
-Each tier changes only opacity, adding no relationship color and removing no unrelated row. The carried branch's absence is separate from those tiers (wiki hierarchy-placement §8). The Mid boundary is the one depth immediately after the last legal parent depth; entries below that boundary remain Low. Top-level projects count from depth 1 in these cap assertions.
+Assigning a tier removes no unrelated row. The carried branch's absence is separate from tier assignment (wiki hierarchy-placement §8). Mid is the one depth immediately after the last legal-parent depth; entries below that boundary remain Low. Top-level projects count from depth 1 in these cap assertions. Painted strengths and colours are [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
 
@@ -64,9 +66,11 @@ Each tier changes only opacity, adding no relationship color and removing no unr
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §3, wiki hierarchy-placement §7
 
-*Given* unrelated top-level leaf `A` and a top-level dragged project `X` whose subtree height is `CAP - 1`, *when* `X` is picked up, *then* the top of the tree can still take `X`: its deepest descendant is at depth `1 + (CAP - 1) = CAP`. `A` is Mid, rather than Low, since `A` cannot parent `X` but the root can. Every other unrelated top-level row is Mid too, and their nested rows are Low.
+*Given* unrelated top-level leaf `A` and top-level dragged project `X` whose subtree height is `CAP - 1`, *when* `X` is picked up, *then* the top of the tree can take `X`: its deepest descendant is at depth `1 + (CAP - 1) = CAP`. `A` is assigned Mid, rather than Low, since `A` cannot parent `X` but the root can. Every other unrelated top-level row is Mid too, and their nested rows are Low.
 
-*Given* instead existing data in which `X`'s subtree height is `CAP`, already too tall even from the top level ([TREE-1.13](tree-1-gap-and-depth.md)), *when* `X` is picked up, *then* every other project row is Low, top-level rows included, because the root cannot take the subtree either. `X`'s ghost remains separate at `projectDraggedOpacity`. The lack of a parent project does not itself make a top-level row Low.
+*Given* instead existing data in which `X`'s subtree height is `CAP`, already too tall even from the top level ([TREE-1.13](tree-1-gap-and-depth.md)), *when* `X` is picked up, *then* every other project row is assigned Low, top-level rows included, because the root cannot take the subtree either. `X`'s own row retains ghost state and no target tier. The lack of a parent project does not itself make a top-level row Low.
+
+Painted strengths are [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
 
@@ -74,31 +78,35 @@ Each tier changes only opacity, adding no relationship color and removing no unr
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
 
-*Given* `X` has subtree height 1, unrelated leaf `P` is top-level and Full for `X`, unrelated `Q` is at depth `CAP - 2`, and an earlier parent edit putting `P` under `Q` is still awaiting its answer, *when* `X` is picked up and that answer then lands, *then* the sidebar applies `P`'s saved parent, but `P` stays drawn at its pickup tier, Full, through the rest of this drag. Its new depth would not be a legal parent for `X`, but the answer does not redraw the tiers. Existing Mid and Low rows retain their pickup tiers too.
+*Given* `X` has subtree height 1, unrelated leaf `P` is top-level and assigned Full for `X`, unrelated `Q` is at depth `CAP - 2`, and an earlier parent edit putting `P` under `Q` is still awaiting its answer, *when* `X` is picked up and that answer then lands, *then* the sidebar applies `P`'s saved parent, but `P` keeps its pickup tier, Full, through the rest of this drag. Its new depth would not be a legal parent for `X`, but the answer does not reassign its tier. Existing Mid and Low rows retain their pickup tiers too.
 
-*When* the drag is cancelled, *then* the tiers clear. *When* `X` is picked up again against the now-saved tree, *then* `P`, at depth `CAP - 1`, is Mid: its parent `Q` can take `X`. This case asserts tier lifetime. The separate pickup subtree and height rules are [TREE-1.14](tree-1-gap-and-depth.md), [TREE-1.15](tree-1-gap-and-depth.md) and [TREE-1.16](tree-1-gap-and-depth.md).
+*When* the drag is cancelled, *then* the tiers clear. *When* `X` is picked up again against the now-saved tree, *then* `P`, at depth `CAP - 1`, is assigned Mid: its parent `Q` can take `X`. The separate pickup subtree and height rules are [TREE-1.14](tree-1-gap-and-depth.md), [TREE-1.15](tree-1-gap-and-depth.md) and [TREE-1.16](tree-1-gap-and-depth.md). Painted strengths are [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
 
-## TREE-2.7 — Tiers leave the drop line at full strength and do not remove valid gap states
+## TREE-2.7 — Tiers do not remove the drop line or valid gap states
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §2, wiki hierarchy-placement §7
 
-*Given* `X` of subtree height 1, and a Mid row `S` whose parent can take `X`, *when* the ghost shows a valid placement beside `S` as its sibling, *then* the drop line is at full strength on the ghost's top edge, while `S`'s content remains at `projectAnchorOpacity` and the ghost at `projectDraggedOpacity`. The line inherits neither row's dim.
+*Given* `X` of subtree height 1, and a Mid row `S` whose parent can take `X`, *when* the ghost shows a valid placement beside `S` as its sibling, *then* the drop line remains present on the ghost's top edge. `S` retains Mid and the ghost retains its own ghost state without a target tier; neither assignment removes the line or gives it a target tier.
 
-*Given* the cap-depth chain in [TREE-2.4](tree-2-what-the-drag-shows.md), followed by top-level `B`, *when* the ghost is in the gap after Low `P_CAP` and before `B`, and the user tabs to the top-level state, *then* the ghost and its line show a valid top-level placement. A release saves `X.parentId = null`, after the chain's top-level project `P1` and before `B`, with `X1` still beneath `X`. Low does not remove the gap or its valid shallower state. A tab state that exceeds the cap remains reachable and writes nothing as in [TREE-1.11](tree-1-gap-and-depth.md); tier opacity does not choose validity.
+*Given* the cap-depth chain in [TREE-2.4](tree-2-what-the-drag-shows.md), followed by top-level `B`, *when* the ghost is in the gap after Low `P_CAP` and before `B`, and the user tabs to the top-level state, *then* the ghost and its line indicate a valid top-level placement. A release saves `X.parentId = null`, after the chain's top-level project `P1` and before `B`, with `X1` still beneath `X`. Low does not remove the gap or its valid shallower state. A tab state that exceeds the cap remains reachable and writes nothing as in [TREE-1.11](tree-1-gap-and-depth.md).
 
-**Automation test:** —
-
-## TREE-2.8 — The sidebar uses opacity values independent of the board's
-
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
-
-*Given* a board and sidebar with different configured opacity values, *when* a project drag starts with Mid and Low rows, *then* their own content uses `projectAnchorOpacity` and `projectNeitherOpacity`, while the dragged project's ghost uses `projectDraggedOpacity`. Each has its own value, even when the Low and ghost values differ. No board opacity value substitutes for any of them.
-
-*When* only the board's opacity values change, *then* a new project drag retains the sidebar's configured strengths. With the sidebar's values changed instead, its next drag uses those values while board targets and the board's ghost retain their own configured strengths. The rule is independent configuration of the two surfaces; the temporary tuning panel's controls are not part of this case.
+The line's full painted strength beside tiered rows and the ghost is [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
+
+## TREE-2.8 — Sidebar tiers and the ghost use their own configured strengths
+
+**Priority:** P1 · **Status:** Manual · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
+
+*Given* the current configured sidebar strengths, chosen independently of the board's, and a drag with rows assigned Full, Mid and Low and a ghost, *when* a person inspects the sidebar through the drag, *then* Full rows have full strength, Mid content uses `projectAnchorOpacity`, Low content uses `projectNeitherOpacity`, and the ghost uses `projectDraggedOpacity`, independently of Low. Tier differences use opacity alone and add no relationship colour. The drop line keeps full strength beside a Mid row and on the dimmed ghost.
+
+*When* an earlier answer adds an untiered row during the drag ([TREE-2.14](tree-2-what-the-drag-shows.md)), *then* that row has full strength for the rest of the drag; on a later pickup its appearance follows the tier then assigned. Existing rows keep their pickup strengths.
+
+*When* only the board's configured opacity values change, *then* a new project drag retains the sidebar's strengths. Changing the sidebar's values instead changes those sidebar strengths while board targets and the board's ghost keep their own configured strengths. The temporary tuning panel's controls and the final look are not assertions of this case. Tier, ghost and line states, presence, placement and geometry remain the other cases' assertions.
+
+**Automation test:** none — manual: a person checks the painted sidebar and ghost strengths, colour independence and full-strength line at the current configured values; tier assignments and geometry are separate assertions.
 
 ## TREE-2.9 — The count line includes the real subtree, including descendants hidden by collapse
 
@@ -155,14 +163,18 @@ The copy's second line ends with the drag. If `A` was collapsed at pickup, its c
 
 *Given* the sidebar has other projects outside dragged `X`'s branch, *when* `X` is picked up before the pointer's first move in the drag, *then* the ghost is at its pickup depth and no drop line is drawn. *When* the pointer moves and the ghost takes any gap, above the first row, between rows or below the last row, *then* exactly one drop line rides the ghost's top edge, between the ghost and Top when Top exists. It never switches to the ghost's bottom edge at a list boundary.
 
-*Given* the ghost is in the gap between `A1a` and `B` in [TREE-1.2](tree-1-gap-and-depth.md), *when* each of depths 0, 1, 2 and 3 is selected, *then* the ghost is drawn at that depth, and the line starts in the same column as its name. Each deeper state starts farther right. The line keeps full strength while its ghost is dimmed. When `X`'s subtree holds every project instead, no line appears even after pointer movement ([TREE-1.4](tree-1-gap-and-depth.md)).
+*Given* the ghost is in the gap between `A1a` and `B` in [TREE-1.2](tree-1-gap-and-depth.md), *when* each of depths 0, 1, 2 and 3 is selected, *then* the ghost is drawn at that depth, and the line starts in the same column as its name. Each deeper state starts farther right. When `X`'s subtree holds every project instead, no line appears even after pointer movement ([TREE-1.4](tree-1-gap-and-depth.md)). The line's painted strength beside the ghost is [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —
 
-## TREE-2.14 — A project first drawn after pickup has a defined drag tier
+## TREE-2.14 — A project first drawn after pickup stays untiered until the next drag
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §7
 
-*Given* project cap `PCAP >= 3`, dragged project `X` with subtree height 1, unrelated project `T` at absolute depth `PCAP - 2`, and an earlier create of child `Y` under `T` that has not yet answered in the sidebar, *when* `X` is picked up before that answer and the answer then adds `Y` at depth `PCAP - 1`, *then* — **question for the PO:** wiki project-tree §1 allows the earlier create's answer to add a row during the drag, while wiki hierarchy-placement §7 gives every other entry a tier computed once at pickup. `Y` had no row or tier then. Does its first appearance use Mid at `projectAnchorOpacity`, because `Y` cannot parent `X` but `T` can, while all existing pickup tiers stay fixed? Or does the new row have no tier until the next pickup? The drag continues and `Y` is outside the held branch; the question is its strength during this drag, not whether to stop the drag or change its membership.
+*Given* project cap `PCAP >= 3`, top-level project `X` with one leaf child, and unrelated project `T` at absolute depth `PCAP - 2`, with child `M` at `PCAP - 1` and grandchild `L` at `PCAP`, all expanded, and an earlier create of child `Y` under `T` whose answer has not yet added `Y` to the sidebar, *when* `X` is picked up and the create's answer then adds `Y` at depth `PCAP - 1`, *then* the drag continues and `Y` is present under `T` with no target tier for the rest of this drag. It is not assigned Mid during this drag, even though it cannot parent `X` and `T` can. Existing pickup tiers stay fixed: `T` is Full, `M` is Mid and `L` is Low. `Y` is outside the held branch and remains a placement candidate; its lack of tier does not change the placement or legal-parent rules.
+
+*When* the drag is cancelled and `X` is picked up again against the saved tree, *then* `Y` is now assigned Mid, as `M` is. `T` is Full and `L` is Low. The new pickup includes `Y` in its tier snapshot. The cancelled drag sends no move, and `Y.parentId` remains `T` throughout.
+
+The new row's full painted strength and its later tiered strength are [TREE-2.8](tree-2-what-the-drag-shows.md)'s.
 
 **Automation test:** —

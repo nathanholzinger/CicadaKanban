@@ -14,8 +14,8 @@
 | DRAG-3.6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | Automated |
 | DRAG-3.7 | A drop into a merged column by a covered-set member leaves the workphase alone | P0 | Automated |
 | DRAG-3.8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row | P0 | Automated |
-| DRAG-3.9 | A done region is a single band; any release is a workphase-only move with no anchor | P0 | Automated |
-| DRAG-3.10 | An empty region is a single band; any release is a workphase-only move | P1 | Automated |
+| DRAG-3.9 | A done region is a single band; any release is a workphase-only move with no anchor | P0 | Open |
+| DRAG-3.10 | An empty region is a single band; any release is a workphase-only move | P1 | Open |
 | DRAG-3.11 | The ghost's placement is ordinal and follows the band's meaning | P1 | Open |
 | DRAG-3.12 | Middle band, item already in this region → nothing is written | P0 | Open |
 | DRAG-3.15 | Exactly one card: the divider halves, so the card keeps a middle band | P1 | Automated |
@@ -98,19 +98,19 @@
 
 ## DRAG-3.9 — A done region is a single band; any release is a workphase-only move with no anchor
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
 
 *Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, and Free Card `X` coming from a non-terminal workphase outside that set, *when* `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-6.1](../item-positioning/part-6-active-done-split.md), [TC-6.3](../item-positioning/part-6-active-done-split.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)). A covered member set back down is [DRAG-3.12](drag-3-card-column-bands.md)'s.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.10 — An empty region is a single band; any release is a workphase-only move
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.1
 
 *Given* a non-terminal column region with no items, and Free Card `X` from a workphase outside its covered set, *when* `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server keeps the item's position, or gives an item with none the append fallback ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)). An empty terminal region has the same one-zone geometry but completes the incoming item as in [DRAG-3.9](drag-3-card-column-bands.md).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.11 — The ghost's placement is ordinal and follows the band's meaning
 
@@ -205,7 +205,9 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
 
-*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. Both Stub copies' boxes share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. If `X` has an attached branch, its carried copy keeps the count line outside that box, and the ghost has none. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer, with the line on the carried copy alone. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup, with the same carried-copy-only line when it has a branch ([DRAG-8.9](drag-8-carried-branch.md)).
+*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section and stays under the pointer through the switch. Both Stub copies' boxes share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. If `X` has an attached branch, its carried copy keeps the count line outside that box, and the ghost has none. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer, with the line on the carried copy alone. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup, with the same carried-copy-only line when it has a branch ([DRAG-8.9](drag-8-carried-branch.md)).
+
+The held shadow's painted appearance is checked in [DRAG-1.27](drag-1-contexts-and-popping.md).
 
 **Automation test:** —
 

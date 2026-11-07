@@ -21,7 +21,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.6 | Back in the section, a Stub whose own slot is hidden starts as the Card's last child | P1 | Open |
 | DRAG-7.7 | Clicking an overflow row opens the hierarchy modal, centered, with the Card's attached descendants at every level | P1 | Automated |
 | DRAG-7.8 | With no drag or Sheet open, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
-| DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Automated |
+| DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Open |
 | DRAG-7.10 | Leaving the modal closes it and pops directly to the Card's column or sub-row | P1 | Open |
 | DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Automated |
 | DRAG-7.12 | The modal's rows keep the drag's classification and Full, Mid or Low tier | P2 | Open |
@@ -44,7 +44,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
 | DRAG-7.32 | Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal | P1 | Open |
-| DRAG-7.33 | Child links replace the Sheet over the same modal | P1 | Open |
+| DRAG-7.33 | Child links replace the Sheet over the same modal | P1 | Automated |
 | DRAG-7.34 | An edit in the Sheet appears in the open modal | P1 | Automated |
 | DRAG-7.35 | An empty hierarchy modal closes immediately while its Sheet stays open | P2 | Automated |
 
@@ -66,7 +66,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 
 *When* an item is dropped beside `R`'s overflow row, as `R`'s first or last child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)), *then* from the release on it reads "3 children". *When* `R1` is picked up in the modal, pulled out to the column and zoomed back into `P` ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), *then* while it's dragged in the section the overflow row reads "1 child", leaving `R1` out, since the ghost shows it. *And given* `R1` is `R`'s only attached child, *then* `R` has no overflow row while `R1` is dragged.
 
-**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `client/src/components/workflow/itemListOps.test.ts`
+**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `client/src/components/workflow/descendantsSection.test.ts`
 
 ## DRAG-7.3 — Between a row and its overflow row, the one state is the row's first child
 
@@ -124,7 +124,7 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 ## DRAG-7.9 — A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §7.1, wiki board-drag-interaction §7.2, wiki hierarchy-placement §1, wiki hierarchy-placement §5
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §7.1, wiki board-drag-interaction §7.2, wiki hierarchy-placement §1, wiki hierarchy-placement §5
 
 *Given* the tree, with the modal open by a click, *when* `R2` is picked up from its row in the modal, *then* its drag starts at `P`'s Descendants layer, with no pop, as any Stub's does ([DRAG-5.9](drag-5-detach-and-overflow.md)). *When* it's released:
 - in the gap between `R1` and `R1a` → one state, `R1`'s first child: `R2.parentId = R1`, attached, before `R1a`;
@@ -134,7 +134,7 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 *then* `R2` stays attached throughout, with `P`'s workphase. The modal offers every placement the section does, and those among hidden rows that the section doesn't ([DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)).
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.10 — Leaving the modal closes it and pops directly to the Card's column or sub-row
 
@@ -158,7 +158,9 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
-*Given* a drag of `X`, with subtree height `H`, where `R` and `R1` are Valid for `X`, `R1a` is Depth-capped, and `R1a` has an attached child `Y`, all existing rows within `CAP`, *when* the modal opens during the drag, *then* `R` and `R1` are Full. `R1a` is Mid at `overlayAnchorOpacity`, since its parent `R1` is Valid, while `Y` is Low at `overlayNeitherOpacity`, since its parent `R1a` is not. The rows keep the drag-start classification and tiers, as in the section; opening the modal does not recompute them. Their content dims independently, with no compounded dim from ancestor rows. The static section rows under the backdrop take no target tier ([DRAG-2.20](drag-2-target-classification.md)).
+*Given* a drag of `X`, with subtree height `H`, where `R` and `R1` are Valid for `X`, `R1a` is Depth-capped, and `R1a` has an attached child `Y`, all existing rows within `CAP`, *when* the modal opens during the drag, *then* `R` and `R1` are assigned Full. `R1a` is assigned Mid, since its parent `R1` is Valid, while `Y` is assigned Low, since its parent `R1a` is not. The rows keep their drag-start classification and tiers; opening the modal does not recompute them or copy an ancestor's tier onto a descendant. The static section rows under the backdrop take no target tier ([DRAG-2.20](drag-2-target-classification.md)).
+
+The painted strengths and absence of compounded dimming are [DRAG-2.24](drag-2-target-classification.md)'s.
 
 **Automation test:** —
 
@@ -340,11 +342,11 @@ After each, the same modal remains at its prior place, with the same list order,
 
 ## DRAG-7.33 — Child links replace the Sheet over the same modal
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
 *Given* `R`'s Sheet open over `P`'s hierarchy modal, *when* the link to child `R1` is followed, *then* `R1`'s Sheet replaces `R`'s in the foreground. *When* the link to its child `R1a` is followed, *then* `R1a`'s Sheet replaces it in turn. No second Sheet is left open underneath. The same modal stays open beneath every replacement, at its prior place, with the same hierarchy and scroll position. Following these links writes nothing; closing the last Sheet returns to that modal.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
 ## DRAG-7.34 — An edit in the Sheet appears in the open modal
 

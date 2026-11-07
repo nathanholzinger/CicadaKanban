@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 steps 1–4 are done. The Planner's D13 rewording (step 5) is next. The inventory and the batches are in [Story 10's second part](story-10-batches.md).
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 steps 1–5 are done; at the step 5 stop, before Phase 3. The inventory and the batches are in [Story 10's second part](story-10-batches.md).
 
 ## Goal
 
@@ -71,6 +71,7 @@ Phase 2 starts from those reports.
   - TREE-9.4, and TREE-11.2, 11.4, 11.6, 11.7 and 11.8 (What it starts from).
   - **Phase 2 step 1 additions:** BCU-5.6, BCU-5.7, TREE-4.15 and TREE-2.14, Open. TREE-2.14 follows the PO's ruling in hierarchy-placement §7: a new row stays untiered until the next pickup. Each is this story's to settle, or route under D10.
   - **Cases revised in that pass:** ATT-4.9; TC-2.6, TC-2.16, TC-2.17 and TC-6.4; DRAG-3.9, DRAG-3.10, DRAG-3.20 and DRAG-4.13; DRAG-6.22, DRAG-6.25 and DRAG-6.26. The baseline run rechecks the existing automation claims against the revised cases. TC-6.13's question was also rewritten without implementation observations; its Quick Items routing under D10 is unchanged.
+  - **D13, Phase 2 step 5:** the 26 original Split cases are listed in [The shared looks](story-10-batches.md). DRAG-1.27 and TREE-2.8 keep their IDs as shared Manual cases; the other 24 retain their automatable clauses. New shared Manual cases: DRAG-2.24, DRAG-6.30 and DRAG-6.31. DRAG-6.27, TREE-1.1 and TREE-2.13 point their appearance clauses to those shared looks while keeping timing, placement and geometry. No existing ID moves or retires.
 
 ## Inbound deferrals
 
@@ -294,7 +295,7 @@ The Split cases, and the shared looks proposed for them, are listed in [Story 10
    - **Every proposed internal mapping is declined,** so each case gets a fresh look at whether a surface Playwright test can cover it. A batch that still finds an internal test the better fit proposes it again, one case at a time, through its confirming run (D5).
    - **ATT-1.10** goes to the Tags & Type System epic (D10).
    - **The roadmap entry's items stay as they are,** as the history of each route.
-5. **The Planner applies D13:** rewords the Split cases, and writes the shared `Manual` cases. Then a stop, after which the case IDs hold still (D6).
+5. **The Planner applies D13:** rewords the Split cases, and writes the shared `Manual` cases. Done 2026-11-06; the results and IDs are below and in [The shared looks](story-10-batches.md). At the step 5 stop, after which the case IDs hold still (D6).
 
 #### Step 1 results — Test Planner, 2026-11-06
 
@@ -340,6 +341,26 @@ Re-read all five feature pages and all 44 suites (478 existing cases), with posi
 - No new settled-rule case is proposed. The report preserves the prior unread-cap drag-loading question for the PO if it is scheduled; it makes no ruling or new live case for that window. D10's later-plan destinations remain for the inventory.
 
 **Validation:** documentation checks pass (418 files, zero hits), catalog tables and case fields agree, all 248 coverage rows are present exactly once, and `git diff --check` passes. The Reconciler's field-mask check confirms that its catalog changes touch only its owned status/Automation fields. The Architect's inventory and the Automator's batches have not started.
+
+#### Step 5 results — D13 rewording, 2026-11-06
+
+All 26 listed Split cases are processed without reading app or test code. Twenty-four keep their existing IDs and Open status for behavior that can be pinned. DRAG-1.27 becomes the shared Manual carried-copy/outline case, and TREE-2.8 the shared Manual sidebar-appearance case. Three new Manual cases complete the shared looks: DRAG-2.24 for board tiers, DRAG-6.30 for forced-stop painting, and DRAG-6.31 for pending pulses. Each has a concrete Given/When/Then, wiki Rule citations and a present-tense Manual reason.
+
+| Shared look | Manual case |
+|---|---|
+| Carried copy's tilt/held shadow and active-context outline colour | DRAG-1.27 |
+| Board tier and ghost strengths, nested isolation and full-strength drop line | DRAG-2.24 |
+| Forced-stop flash's two amber pulses and banner's final-quarter fade | DRAG-6.30 |
+| Pending pulse endpoints and isolation of nested rows and the line | DRAG-6.31 |
+| Sidebar's own tier/ghost values, untiered new row and full-strength line | TREE-2.8 |
+
+The revised Open cases still assert saved outcomes, which row is affected, which tier/form/state is assigned, and where things are drawn and how big. DRAG-6.19 keeps the banner's configured lifetime and no-restart rule; DRAG-6.20 keeps the flash target; DRAG-6.23 and DRAG-6.24 keep independent pending-state ownership. DRAG-3.22 keeps both form switches, dimensions, pointer continuity and branch-line placement. Three supporting references in DRAG-6.27, TREE-1.1 and TREE-2.13 now point to the shared paint checks without moving their timing, placement or geometry into Manual.
+
+**IDs and handoff:** no old → new map or test-ID re-titling is required. DRAG-2's Next ID is DRAG-2.25; DRAG-6's is DRAG-6.32. The batch inventory now has 152 Open assignments; the two reused Manual IDs are no longer automation assignments. Current catalog wording supersedes the baseline's painted-appearance residuals. Existing Automated statuses/pointers, wiki rules and baseline report are unchanged. The confirming runs judge the revised cases after their tests are written.
+
+**Status snapshot after this pass:** the whole catalog has 485 cases: 318 Automated, 154 Open, 10 Manual, one Planned and two Pending PO. This is not a new reconciliation or a manual test run. Phase 3 and the Automator batches have not started; this is the requested step 5 stop.
+
+**Validation:** documentation checks pass (418 files, zero hits), all 485 catalog cases agree with their summary tables and required metadata, and all 152 in-scope Open cases have exactly one batch assignment. `git diff --check` passes. App and test code were neither read nor changed for this pass.
 
 ### Phase 3: the helpers (D4)
 
@@ -446,9 +467,10 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-06 — Phase 2 step 2 (Test Planner, from the Reconciler).** Recorded the completed baseline report and its exact scope, totals, five promotions, four reopenings, pointer repair and inventory handoff above. Whole-catalog ID checks are clean; the 24 skips and all residual clauses remain explicit inventory inputs. No new approval, case wording change, test edit or runtime validation is implied by the baseline. Phase 2 step 3 is next.
 
+- **2026-11-06 — Phase 2 step 5 (Test Planner).** Applied D13 to the 26 listed cases, retained all existing IDs and added DRAG-2.24, DRAG-6.30 and DRAG-6.31 as Manual. Reused DRAG-1.27 and TREE-2.8 for the other shared looks. Kept functional and geometry obligations in the automated cases and updated three supporting paint references, both catalog indexes and the batch handoff. The batch total is now 152 Open assignments, with no new coverage claim. Stopped before Phase 3.
+
 ## Open questions
 
-- **For the Planner, Phase 2 step 5: D13.** Reword the Split cases and write the shared `Manual` cases ([Story 10's second part](story-10-batches.md), The shared looks).
 - **For the PO, not blocking: the sidebar drag before the project cap is read.** The baseline report's Candidate New Cases notes it. `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" pins permissive behaviour, which neither wiki project-tree §3 nor hierarchy-placement §6 settles. No case exists for it, so D10 doesn't hold this story up for it.
 - **For Nathan, at the checkpoint after 4a: the bar (D2).** It's the starting point, revisited once it's clear how many specs miss it.
 - **For Nathan and the Architect, separately: the epic-wide audit's scope** (Nathan, 2026-11-06). It doesn't hold up this story before Phase 5. Nathan's starting points:
@@ -466,6 +488,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **Test-plan cases affected:** DRAG-6.22, whose column, no-cue clause the Planner removes, and DRAG-6.26, which becomes Open (Phase 1).
   - **Planner applied in Phase 2 step 1:** the column clause is removed, DRAG-6.26 is Open, and DRAG-6.25 points to its banner and no-flash rule.
 - **D13's Split cases and their shared `Manual` cases, for the Planner** (Phase 2 step 5): the 26 cases listed in [Story 10's second part](story-10-batches.md), "The shared looks".
+  - **Planner applied:** 24 existing IDs retain their automatable clauses. DRAG-1.27 and TREE-2.8 are reused as shared Manual cases; DRAG-2.24, DRAG-6.30 and DRAG-6.31 are added as Manual. The shared-look table records every source ID and its destination. No ID is retired or moved, and the 152 Open batch assignments exclude the two reused Manual IDs.
 - **A case for D11's fix, for the Planner to write** (Phase 1). The probe failed: filing a parent out of Unknown status left the Unsorted bucket's "needs attention" badge up until a reload, since the client moved only the written row, where the server also moves its attached descendants. Wiki boards-columns-unsorted §10 already states the rule (`needsAttention` counts an Attached item whose own workphase is unknown). The case: *given* a parent and its Attached descendants in Unknown status, *when* the parent is filed into a workflow workphase and the write's answer lands, *then* the badge goes without a reload. The Coder's tests carry no ID yet and take the Planner's: `useItemManagement.test.ts` ("filing a parent out of Unknown status") and `itemWriteReconciliation.test.ts` ("the workphase cascade").
   - **Planner applied in Phase 2 step 1:** BCU-5.6 is the case for the fix; BCU-5.7 holds the detached-descendant boundary. Both are Open. The baseline Reconciler assesses the candidate tests above and names which need the ID or more assertions; no mapping is presumed here.
 - **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §10 (Phase 1). The Planned passage is gone, its marker with it. A column drag the board stops now sits in the cue's own list: the banner is the same, and a bullet says it flashes nothing. The cue's opening line says the three resyncs show it on an item's drag or a column's. Nothing else on the page changed. Phase 2 step 1: hierarchy-placement §7 gains a sentence in its "One tier for the whole drag" bullet (an entry first drawn after pickup has no tier), and project-tree §1's mid-drag paragraph points to it (TREE-2.14).

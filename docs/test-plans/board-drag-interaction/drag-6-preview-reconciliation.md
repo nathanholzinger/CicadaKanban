@@ -1,6 +1,6 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.30
+**Next ID:** DRAG-6.32
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses for the same or different items, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
@@ -22,17 +22,19 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.16 | A forced stop shows its cause in a banner that stays across the reload | P1 | Open |
 | DRAG-6.17 | Assistive tech announces the forced-stop explanation | P1 | Open |
 | DRAG-6.18 | A click leaves the cue up; starting the next drag clears it | P1 | Open |
-| DRAG-6.19 | The cue expires at its configured lifetime, with the last quarter a fade | P1 | Open |
-| DRAG-6.20 | The stopped item flashes wherever the reloaded board draws it | P1 | Open |
+| DRAG-6.19 | The cue expires at its configured lifetime without restarting on reload | P1 | Open |
+| DRAG-6.20 | The stopped-item flash targets the row the reloaded board draws | P1 | Open |
 | DRAG-6.21 | A hidden stopped item is not revealed for its flash | P1 | Open |
 | DRAG-6.22 | Cancels, no-write releases and resyncs without a live drag show no stop cue | P1 | Open |
-| DRAG-6.23 | A pending row pulses from its own strength to half of it | P1 | Open |
-| DRAG-6.24 | A pending pulse leaves the drop line and nested rows independent | P1 | Open |
+| DRAG-6.23 | Pending state is independent of the row's tier and ghost state | P1 | Open |
+| DRAG-6.24 | Pending state belongs to each row independently and never to the drop line | P1 | Open |
 | DRAG-6.25 | A reload stops a column drag without saving its interrupted reorder | P1 | Open |
 | DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Open |
 | DRAG-6.27 | The flash window starts with the reloaded board and ends independently of the banner | P1 | Open |
 | DRAG-6.28 | A stopped item brought into view flashes only for the window's remaining time | P1 | Open |
 | DRAG-6.29 | Answers for different items preserve positions set by the later write | P0 | Automated |
+| DRAG-6.30 | The forced-stop banner fades and its active item flash has two amber pulses | P1 | Manual |
+| DRAG-6.31 | A pending row pulses from its own configured strength without pulsing nested rows or the line | P1 | Manual |
 
 ---
 
@@ -169,21 +171,23 @@ The banner is visible over “Loading board…” and remains over the reloaded 
 
 **Automation test:** —
 
-## DRAG-6.19 — The cue expires at its configured lifetime, with the last quarter a fade
+## DRAG-6.19 — The cue expires at its configured lifetime without restarting on reload
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* a forced-stop cue with a positive configured lifetime `T`, *when* no new drag starts, *then* the banner remains fully visible for the first three quarters of `T`, fades during the last quarter, and is gone when `T` expires. Completing the board reload does not restart its lifetime. The same lifecycle holds for both cause explanations in [DRAG-6.16](drag-6-preview-reconciliation.md).
+*Given* a forced-stop cue with a positive configured lifetime `T`, *when* no new drag starts, *then* the banner remains present until `T` expires and is absent at expiry. Completing the board reload does not restart its lifetime. The same lifecycle holds for both cause explanations in [DRAG-6.16](drag-6-preview-reconciliation.md).
 
-This case asserts the lifecycle using `T` as a parameter, not whether today's tuned duration feels right. It pins neither a fixed millisecond duration nor the banner's final palette or styling.
+This case asserts lifetime and presence using `T` as a parameter, without fixing milliseconds. The banner's full-strength appearance and final-quarter fade are checked in [DRAG-6.30](drag-6-preview-reconciliation.md).
 
 **Automation test:** —
 
-## DRAG-6.20 — The stopped item flashes wherever the reloaded board draws it
+## DRAG-6.20 — The stopped-item flash targets the row the reloaded board draws
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* `X` is the item being dragged when a resync stops the drag, and the reloaded board draws `X`, *when* it appears at its server-saved place, *then* `X`'s row flashes with two amber pulses. This holds when `X` is drawn as a Free Card, as a Stub in an expanded descendants section, or as a row in an open hierarchy modal. If the reload moved `X` relative to the interrupted drag's pickup, the flash follows the reloaded place. It identifies `X`, not the item whose earlier failed write or stale response caused the resync, and does not change either item's saved placement.
+*Given* `X` is the item being dragged when a resync stops the drag, and the reloaded board draws `X`, *when* the board appears at its server-saved state, *then* the drawn row for `X` has the stopped-item flash state and no row of another item receives it. This holds when `X` is a Free Card, a Stub in an expanded descendants section, or a row in an open hierarchy modal. If the reload moved `X` relative to the interrupted drag's pickup, that state belongs to its reloaded place. The item whose earlier failed write or stale response caused the resync is not substituted for `X`. Assigning the state changes neither item's saved placement.
+
+The state's window is [DRAG-6.27](drag-6-preview-reconciliation.md)'s; its two painted amber pulses are [DRAG-6.30](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
@@ -209,21 +213,23 @@ An item drag interrupted by an earlier failed column save is different: it shows
 
 **Automation test:** —
 
-## DRAG-6.23 — A pending row pulses from its own strength to half of it
+## DRAG-6.23 — Pending state is independent of the row's tier and ghost state
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1
 
-*Given* a row with a write still in flight, *when* it is drawn at Full strength, *then* its pending pulse runs between 1 and 0.5. *When* another item is dragged and the pending row is Mid or Low for that drag, *then* it pulses between `overlayAnchorOpacity` and half that value, or between `overlayNeitherOpacity` and half that value, respectively. A re-dragged pending item's ghost pulses between `overlayGhostOpacity` and half that value. None pulses toward a fixed opacity that would brighten a dim row. When the pending row's response is applied and its marker clears, the pending pulse ends; any tier belonging to the current drag still applies.
+*Given* row `X` has a write in flight, *when* it has no drag target tier, *then* it is marked pending. *When* another item is dragged and `X` is assigned Full, Mid or Low, *then* `X` remains pending independently of that tier. *When* pending `X` is picked up again, *then* its ghost retains the pending state while having ghost state rather than a target tier. *When* the response is applied and the write's marker clears, *then* `X` is no longer pending; any pickup tier belonging to the current drag still applies.
 
-The case asserts the relative endpoints, without pinning tuned opacity values or an animation duration.
+The painted pulse at each strength is [DRAG-6.31](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
-## DRAG-6.24 — A pending pulse leaves the drop line and nested rows independent
+## DRAG-6.24 — Pending state belongs to each row independently and never to the drop line
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
-*Given* pending Card `P` with attached Stub `S` that has no write in flight, *when* `P` pulses, *then* only `P`'s own content pulses. `S` keeps its own strength, Full with no drag or its assigned tier during a drag, without inheriting `P`'s pulse. *Given* instead `S` alone is pending, *then* it pulses on its own and `P` does not. If both are pending, each pulses relative to its own strength, without multiplying the parent's pulse into the child's. A drop line naming a pending row remains Full and does not pulse, including on a Mid Card or Stub.
+*Given* pending Card `P` with attached Stub `S` whose own write is not in flight, *when* their states are read, *then* `P` alone is marked pending and `S` is not. `S` retains its own target tier, if a drag assigned one. *Given* instead `S` alone has a write in flight, *then* `S` is pending and `P` is not. If both have writes in flight, each has its own pending state; applying one answer clears only that row's marker while the other write is still pending. A drop line naming a pending row never acquires pending state, including beside a Mid Card or Stub.
+
+The painted pulses, their independent strengths and the unpulsed line are [DRAG-6.31](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
@@ -239,7 +245,9 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* a column is being dragged when any of the three resyncs in [DRAG-6.25](drag-6-preview-reconciliation.md) stops it, *when* the stop occurs, *then* the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it up; the next drag clears it. Otherwise it lasts for configured lifetime `T`, fully visible for its first three quarters and fading for the last quarter, without restarting when the reload finishes. Neither the stopped column nor any item receives a forced-stop flash.
+*Given* a column is being dragged when any of the three resyncs in [DRAG-6.25](drag-6-preview-reconciliation.md) stops it, *when* the stop occurs, *then* the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it present; the next drag clears it. Otherwise it remains until configured lifetime `T` expires, without restarting when the reload finishes. Neither the stopped column nor any item receives stopped-item flash state.
+
+The banner's full-strength appearance and final-quarter fade are checked in [DRAG-6.30](drag-6-preview-reconciliation.md).
 
 **Automation test:** —
 
@@ -247,7 +255,7 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* a live item drag stopped by any of the three resyncs in [DRAG-6.15](drag-6-preview-reconciliation.md), with flash-window length `F`, *when* its reload takes longer than `F`, *then* loading spends none of the window. When the reloaded board first draws the stopped item at time `t0`, the item has the full window until `t0 + F`, with the two pulses of [DRAG-6.20](drag-6-preview-reconciliation.md). At `t0 + F` the flash ends even if the banner remains.
+*Given* a live item drag stopped by any of the three resyncs in [DRAG-6.15](drag-6-preview-reconciliation.md), with flash-window length `F`, *when* its reload takes longer than `F`, *then* loading spends none of the window. When the reloaded board first draws the stopped item at time `t0`, its stopped-item flash state has the full window until `t0 + F`. At `t0 + F` that state ends even if the banner remains. The target row is [DRAG-6.20](drag-6-preview-reconciliation.md)'s; the painted pulses are [DRAG-6.30](drag-6-preview-reconciliation.md)'s.
 
 *Starting again, when* a new drag starts or another reload starts before `t0 + F`, *then* the flash ends at that start. The other reload, with no new stop behind it, draws no flash, even if it draws the same item or finishes before `t0 + F`. Ending the new drag, redrawing the row or keeping the banner visible does not replay the old flash. The window is measured from the board drawing, even when the stopped item is hidden ([DRAG-6.28](drag-6-preview-reconciliation.md)), and is not the banner's lifetime.
 
@@ -277,3 +285,23 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 Answering either pair in its saved order ends in the same respective positions and order. Where currency cannot be established, a fresh read may supply the saved result instead; the older answer still never restores a superseded position. These fixtures specify the successful responses, not a fixed reindex threshold. The rule covers the board's position-bearing answers from drags, inline creates and Sheet writes, rather than only re-drags of one item.
 
 **Automation test:** `client/src/components/workflow/useItemManagement.test.ts`
+
+## DRAG-6.30 — The forced-stop banner fades and its active item flash has two amber pulses
+
+**Priority:** P1 · **Status:** Manual · **Rule:** wiki board-drag-interaction §10
+
+*Given* a forced-stop banner with positive configured lifetime `T`, and an item drawn from the start of its stopped-item flash window, *when* a person watches the cue at the current configured values with no new drag or reload interrupting it, *then* the banner has full strength for the first three quarters of `T` and fades during the last quarter. The active item flash is two amber pulses within its configured window. The painted transition reads as a temporary indication rather than a permanent change to the row.
+
+The banner's appearance follows this pattern for either cause explanation, after an item drag or a column drag is stopped. A column stop has no item flash state ([DRAG-6.26](drag-6-preview-reconciliation.md)). Banner text, placement, announcements, presence and lifetime, and the flash's target row and active window, are the other forced-stop cases' assertions; this case checks the painting of the states they establish. It fixes neither milliseconds nor the final cue design.
+
+**Automation test:** none — manual: a person judges the banner's painted full-strength/fade transition and the flash's two amber pulses at the current configured values; target, presence, lifetime and window are separate assertions.
+
+## DRAG-6.31 — A pending row pulses from its own configured strength without pulsing nested rows or the line
+
+**Priority:** P1 · **Status:** Manual · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
+
+*Given* a pending row at normal strength or at an assigned Full, Mid or Low tier, and a re-dragged pending item's ghost, with positive current configured strengths, *when* a person watches each pending representation, *then* its pulse runs from its own strength to half of it: normal/Full from 1 to 0.5, Mid from `overlayAnchorOpacity` to half that value, Low from `overlayNeitherOpacity` to half that value, and the ghost from `overlayGhostOpacity` to half that value. A dim row dims further on each beat rather than brightening toward one fixed endpoint.
+
+A pending Card pulses only its own content. A Stub without pending state keeps its own steady strength; a pending Stub pulses on its own. When parent and child are both pending, each pulses relative to its own strength, without multiplying the parent's pulse into the child's. The drop line keeps full strength and does not pulse, including beside a pending Mid Card or Stub. When pending state clears, that row's pulse ends while any current tier strength remains. Pending-state ownership is [DRAG-6.23](drag-6-preview-reconciliation.md)'s and [DRAG-6.24](drag-6-preview-reconciliation.md)'s. No animation duration or final styling is prescribed.
+
+**Automation test:** none — manual: a person checks the painted pulse endpoints and isolation of nested content and the drop line at the current configured values; pending and tier states are separate assertions.

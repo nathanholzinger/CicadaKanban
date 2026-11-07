@@ -35,7 +35,9 @@
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §5a, wiki board-drag-interaction §4.1, wiki hierarchy-placement §8
 
-*Given* the setup, with Free child `F` of `X` and attached child `F1` of `F`, and Free child `D` of attached descendant `A` with attached child `D1` of `D`, *when* `X` is picked up as a Card or Stub, *then* `F` and `D` stay drawn as Cards in their columns at Mid, and `F1` and `D1` stay in those Cards' sections at Low. None joins the hidden branch or its count. The carried copy reads "+ 2 children, 5 total descendants", not a count including any of `F`, `F1`, `D` or `D1`. This holds through popping, zooming and opening the modal.
+*Given* the setup, with Free child `F` of `X` and attached child `F1` of `F`, and Free child `D` of attached descendant `A` with attached child `D1` of `D`, *when* `X` is picked up as a Card or Stub, *then* `F` and `D` stay present as Cards in their columns with Mid assigned, and `F1` and `D1` stay in those Cards' sections with Low assigned. None joins the hidden branch or its count. The carried copy reads "+ 2 children, 5 total descendants", excluding `F`, `F1`, `D` and `D1`. Presence, tier assignment and counts hold through popping, zooming and opening the modal.
+
+The painted strengths of the Free Cards and their Stubs are [DRAG-2.24](drag-2-target-classification.md)'s.
 
 **Automation test:** —
 

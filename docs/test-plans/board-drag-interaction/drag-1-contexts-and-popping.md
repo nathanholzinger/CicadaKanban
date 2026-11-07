@@ -29,8 +29,8 @@
 | DRAG-1.23 | At either end of a list the one neighbor is named; a ghost alone names nothing | P0 | Automated |
 | DRAG-1.24 | Setting a card back down in its own slot saves the named anchor; only a card alone writes nothing | P0 | Open |
 | DRAG-1.25 | A short merged column's empty space below its last card still counts as the context | P1 | Automated |
-| DRAG-1.26 | The locked layer always carries an outline, in `activeContextOutlineColor` | P2 | Open |
-| DRAG-1.27 | The carried card tilts on pickup | P2 | Open |
+| DRAG-1.26 | Exactly the locked context is marked active | P2 | Open |
+| DRAG-1.27 | The carried copy and active-context outline use their configured held treatment | P2 | Manual |
 | DRAG-1.28 | The carried card is bounded by its context | P1 | Open |
 | DRAG-1.29 | After a pop out, the carried card snaps to the cursor over `popSnapMs` | P2 | Manual |
 | DRAG-1.30 | The pop-out clock runs from leaving the context, wherever the cursor goes, and resets on return | P1 | Automated |
@@ -288,21 +288,25 @@ A single cursor sample decides both pops, without another movement or a later sa
 
 **Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`
 
-## DRAG-1.26 — The locked layer always carries an outline, in `activeContextOutlineColor`
+## DRAG-1.26 — Exactly the locked context is marked active
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1
 
-*Given* a drag, *when* it is locked in a column or sub-row, *then* that column or sub-row shows the locked outline. *When* it zooms into a Card, *then* the outline moves to that Card. Exactly one outline marks the locked context at a time, and it follows the lock as the drag pops. At Board layer nothing is locked, and no outline shows. The outline is drawn in the tunable `activeContextOutlineColor`.
+*Given* a drag locked in column or expanded sub-row `K`, *then* `K` alone is marked as the active context. *When* the drag zooms into Card `P`'s Descendants layer, *then* `P` alone is marked active and `K` is no longer active. Each pop transfers that mark to the newly locked context. At Board layer there is no active context. The mark follows the lock throughout the drag and clears when the drag ends.
+
+The outline's painted colour is checked in [DRAG-1.27](drag-1-contexts-and-popping.md).
 
 **Automation test:** —
 
-## DRAG-1.27 — The carried card tilts on pickup
+## DRAG-1.27 — The carried copy and active-context outline use their configured held treatment
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
+**Priority:** P2 · **Status:** Manual · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §2, wiki board-drag-interaction §5a
 
-*Given* a Free Card, *when* it is picked up, *then* its carried copy is tilted, showing that it is held. This case asserts that the tilt is there, not its angle.
+*Given* the current configured drag appearance, *when* a person picks up a Free Card and carries it through Column/sub-row, Board and Descendants layers, and also picks up a Stub in its section or modal, *then* the shortCard carried copy has its pickup tilt and the carried Stub has the held shadow that distinguishes it from the list's rows. The active context's outline uses `activeContextOutlineColor` wherever the drag is locked. These painted treatments remain appropriate through the form switches; no angle, shadow recipe or final palette is prescribed.
 
-**Automation test:** —
+Which context is active is [DRAG-1.26](drag-1-contexts-and-popping.md)'s; the two forms, their sizes and the pointer's continuity are [DRAG-3.22](drag-3-card-column-bands.md)'s.
+
+**Automation test:** none — manual: a person judges the painted tilt, held shadow and configured outline colour; context, form, position and size have separate assertions.
 
 ## DRAG-1.28 — The carried card is bounded by its context
 
