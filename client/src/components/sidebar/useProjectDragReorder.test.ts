@@ -808,7 +808,7 @@ describe('the tier each row is drawn at', () => {
     expect(result.current.dropInvalid).toBe(false);
   });
 
-  describe('TREE-2.8: the strengths', () => {
+  describe('the strengths', () => {
     const OWN = {
       projectAnchorOpacity: 0.45,
       projectNeitherOpacity: 0.15,

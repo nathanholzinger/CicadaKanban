@@ -11,8 +11,7 @@ import {
   fetchDefaultBoard,
 } from '../helpers/seed';
 import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
-import { article, column, itemPanel, itemRow, titlesIn } from '../helpers/boardLocators';
-import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
+import { article, column, itemPanel, itemRow, titlesIn, dragRegion } from '../helpers/boardLocators';
 
 test.describe('attached children on the board', () => {
   test.beforeAll(async () => {
@@ -219,7 +218,7 @@ test.describe('attached children on the board', () => {
     // The region itself, not the group's own center — In Progress is empty,
     // and an empty region's carve-out is a fixed, small band near the top of the column body, not the whole
     // available column height.
-    const targetRegion = targetColumn.locator(`[${DRAG_REGION_ATTR}]`).first();
+    const targetRegion = dragRegion(targetColumn);
     await pickUp(page, card);
     await hoverTo(page, await center(targetRegion));
     await awaitPoppedOut(page, tuning);

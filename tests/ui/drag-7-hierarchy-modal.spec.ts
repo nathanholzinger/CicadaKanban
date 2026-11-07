@@ -1,3 +1,4 @@
+import { delayMoveResponses, refuseMoves, settledWrites, watchWrites } from '../helpers/requestHarness';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
@@ -20,12 +21,10 @@ import {
   cancel,
   center,
   clocksMargin,
-  delayMoveResponses,
   dragMachine,
   hoverTo,
   paintedBoxOf,
   pickUp,
-  refuseMoves,
   release,
   seedDragTuning,
   topQuarter,
@@ -39,7 +38,7 @@ import {
   itemPanel,
   itemRow,
   overflowRow,
-  region,
+  dragRegion,
 } from '../helpers/boardLocators';
 import {
   expectCentered,
@@ -49,7 +48,7 @@ import {
   sectionRows,
   seedOverflowTree,
 } from '../helpers/overflowTree';
-import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
+
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
@@ -78,7 +77,7 @@ async function pullOutAndZoomBack(page: Page, modal: Locator, cardId: string, ro
   const card = await boxOf(article(page, 'P'));
   await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
   await expect(modal).toHaveCount(0);
-  const section = region(page, descendantsRegionKey(cardId));
+  const section = dragRegion(page, descendantsRegionKey(cardId));
   await hoverTo(page, await atFraction(section, 0.5));
   await awaitDragContext(page, descendantsRegionKey(cardId));
 }
@@ -445,9 +444,9 @@ test('DRAG-7.11: while the modal is open, the Card and its section under the bac
 
   // One element carries the section's key, the modal's list, and each row is registered once:
   // the section's own rows draw static under the backdrop.
-  const regions = region(page, descendantsRegionKey(p.id));
+  const regions = dragRegion(page, descendantsRegionKey(p.id));
   await expect(regions).toHaveCount(1);
-  await expect(region(modal, descendantsRegionKey(p.id))).toHaveCount(1);
+  await expect(dragRegion(modal, descendantsRegionKey(p.id))).toHaveCount(1);
   for (const row of [a, q, r, t]) await expect(itemRow(page, row.id)).toHaveCount(1);
 
   // The cursor rests on P's own section, behind the backdrop and left of the modal's box, at the
@@ -881,7 +880,7 @@ test.skip('DRAG-7.32: closing the Sheet over the hierarchy modal, by Escape, its
   const modal = hierarchyModal(page, 'P');
   await expect(modal).toBeVisible();
   // Scrolled a little, with R1 still in view to press.
-  await region(modal, descendantsRegionKey(p.id)).evaluate((list, by) => (list.scrollTop = by), SCROLLED_BY);
+  await dragRegion(modal, descendantsRegionKey(p.id)).evaluate((list, by) => (list.scrollTop = by), SCROLLED_BY);
   const before = await modalState(modal, p.id);
   expect(before.scrollTop, 'the modal’s list scrolls').toBe(SCROLLED_BY);
   expect(before.rows.length).toBeGreaterThan(0);

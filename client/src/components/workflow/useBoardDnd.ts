@@ -183,7 +183,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const [session, setSession] = useState<DragSession | null>(null);
   // Whether a column is being dragged. A column drag has no session (no pop machine, no ghost), so this
   // is all the hook holds of it: the state starts the armed stop's timer, and the ref is what
-  // `resyncBoard` reads, from closures that outlive the render they were made in.
+  // `resyncBoard` and `handleDragEnd` read, from closures that outlive their render.
   const [columnDragLive, setColumnDragLive] = useState(false);
 
   // Mirrors for the closures that run outside React's render of this hook.
@@ -818,12 +818,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     const current = sessionRef.current;
+    const columnWasLive = columnDragRef.current;
     endSession();
 
     const activeId = String(active.id);
 
     if (isColumnData(active.data.current)) {
-      if (over && activeId !== String(over.id)) {
+      if (columnWasLive && over && activeId !== String(over.id)) {
         await deps.onColumnDrop(activeId, String(over.id), () => resyncBoard('write-failed'));
       }
       return;

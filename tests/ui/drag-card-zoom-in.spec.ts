@@ -19,7 +19,7 @@ import {
   seedDragTuning,
   clocksMargin,
 } from '../helpers/dragGesture';
-import { article, column, region } from '../helpers/boardLocators';
+import { article, column, dragRegion } from '../helpers/boardLocators';
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // The Column → Card zoom-in, reached after the drag has passed through
@@ -78,7 +78,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
     await awaitPoppedOut(page, tuning);
 
-    await hoverTo(page, await center(region(inProgressGroup, columnRegionKey(inProgressCol.id))));
+    await hoverTo(page, await center(dragRegion(inProgressGroup, columnRegionKey(inProgressCol.id))));
     await awaitDragContext(page, columnRegionKey(inProgressCol.id), clocksMargin(tuning.popInDelayMs));
     // Locking in redraws the column (the zones gone): aim at Q where it now sits.
     await hoverTo(page, await center(article(inProgressGroup, 'Q')));
@@ -117,7 +117,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
     await awaitPoppedOut(page, tuning);
 
-    await hoverTo(page, await center(region(todoGroup, columnRegionKey(todoCol.id))));
+    await hoverTo(page, await center(dragRegion(todoGroup, columnRegionKey(todoCol.id))));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popInDelayMs));
     await hoverTo(page, await center(article(todoGroup, 'Q')));
     await awaitDragContext(

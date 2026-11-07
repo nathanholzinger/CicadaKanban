@@ -1,9 +1,10 @@
+import { settledWrites, watchWrites } from '../helpers/requestHarness';
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import { holdRequests } from '../helpers/holdRequests';
-import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
+
 import { fetchProjectDepthCap, pinProjectParent, seedProject, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import { SIDEBAR_MAX_WIDTH_PX, SIDEBAR_WIDTH_STORAGE_KEY } from '../../client/src/components/sidebar/sidebarWidth';

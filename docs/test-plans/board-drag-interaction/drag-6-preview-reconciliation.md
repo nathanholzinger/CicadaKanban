@@ -44,7 +44,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 *Given* a drop that resolves to `{anchorId: A, side: after}` in a column rendering `A, C, E`, *when* the user releases, *then*, before the request leaves the client, the dragged item `X` renders at index 1 (`A, X, C, E`), the ghost's index, and no `position` value is assigned to it to get there ([TC-2.27](../item-positioning/part-2-anchor-resolution.md)). The placement the board shows is the relation the request carries (a workphase, and first, last, where the kept position falls, or an anchor and side), so the picture before and after the response is the same. The board never shows its pre-drop order after the release. *And given* the same column, *when* the user releases in its top band, *then* the request is `before A` ([TC-7.1](../item-positioning/part-7-board-placement-intents.md)), and the placement the board shows is that same anchor and side, not a bare first slot: `X` renders first, and once the response is applied the list still reads `X, A, C, E`. A bottom-band release is the same, as `after E` ([TC-7.2](../item-positioning/part-7-board-placement-intents.md)), and the list reads `A, C, E, X`.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
+**Automation test:** `tests/ui/drag-preview-reconciliation.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
 ## DRAG-6.2 — The previewed item is marked pending; its `position` is left alone, and isn't `null`
 
@@ -52,7 +52,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 *Given* the preview of [DRAG-6.1](drag-6-preview-reconciliation.md), *when* the board's state is inspected while the write is in flight, *then* `X` carries the pending marker, `X.position` equals its value before the drop, and `X.position` isn't `null` ([TC-2.30](../item-positioning/part-2-anchor-resolution.md)). Nothing in the item itself changes until the response. *When* another item's response re-sorts the list in that window, *then* `X` doesn't jump to the top of the column.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
+**Automation test:** `tests/ui/drag-preview-reconciliation.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
 ## DRAG-6.4 — A response that orders the item differently from its preview is shown as the server saved it
 
@@ -68,7 +68,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 *Given* `X` dropped once (write 1 in flight) and straight away dragged and dropped again at a different slot (write 2 in flight), *when* the responses arrive in either order, including write 2's before write 1's, *then* `X` ends in write 2's result (its position and its slot), and write 1's response, if it arrives later, is not applied over it: its row for `X` is discarded. A stale response that also carries reindex pairs is [DRAG-6.7](drag-6-preview-reconciliation.md).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-preview-reconciliation.spec.ts`
 
 ## DRAG-6.6 — A failed drop resyncs the board from the server; the guess is never kept
 
@@ -76,7 +76,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 *Given* a previewed drop whose write the server rejects, *when* the rejection arrives, *then* the board drops the previewed placement and resyncs its items from the server. The previewed order isn't kept, and no value from the preview survives ([ATT-3.7](../item-attachment/att-3-reparent-placement-atomicity.md)). A rejection should be nearly unreachable, since an invalid target is never poppable ([DRAG-1.7](drag-1-contexts-and-popping.md), [DRAG-1.8](drag-1-contexts-and-popping.md)); one arriving at all means the board's and the API's checks have drifted apart ([ATT-4.9](../item-attachment/att-4-legal-parent-depth-cap.md)).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-preview-reconciliation.spec.ts`
 
 ## DRAG-6.7 — A stale response carrying reindex pairs triggers a resync, not a guess
 

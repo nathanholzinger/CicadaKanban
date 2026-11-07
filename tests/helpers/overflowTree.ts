@@ -1,7 +1,7 @@
 import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
-import { awaitDragContext, boxOf, hoverTo, pickUp, type Point } from './dragGesture';
-import { itemRow, region } from './boardLocators';
+import { awaitDragContext, boxOf, pickUp, tabBy, type Point } from './dragGesture';
+import { itemRow, dragRegion } from './boardLocators';
 import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 
@@ -47,8 +47,7 @@ export async function holdAt(
   let last: Point = from;
   const aim = async (levels: number) => {
     const point = await target();
-    last = { x: from.x + levels * DESCENDANTS_INDENT_PX, y: point.y };
-    await hoverTo(page, last);
+    last = await tabBy(page, { x: from.x, y: point.y }, levels);
   };
   // The rows slide aside as the ghost approaches, so the second pass aims at where they settle.
   await aim(depth);
@@ -149,7 +148,7 @@ export function rowIds(scope: Locator): Promise<string[]> {
 
 // The ids of what a Card's section draws, in order (`rowIds`).
 export function sectionRows(page: Page, cardId: string): Promise<string[]> {
-  return rowIds(region(page, descendantsRegionKey(cardId)));
+  return rowIds(dragRegion(page, descendantsRegionKey(cardId)));
 }
 
 // What an open hierarchy modal draws and where its list is scrolled: each row's id, title and indent
@@ -160,7 +159,7 @@ export interface ModalState {
 }
 
 export function modalState(modal: Locator, cardId: string): Promise<ModalState> {
-  return region(modal, descendantsRegionKey(cardId)).evaluate(list => ({
+  return dragRegion(modal, descendantsRegionKey(cardId)).evaluate(list => ({
     rows: [...list.querySelectorAll<HTMLElement>('[data-item-id]')].map(row => ({
       id: row.getAttribute('data-item-id') ?? '',
       title: row.querySelector('button')?.textContent?.trim() ?? '',

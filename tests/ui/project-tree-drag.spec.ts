@@ -1,9 +1,10 @@
+import { watchWrites } from '../helpers/requestHarness';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { dragOverlay } from '../helpers/boardLocators';
 import { cancel, hoverTo, paintedBoxOf, pickUp, release } from '../helpers/dragGesture';
-import { aim, aimAtOwnRow, ghostSlot, watchWrites } from '../helpers/projectTreeDrag';
+import { aim, aimAtOwnRow, ghostSlot } from '../helpers/projectTreeDrag';
 import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import {

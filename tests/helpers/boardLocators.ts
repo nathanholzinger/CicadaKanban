@@ -1,5 +1,9 @@
 import type { Locator, Page } from '@playwright/test';
-import { DRAG_OVERLAY_ATTR, DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
+import {
+  CARD_LIST_REGION_SELECTOR,
+  DRAG_OVERLAY_ATTR,
+  DRAG_REGION_ATTR,
+} from '../../client/src/components/workflow/dragRegions';
 
 // The board's own card and column locators, spelled once for the specs to share.
 
@@ -33,9 +37,16 @@ export function itemRow(scope: Page | Locator, id: string): Locator {
   return scope.locator(`[data-item-id="${id}"]`);
 }
 
-// The drag region with the key `regionKey` (`dragRegions.ts`'s `*RegionKey` builders), in `scope`.
-export function region(scope: Page | Locator, regionKey: string): Locator {
-  return scope.locator(`[${DRAG_REGION_ATTR}="${regionKey}"]`);
+export function itemRowButton(scope: Page | Locator, id: string, title: string): Locator {
+  return itemRow(scope, id).getByRole('button', { name: title, exact: true });
+}
+
+// An exact region key, or the first column/sub-row region in a column group.
+// The unkeyed form excludes Cards' Descendants regions, which share the attribute.
+export function dragRegion(scope: Page | Locator, key?: string): Locator {
+  return key === undefined
+    ? scope.locator(CARD_LIST_REGION_SELECTOR).first()
+    : scope.locator(`[${DRAG_REGION_ATTR}="${key}"]`);
 }
 
 // The carried copy of the item being dragged, which exists only for the length of the drag.

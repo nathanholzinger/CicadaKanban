@@ -1,3 +1,4 @@
+import { settledWrites, watchWrites } from '../helpers/requestHarness';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem, moveItem } from '../helpers/seed';
@@ -17,7 +18,7 @@ import {
 } from '../helpers/dragGesture';
 import { article, dragOverlay, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
 import { dropLineOn, holdAt, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
-import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
+
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 

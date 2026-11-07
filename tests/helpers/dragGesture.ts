@@ -1,5 +1,6 @@
-import { expect, type Locator, type Page, type Route } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { CARD_LIST_REGION_SELECTOR } from '../../client/src/components/workflow/dragRegions';
+import { DESCENDANTS_INDENT_PX } from '../../client/src/components/cardMetrics';
 import { dragOverlay } from './boardLocators';
 import {
   DEFAULT_DRAG_TUNING,
@@ -174,6 +175,14 @@ export async function bottomQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.85);
 }
 
+// Move sideways from an explicit current point by board hierarchy indents.
+// The point makes repeated tabs relative to the caller's last aim, not a stale pickup.
+export async function tabBy(page: Page, from: Point, n: number): Promise<Point> {
+  const target = { x: from.x + n * DESCENDANTS_INDENT_PX, y: from.y };
+  await hoverTo(page, target);
+  return target;
+}
+
 // How far past the ghost's middle `setBackDownLeaning` carries the dragged
 // copy — well clear of the middle either way, well short of the next card.
 const LEAN_PX = 15;
@@ -266,29 +275,6 @@ export async function seedDragTuning(page: Page, override: Partial<DragTuning> =
     JSON.stringify(tuning),
   ] as const);
   return tuning;
-}
-
-// Holds every move response for `ms(n)`, `n` counting the moves from 0. The request still
-// reaches the server at once, so the server's order of operations is the real one and only the
-// client's view of it is delayed: a drop stays marked pending until the held response lands.
-export async function delayMoveResponses(page: Page, ms: (n: number) => number) {
-  let n = 0;
-  await page.route('**/api/items/*/move', async (route: Route) => {
-    const wait = ms(n++);
-    const response = await route.fetch();
-    await new Promise(r => setTimeout(r, wait));
-    await route.fulfill({ response });
-  });
-}
-
-// Refuses every move the page sends, so that a release resyncs the board from the server. With
-// `afterMs`, each refusal comes that long after the request, so the reload it causes can land while
-// a later drag is under way.
-export async function refuseMoves(page: Page, { afterMs = 0 }: { afterMs?: number } = {}) {
-  await page.route('**/api/items/*/move', async (route: Route) => {
-    if (afterMs > 0) await new Promise(resolve => setTimeout(resolve, afterMs));
-    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
-  });
 }
 
 // The board read the client makes when it resyncs.

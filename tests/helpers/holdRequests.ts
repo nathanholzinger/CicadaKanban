@@ -2,7 +2,7 @@ import { expect, type Page, type Route } from '@playwright/test';
 
 // Holds the answer to every request of one method and URL until the spec lets it go, for a spec that
 // reads the page while a write is unanswered. `outcome` says how the held answer ends:
-// - 'succeed': the request reaches the server at once, as `dragGesture.ts::delayMoveResponses`'s does, so
+// - 'succeed': the request reaches the server at once, as `requestHarness.ts::delayMoveResponses`'s does, so
 //   the server's order of operations is the real one and only the client's view of it is delayed.
 // - 'refuse': the request never reaches the server, and its answer is a 400 once released, so a refused
 //   write leaves nothing behind.

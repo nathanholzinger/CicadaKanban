@@ -371,6 +371,7 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
   it('DRAG-6.15: ends an item drag that began while the save was in flight, and the release writes nothing', async () => {
     const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
+    act(() => result.current.handleDragStart(columnPickup));
 
     let reorder!: Promise<void>;
     act(() => {
@@ -397,6 +398,7 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
     });
     const { result } = renderHook(() => useBoardDnd(deps));
 
+    act(() => result.current.handleDragStart(columnPickup));
     await act(() => result.current.handleDragEnd(columnDrop));
 
     expect(deps.loadBoard).toHaveBeenCalledOnce();
@@ -416,6 +418,7 @@ describe('useBoardDnd: a drag the board stops', () => {
   it('DRAG-6.16: is reported once, with the cause, when a failed write reloads the board mid-drag', async () => {
     const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
+    act(() => result.current.handleDragStart(columnPickup));
     let reorder!: Promise<void>;
     act(() => {
       reorder = result.current.handleDragEnd(columnDrop);
@@ -491,9 +494,58 @@ describe('useBoardDnd: a drag the board stops', () => {
       return { deps, result };
     }
 
+    it('DRAG-6.25: a stopped column release writes nothing, and a fresh column drag can still reorder', async () => {
+      const { deps, failSave } = failingColumnSave();
+      const onColumnDrop = vi.fn(deps.onColumnDrop);
+      deps.onColumnDrop = onColumnDrop;
+      const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(columnPickup));
+      let earlierReorder!: Promise<void>;
+      act(() => {
+        earlierReorder = result.current.handleDragEnd(columnDrop);
+      });
+      act(() => result.current.handleDragStart(columnPickup));
+
+      await act(async () => {
+        failSave();
+        await earlierReorder;
+      });
+
+      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'write-failed', itemId: null });
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(onColumnDrop).toHaveBeenCalledTimes(1);
+      await act(() => result.current.handleDragEnd(columnDrop));
+      expect(onColumnDrop).toHaveBeenCalledTimes(1);
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(moveItem).not.toHaveBeenCalled();
+
+      act(() => result.current.handleDragStart(columnPickup));
+      await act(() => result.current.handleDragEnd(columnDrop));
+      expect(onColumnDrop).toHaveBeenCalledTimes(2);
+      expect(onColumnDrop).toHaveBeenLastCalledWith('a', 'b', expect.any(Function));
+      expect(deps.onDragStopped).toHaveBeenCalledOnce();
+    });
+
+    it('ignores a column release when no column drag is live, including after cancellation', async () => {
+      const onColumnDrop = vi.fn(async () => {});
+      const deps = depsWith(onColumnDrop);
+      const { result } = renderHook(() => useBoardDnd(deps));
+
+      await act(() => result.current.handleDragEnd(columnDrop));
+      expect(onColumnDrop).not.toHaveBeenCalled();
+
+      act(() => result.current.handleDragStart(columnPickup));
+      act(() => result.current.handleDragCancel());
+      await act(() => result.current.handleDragEnd(columnDrop));
+      expect(onColumnDrop).not.toHaveBeenCalled();
+      expect(deps.loadBoard).not.toHaveBeenCalled();
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+    });
+
     it('DRAG-6.26: is reported once, with the cause and no item, when a failed column save reloads the board mid-drag', async () => {
       const { deps, failSave } = failingColumnSave();
       const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(columnPickup));
       let reorder!: Promise<void>;
       act(() => {
         reorder = result.current.handleDragEnd(columnDrop);
@@ -530,6 +582,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     it('DRAG-6.22: is not reported for one cancelled before the reload', async () => {
       const { deps, failSave } = failingColumnSave();
       const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(columnPickup));
       let reorder!: Promise<void>;
       act(() => {
         reorder = result.current.handleDragEnd(columnDrop);

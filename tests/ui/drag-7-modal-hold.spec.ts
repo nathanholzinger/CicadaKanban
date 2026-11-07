@@ -1,3 +1,4 @@
+import { refuseMoves, settledWrites, watchWrites } from '../helpers/requestHarness';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
@@ -16,15 +17,14 @@ import {
   hoverTo,
   paintedBoxOf,
   pickUp,
-  refuseMoves,
   release,
   seedDragTuning,
   topQuarter,
   NO_POP,
 } from '../helpers/dragGesture';
-import { article, hierarchyModal, itemRow, overflowRow, region } from '../helpers/boardLocators';
+import { article, hierarchyModal, itemRow, overflowRow, dragRegion } from '../helpers/boardLocators';
 import { expectCentered, expectInside, holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
-import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
+
 import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 import { MODAL_EDGE_MARGIN_PX } from '../../client/src/components/workflow/modalPlacement';
@@ -633,7 +633,7 @@ test('DRAG-7.17: when R’s children run longer than the modal, its list scrolls
   const gap = 6 + count;
   await awaitProjection(page, `${gap}:3:true`);
   await expect(modal).toBeVisible(opens(tuning));
-  const list = region(modal, descendantsRegionKey(p.id));
+  const list = dragRegion(modal, descendantsRegionKey(p.id));
   expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await expectInside(modal, last.at());
   await expectGhostUnder(modal, x.id, last.at());
@@ -671,7 +671,7 @@ test.skip('DRAG-7.17: from the gap above R’s overflow row, a list that scrolls
   const gap = 4 + count;
   await awaitProjection(page, `${gap}:3:true`);
   await expect(modal).toBeVisible(opens(tuning));
-  const list = region(modal, descendantsRegionKey(p.id));
+  const list = dragRegion(modal, descendantsRegionKey(p.id));
   expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await expectInside(modal, first.at());
   await expectGhostUnder(modal, x.id, first.at());
@@ -743,7 +743,7 @@ test.skip('DRAG-7.10, DRAG-7.18: after leaving a modal a hold opened, a hold bes
   await expect(modal).toHaveCount(0);
 
   // Back into the section, and a hold beside the overflow row again.
-  const section = region(page, descendantsRegionKey(p.id));
+  const section = dragRegion(page, descendantsRegionKey(p.id));
   await hoverTo(page, await atFraction(section, 0.5));
   await hoverTo(page, await topQuarter(overflowRow(page, r.id)));
   await hoverTo(page, await topQuarter(overflowRow(page, r.id)));

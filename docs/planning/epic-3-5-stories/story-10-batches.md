@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — the inventory and the batches
 
-**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation · **Status:** inventory approved; the Planner's D13 rewording (Phase 2 step 5) is applied. At the step 5 stop, before Phase 3 and batch 4a.
+**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation · **Status:** inventory approved; the Planner's D13 rewording (Phase 2 step 5) is committed. Phase 3 is complete, including the authorized DRAG-6.25 fix; at its review/commit stop before batch 4a.
 
 [Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D13), Phases 1–3 and Phase 5. This doc holds the part that grows while the work runs: each Open case's batch and how it closes, each skip's fate, the checkpoint after 4a, and each batch's results. A change to a decision is amended in the plan. A change to a case's route is amended here.
 
@@ -262,8 +262,12 @@ Each batch's stop adds its results here: the cases closed, the specs that missed
 
 **Validation:** documentation checks pass (418 files, zero hits), all 485 catalog cases agree with their summary tables and required metadata, and all 152 in-scope Open cases have exactly one batch assignment. `git diff --check` passes. No runtime or manual test run is claimed.
 
+**Phase 3 — 2026-11-06:** D4's helpers and spec split are complete; [the main plan's Phase 3 results](story-10-dnd-automation-catch-up.md) record the helper contracts, small authorized DRAG-6.25 fix, commands and validation. The preservation run passed 2,200 tests with 400 expected skipped runs (12 files, 20 repeats, zero retries). After the Coder fix, all 120 genuine-cause exercises passed; the temporary diagnostic was retired. The final full E2E run passed 240 tests with 24 existing skips, and the root gate passed. The original 153 ID-bearing Playwright titles and 24 skips are preserved. Four moved DRAG-6 Automation paths are repaired and the stale TREE-2.8 internal title claims are removed; catalog statuses and all 152 Open assignments stay unchanged. Use the completed helpers in the next brief. DRAG-6.25's complete surface coverage remains with 4d. This is the review/commit stop before 4a; no batch or commit has started.
+
 ## Amendments
 
 - **2026-11-06 — Phase 2 step 5 (Planner).** Applied D13, recorded the five shared Manual IDs, removed DRAG-1.27 and TREE-2.8 from automation assignments and adjusted the table to 152 Open cases. Clarified the three supporting references in DRAG-6.27, TREE-1.1 and TREE-2.13, preserving their timing, placement and geometry assertions. The baseline remains a pre-D13 reconciliation snapshot; current catalog wording governs the next briefs. No existing ID is retired or reassigned to another suite.
+
+- **2026-11-06 — Phase 3 (Planner).** Recorded the completed helper/refactor phase, approved DRAG-6.25 fix and final validation. The inventory and routes are unchanged; four Automation paths and four stale internal title claims are maintained. The next batch is 4a after Phase 3 review/commit.
 
 ## Open questions

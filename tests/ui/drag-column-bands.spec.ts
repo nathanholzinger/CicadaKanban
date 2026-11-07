@@ -1,18 +1,6 @@
-import type { APIRequestContext, Locator, Page } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { resetAndSeedDb } from '../helpers/db';
-import {
-  seedTemplatedWorkflow,
-  pickWorkphases,
-  moveItem,
-  pinItemPosition,
-  seedPositionedItems,
-  fetchDefaultBoard,
-  fetchItem,
-  deleteColumn,
-  updateColumn,
-  type SeededColumn,
-} from '../helpers/seed';
+import { moveItem, pinItemPosition, fetchItem, deleteColumn, updateColumn } from '../helpers/seed';
 import {
   pickUp,
   hoverTo,
@@ -23,223 +11,33 @@ import {
   gapBetween,
   awaitDragState,
   awaitDragContext,
-  delayMoveResponses,
-  boardReload,
-  refuseMoves,
-  dragMachine,
   seedDragTuning,
   awaitPoppedOut,
+  clocksMargin,
   NO_POP,
   POP_OUT_ONLY,
   SUSTAINED,
   type Point,
 } from '../helpers/dragGesture';
-import { article, column, region, titlesIn } from '../helpers/boardLocators';
+import { article, column, dragRegion, titlesIn } from '../helpers/boardLocators';
 import { columnOrder, fullOrder } from '../helpers/itemRepositioningScenario';
-import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
-import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { subrowRegionKey } from '../../client/src/components/workflow/dragRegions';
+import {
+  seed,
+  openBoard,
+  foldReviewIntoInProgress,
+  columnKeyOf,
+  popThrough,
+  stableBoxOf,
+  settleOnTopBand,
+  settleOnBottomBand,
+  singleBandPoint,
+  bandDivider,
+  middleGapPoint,
+} from '../helpers/boardDragScenario';
 
-// Contexts and popping, the Card → column drop bands, and the ordinal
-// preview and its reconciliation.
-//
-// Every threshold and band is the *configured* value: each case seeds the
-// dev/test panel's storage key before the page loads and reads the numbers
-// back from that same object — never a literal 0.5 s or 20%. Momentary cases
-// seed a delay far longer than a Playwright hover so a slow run can't pop by
-// accident; sustained cases seed a short one and wait explicitly past it.
-//
-// Feel — the clamp, the snap, the ghost's look — is checked by hand; these
-// assert resolution and end state.
-
-const PROJECT = 'Drag Bands Project';
-// `cardPopInDelayMs` is a separate clock from `popInDelayMs`: it fires from
-// hovering one of the *locked* context's own Cards, so a case here that
-// briefly hovers a sibling card in-context right before releasing
-// (DRAG-1.3, DRAG-3.4, DRAG-6.5) is exposed to it too, even though none of
-// these is about attaching at all — every preset
-// (tests/helpers/dragGesture.ts) keeps it absurdly high for the same reason
-// `popDelayMs`/`popInDelayMs` are in `NO_POP`, so a slow run can't pop by
-// accident.
-// Enough for both clocks to run out while the cursor rests: pop out, then in.
-const popThrough = (tuning: DragTuning) => tuning.popDelayMs + tuning.popInDelayMs + 300;
-
-// Four columns plus the sidebar overflow the default 1280px viewport, and a
-// band point measured in a column that is partly off-screen depends on
-// dnd-kit's auto-scroll having kicked in — timing, not behavior. Wide
-// enough that every column is fully on screen.
+// Four columns and the sidebar must fit without triggering horizontal auto-scroll.
 test.use({ viewport: { width: 1600, height: 900 } });
-
-interface Scenario {
-  projectId: string;
-  workflow: { id: string };
-  boardId: string;
-  columns: SeededColumn[];
-  phase: Record<'todo' | 'inProgress' | 'review' | 'done', { id: string; name: string }>;
-  items: Record<'X' | 'A' | 'B' | 'C', { id: string }>;
-}
-
-// Flow workflow (Todo / In Progress / Review / Done) on its 1:1 default
-// board. X in Todo at 2.5; A, B, C in In Progress at 1, 2, 3 — so a
-// workphase-only move of X lands it *between* B and C by its kept position,
-// which is what tells the middle band apart from either edge band.
-async function seed(request: APIRequestContext): Promise<Scenario> {
-  await resetAndSeedDb();
-  const { project, workflow } = await seedTemplatedWorkflow(request, PROJECT);
-  const [todo, inProgress, review, done] = pickWorkphases(workflow, 'Todo', 'In Progress', 'Review', 'Done');
-  const board = await fetchDefaultBoard(request, workflow.id);
-  const items = await seedPositionedItems(request, [
-    { key: 'A', projectId: project.id, workphaseId: inProgress.id, position: 1 },
-    { key: 'B', projectId: project.id, workphaseId: inProgress.id, position: 2 },
-    { key: 'X', projectId: project.id, workphaseId: todo.id, position: 2.5 },
-    { key: 'C', projectId: project.id, workphaseId: inProgress.id, position: 3 },
-  ]);
-  return {
-    projectId: project.id,
-    workflow,
-    boardId: board.id,
-    columns: board.columns,
-    phase: { todo, inProgress, review, done },
-    items,
-  };
-}
-
-// In Progress and Review folded into one column (merged, or expanded into
-// two sub-rows), with Y seeded into Review at 5 — the fixture DRAG-3.6,
-// DRAG-3.7, DRAG-3.8 and DRAG-1.6 share. Returns the surviving column and Y.
-async function foldReviewIntoInProgress(
-  request: APIRequestContext,
-  s: Scenario,
-  displayMode: 'merged' | 'expanded',
-): Promise<{ col: Scenario['columns'][number]; y: { id: string } }> {
-  const col = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
-  const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
-  await deleteColumn(request, reviewCol.id);
-  await updateColumn(request, col.id, {
-    startWorkphaseId: s.phase.inProgress.id,
-    endWorkphaseId: s.phase.review.id,
-    displayMode,
-  });
-  const { Y: y } = await seedPositionedItems(request, [
-    { key: 'Y', projectId: s.projectId, workphaseId: s.phase.review.id, position: 5 },
-  ]);
-  return { col, y };
-}
-
-async function openBoard(page: Page, projectSidebar: { openBoard: (name: string) => Promise<void> }) {
-  await projectSidebar.openBoard(PROJECT);
-  await expect(page.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
-}
-
-// The region key the board root reports for a column (`data-drag-context`),
-// spelled by the client's own key builder rather than re-typed here.
-function columnKeyOf(s: Scenario, workphaseId: string): string {
-  return columnRegionKey(s.columns.find(c => c.entryWorkphaseId === workphaseId)!.id);
-}
-
-// A band is content-anchored pixels (`dragBands.ts::bandFor`), sized by the
-// shortCard's own fixed height and the card lists' shared gap (neither is a
-// tunable) and the region's own card count/terminal-ness — never a fraction
-// of the region's height — so a band is targeted by locating the carve-out
-// that marks it (`BandGuides.tsx::DragCarveFrame`), never by recomputing
-// that arithmetic here. A carve-out only exists while this
-// region *isn't* the live hover target, which every case below arranges by
-// construction (it measures the point before moving there).
-//
-// Popping out grows *every* region on the board at once (each reserves its
-// own carve-out the instant Board layer is reached), and in an expanded
-// column that simultaneous, board-wide reflow can be enough to trip
-// dnd-kit's own auto-scroll of the shared sub-row body — animated, so a
-// box measured mid-scroll is stale before the mouse ever gets there.
-// `stableBoxOf` waits for a locator's own box to stop moving before an
-// exact carve-out point trusts it.
-async function stableBoxOf(locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> {
-  let previous = await boxOf(locator);
-  for (let i = 0; i < 20; i++) {
-    await new Promise(r => setTimeout(r, 100));
-    const current = await boxOf(locator);
-    if (Math.abs(current.y - previous.y) < 0.5 && Math.abs(current.height - previous.height) < 0.5) return current;
-    previous = current;
-  }
-  return previous;
-}
-async function stableCenter(locator: Locator): Promise<Point> {
-  const box = await stableBoxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-function carveZone(region: Locator, edge: 'top' | 'bottom' | 'single'): Locator {
-  return region.locator(`[data-carve-zone="${edge}"]`);
-}
-function carveDivider(region: Locator, edge: 'top' | 'bottom'): Locator {
-  return region.locator(`[data-carve-divider="${edge}"]`);
-}
-
-// Landing on the top/bottom carve-out itself makes *this* region the live
-// hover target, which is exactly what collapses that carve-out (a real
-// ghost takes the reservation over) — pulling the rest of the region's
-// content up to fill the space the two dead zones held, and (in
-// an expanded column) possibly nudging a sibling sub-row's own scroll
-// position too. A point aimed at the dead zone's own (pre-collapse)
-// center, or even at the post-collapse divider, can still land in the
-// wrong band once all of that has actually settled — dnd-kit's own
-// sortable animation alone takes a real ~200ms, and nothing here can be
-// sure every one of these has finished just by waiting a guessed margin.
-// So this doesn't guess: it hovers roughly toward the edge, then reads the
-// machine's own verdict (`data-drag-band`, set from `pop.hover.band`) and
-// nudges further the same direction, a real re-sample each time, until
-// the machine itself agrees — the one source that's always right about
-// what a release right now would actually commit.
-async function settleOnBand(page: Page, region: Locator, edge: 'top' | 'bottom'): Promise<void> {
-  const rough = await stableCenter(carveZone(region, edge));
-  await hoverTo(page, rough);
-  let point = rough;
-  for (let attempt = 0; attempt < 20; attempt++) {
-    if ((await dragMachine(page).getAttribute('data-drag-band')) === edge) return;
-    const box = await boxOf(region);
-    const step = edge === 'top' ? -8 : 8;
-    point = { x: point.x, y: Math.max(box.y + 2, Math.min(box.y + box.height - 2, point.y + step)) };
-    await hoverTo(page, point);
-  }
-  throw new Error(`never settled on the "${edge}" band`);
-}
-async function settleOnTopBand(page: Page, region: Locator): Promise<void> {
-  return settleOnBand(page, region, 'top');
-}
-async function settleOnBottomBand(page: Page, region: Locator): Promise<void> {
-  return settleOnBand(page, region, 'bottom');
-}
-// The single band a terminal or truly-empty region collapses to — any
-// point in it is a workphase-only move, whatever the fixture's tuning.
-// Unlike the top/bottom carve-outs, landing here doesn't shrink the
-// region out from under itself (dragBands.ts::bandFor never gives it a
-// boundary to collapse toward — it's always one band, whatever's inside).
-async function singleBandPoint(region: Locator): Promise<Point> {
-  return stableCenter(carveZone(region, 'single'));
-}
-// The exact pixel the top/bottom band boundary sits at — for a case that
-// (unlike settleOnBand above) is already resting inside the region when
-// it calls this, so hovering there has already forced the collapse this
-// reads the settled result of.
-async function bandDivider(region: Locator, edge: 'top' | 'bottom'): Promise<Point> {
-  const box = await stableBoxOf(carveDivider(region, edge));
-  return { x: box.x + box.width / 2, y: box.y };
-}
-
-// A point in In Progress's own middle band — used as the *first* move from
-// a different locked origin (DRAG-3.4, and DRAG-1.5's "locked to each context in turn"),
-// before the drag has necessarily reached Board layer at all, so it can't
-// read the carve-out or the divider off (neither renders until then). The
-// region's own dead center is a safe stand-in instead: with this fixture's
-// 3 small cards, half its total height (carve-outs and all) falls nowhere
-// near either edge. Once the drag is actually at Board layer and past THRESHOLD, the
-// callers below re-read the machine's own state rather than trusting this
-// point further.
-async function middleGapPoint(page: Page): Promise<Point> {
-  return center(regionOf(column(page, 'In Progress')));
-}
-
-function regionOf(col: Locator): Locator {
-  return col.locator(`[${DRAG_REGION_ATTR}]`).first();
-}
 
 test.describe('Card → column drop bands', () => {
   test('DRAG-3.1, DRAG-3.2, DRAG-3.11: the top band places before the first item, the bottom band after the last', async ({
@@ -260,7 +58,7 @@ test.describe('Card → column drop bands', () => {
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);
-    await settleOnTopBand(page, regionOf(inProgress));
+    await settleOnTopBand(page, dragRegion(inProgress));
     // The live ghost previews X first, in the hovered column's own list.
     await expect.poll(() => titlesIn(inProgress)).toEqual(['Item X', 'Item A', 'Item B', 'Item C']);
     await release(page);
@@ -277,7 +75,7 @@ test.describe('Card → column drop bands', () => {
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);
-    await settleOnBottomBand(page, regionOf(inProgress));
+    await settleOnBottomBand(page, dragRegion(inProgress));
     await release(page);
 
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
@@ -310,9 +108,9 @@ test.describe('Card → column drop bands', () => {
     const neutral = () => gapBetween(todo, inProgress);
 
     async function assertHeightUnchangedOnHover(col: Locator, middle: () => Promise<Point>) {
-      const before = await stableBoxOf(regionOf(col));
+      const before = await stableBoxOf(dragRegion(col));
       await hoverTo(page, await middle());
-      const after = await stableBoxOf(regionOf(col));
+      const after = await stableBoxOf(dragRegion(col));
       expect(after.height).toBeCloseTo(before.height, 0);
       // Back to nowhere, so the next region's own "before" reading is also
       // taken while it genuinely isn't the hover target.
@@ -323,9 +121,9 @@ test.describe('Card → column drop bands', () => {
     await hoverTo(page, await neutral());
     await awaitPoppedOut(page, tuning);
 
-    await assertHeightUnchangedOnHover(inProgress, () => center(regionOf(inProgress)));
-    await assertHeightUnchangedOnHover(review, () => singleBandPoint(regionOf(review)));
-    await assertHeightUnchangedOnHover(done, () => singleBandPoint(regionOf(done)));
+    await assertHeightUnchangedOnHover(inProgress, () => center(dragRegion(inProgress)));
+    await assertHeightUnchangedOnHover(review, () => singleBandPoint(dragRegion(review)));
+    await assertHeightUnchangedOnHover(done, () => singleBandPoint(dragRegion(done)));
 
     await release(page);
   });
@@ -356,7 +154,7 @@ test.describe('Card → column drop bands', () => {
     });
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await openBoard(page, projectSidebar);
-    const reviewRow = region(page, subrowRegionKey(inProgressCol.id, s.phase.review.id));
+    const reviewRow = dragRegion(page, subrowRegionKey(inProgressCol.id, s.phase.review.id));
     // The merged range's own displayName isn't the literal "In Progress"
     // (the DRAG-3.6, DRAG-3.7 case below meets the same thing) — matched by
     // substring here too.
@@ -388,7 +186,7 @@ test.describe('Card → column drop bands', () => {
     // on In Progress never previews anything while still locked elsewhere
     // (wiki board-drag-interaction §1.1, rule 1), only once genuinely there.
     await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, await center(regionOf(inProgress)));
+    await hoverTo(page, await center(dragRegion(inProgress)));
     await awaitPoppedOut(page, tuning);
     // The ghost now shows X where its kept position falls (DRAG-3.11).
     await expect.poll(() => titlesIn(inProgress)).toEqual(['Item A', 'Item B', 'Item X', 'Item C']);
@@ -399,7 +197,7 @@ test.describe('Card → column drop bands', () => {
     // band's meaning, and the card under the cursor is ignored. The middle
     // band's own bounds come from the divider lines themselves —
     // content-anchored pixels, not a fraction of the region.
-    const region = regionOf(inProgress);
+    const region = dragRegion(inProgress);
     const middle = { from: (await bandDivider(region, 'top')).y, to: (await bandDivider(region, 'bottom')).y };
     let hovered: string | null = null;
     for (const title of ['Item A', 'Item B', 'Item C']) {
@@ -469,15 +267,15 @@ test.describe('Card → column drop bands', () => {
     await hoverTo(page, await gapBetween(todo, inProgress));
 
     // Popped out: no context, not locked, and the card is still drawn where it was.
-    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+    await awaitDragState(page, 'popped-out', clocksMargin(tuning.popDelayMs));
     await awaitDragContext(page, null);
     await expect(todo.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
 
     // A release over nothing while popped out writes nothing …
     // (asserted separately below); here, come back and rest in Todo's middle
     // band: the card pops back into the column it left.
-    await hoverTo(page, await center(regionOf(todo)));
-    await awaitDragContext(page, todoKey, tuning.popInDelayMs + 2000);
+    await hoverTo(page, await center(dragRegion(todo)));
+    await awaitDragContext(page, todoKey, clocksMargin(tuning.popInDelayMs));
     await awaitDragState(page, 'locked');
     await release(page);
 
@@ -500,10 +298,10 @@ test.describe('Card → column drop bands', () => {
 
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
-    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+    await awaitDragState(page, 'popped-out', clocksMargin(tuning.popDelayMs));
 
     // Popped out, over In Progress's bottom band: after the last item.
-    await settleOnBottomBand(page, regionOf(inProgress));
+    await settleOnBottomBand(page, dragRegion(inProgress));
     await awaitDragState(page, 'popped-out');
     await release(page);
 
@@ -533,7 +331,7 @@ test.describe('Card → column drop bands', () => {
     // off.
     await hoverTo(page, await gapBetween(inProgress, review));
     await awaitPoppedOut(page, tuning);
-    await hoverTo(page, await singleBandPoint(regionOf(review)));
+    await hoverTo(page, await singleBandPoint(dragRegion(review)));
     await awaitDragContext(page, columnKeyOf(s, s.phase.review.id), popThrough(tuning));
     await awaitDragState(page, 'locked');
     await release(page);
@@ -579,7 +377,7 @@ test.describe('Card → column drop bands', () => {
     // reachable through this same gesture, since popping out is what a
     // sustained move away from Todo *means*).
     await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, await center(regionOf(inProgress)));
+    await hoverTo(page, await center(dragRegion(inProgress)));
     await awaitPoppedOut(page, tuning);
     await expect(inProgress.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
     // The gap between the two columns — nowhere, Board layer's own no-op.
@@ -613,9 +411,9 @@ test.describe('Card → column drop bands', () => {
     // pop out over Todo, come back to the merged column's top band, release.
     // A reorder before A; Y stays in Review, not the entry workphase.
     await pickUp(page, article(page, 'Item Y'));
-    await hoverTo(page, await center(regionOf(todo)));
-    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
-    await settleOnTopBand(page, regionOf(merged));
+    await hoverTo(page, await center(dragRegion(todo)));
+    await awaitDragState(page, 'popped-out', clocksMargin(tuning.popDelayMs));
+    await settleOnTopBand(page, dragRegion(merged));
     await release(page);
     await expect.poll(() => fullOrder(request, s.workflow.id)).toBe('YABXC');
     expect((await fetchItem(request, y.id)).workphaseId).toBe(s.phase.review.id);
@@ -627,7 +425,7 @@ test.describe('Card → column drop bands', () => {
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, merged));
     await awaitPoppedOut(page, tuning);
-    await settleOnTopBand(page, regionOf(merged));
+    await settleOnTopBand(page, dragRegion(merged));
     await release(page);
     await expect.poll(() => fullOrder(request, s.workflow.id)).toBe('XYABC');
     expect((await fetchItem(request, s.items.X.id)).workphaseId).toBe(s.phase.inProgress.id);
@@ -642,7 +440,7 @@ test.describe('Card → column drop bands', () => {
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     const { col } = await foldReviewIntoInProgress(request, s, 'expanded');
     await openBoard(page, projectSidebar);
-    const reviewRow = region(page, subrowRegionKey(col.id, s.phase.review.id));
+    const reviewRow = dragRegion(page, subrowRegionKey(col.id, s.phase.review.id));
 
     // X from Todo into the Review sub-row's top band: before Y, exactly
     // Review. X starts locked to Todo, so it also has to pop out to Board
@@ -713,7 +511,7 @@ test.describe('Card → column drop bands', () => {
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, column(page, 'In Progress')));
     await awaitPoppedOut(page, tuning);
-    await hoverTo(page, await singleBandPoint(regionOf(done)));
+    await hoverTo(page, await singleBandPoint(dragRegion(done)));
     await release(page);
 
     await expect.poll(async () => (await fetchItem(request, s.items.X.id)).workphaseId).toBe(s.phase.done.id);
@@ -734,116 +532,10 @@ test.describe('Card → column drop bands', () => {
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, column(page, 'In Progress')));
     await awaitPoppedOut(page, tuning);
-    await hoverTo(page, await singleBandPoint(regionOf(review)));
+    await hoverTo(page, await singleBandPoint(dragRegion(review)));
     await release(page);
 
     await expect.poll(async () => (await fetchItem(request, s.items.X.id)).workphaseId).toBe(s.phase.review.id);
     expect((await fetchItem(request, s.items.X.id)).position).toBe(2.5);
-  });
-});
-
-test.describe('ordinal preview and reconciliation', () => {
-  test('DRAG-6.1, DRAG-6.2: the drop is drawn at its slot and marked pending until the response lands, then settles unchanged', async ({
-    page,
-    request,
-    projectSidebar,
-  }) => {
-    const s = await seed(request);
-    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
-    await openBoard(page, projectSidebar);
-    await delayMoveResponses(page, () => 1500);
-    const todo = column(page, 'Todo');
-    const inProgress = column(page, 'In Progress');
-
-    // X starts locked to Todo; In Progress's own carve-out only renders once
-    // genuinely at Board layer, so pop out first.
-    await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, await gapBetween(todo, inProgress));
-    await awaitPoppedOut(page, tuning);
-    await settleOnBottomBand(page, regionOf(inProgress));
-    await release(page);
-
-    // Pending: X is last in In Progress, marked, with no number invented for it.
-    const x = inProgress.getByRole('article', { name: 'Item X', exact: true });
-    await expect(x).toHaveAttribute('data-pending', 'true');
-    expect(await titlesIn(inProgress)).toEqual(['Item A', 'Item B', 'Item C', 'Item X']);
-
-    // Reconciled: the marker clears and the picture is the one already drawn.
-    await expect(x).not.toHaveAttribute('data-pending', 'true', { timeout: 5000 });
-    expect(await titlesIn(inProgress)).toEqual(['Item A', 'Item B', 'Item C', 'Item X']);
-    expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
-  });
-
-  test('DRAG-6.5: re-dragging a pending item — the later write wins even when its response lands first', async ({
-    page,
-    request,
-    projectSidebar,
-  }) => {
-    const s = await seed(request);
-    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
-    await openBoard(page, projectSidebar);
-    // Write 1's response is held well past write 2's.
-    await delayMoveResponses(page, n => (n === 0 ? 2500 : 0));
-    const todo = column(page, 'Todo');
-    const inProgress = column(page, 'In Progress');
-
-    // Write 1: X after C (bottom band) — X starts locked to Todo, so this
-    // pops out to Board layer first, and In Progress's own carve-out only
-    // renders there too.
-    await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, await gapBetween(todo, inProgress));
-    await awaitPoppedOut(page, tuning);
-    await settleOnBottomBand(page, regionOf(inProgress));
-    await release(page);
-    const x = inProgress.getByRole('article', { name: 'Item X', exact: true });
-    await expect(x).toHaveAttribute('data-pending', 'true');
-
-    // Write 2, while write 1 is still in flight: X before A, in-context.
-    await pickUp(page, x);
-    await hoverTo(page, await topQuarter(article(page, 'Item A')));
-    await release(page);
-
-    // Write 2's response lands first and clears the marker; write 1's arrives
-    // later and must not be applied over it.
-    await expect(x).not.toHaveAttribute('data-pending', 'true');
-    await expect.poll(() => titlesIn(inProgress)).toEqual(['Item X', 'Item A', 'Item B', 'Item C']);
-    await page.waitForTimeout(3000);
-    expect(await titlesIn(inProgress)).toEqual(['Item X', 'Item A', 'Item B', 'Item C']);
-    expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('XABC');
-  });
-
-  test('DRAG-6.6: a refused drop is not kept — the board reloads and shows the item where the server has it', async ({
-    page,
-    request,
-    projectSidebar,
-  }) => {
-    const s = await seed(request);
-    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
-    await openBoard(page, projectSidebar);
-    const todo = column(page, 'Todo');
-    const inProgress = column(page, 'In Progress');
-
-    // The server has X in Review, which the open board doesn't know: it still draws X in Todo.
-    await moveItem(request, s.items.X.id, { workphaseId: s.phase.review.id });
-    await expect(article(todo, 'Item X')).toBeVisible();
-    await refuseMoves(page);
-
-    await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, await gapBetween(todo, inProgress));
-    await awaitPoppedOut(page, tuning);
-    await settleOnBottomBand(page, regionOf(inProgress));
-    const refused = page.waitForResponse(res => res.url().endsWith('/move'));
-    const reloaded = boardReload(page);
-    await release(page);
-    expect((await refused).status()).toBe(400);
-    await reloaded;
-
-    // X is where the server has it: not where the board last drew it, and not where it was dropped.
-    const review = column(page, 'Review');
-    await expect(article(review, 'Item X')).toBeVisible();
-    await expect(article(review, 'Item X')).not.toHaveAttribute('data-pending', 'true');
-    await expect(article(todo, 'Item X')).toHaveCount(0);
-    expect(await titlesIn(inProgress)).toEqual(['Item A', 'Item B', 'Item C']);
-    expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABC');
   });
 });

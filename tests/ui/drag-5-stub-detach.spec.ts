@@ -20,7 +20,7 @@ import {
   NO_POP,
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
-import { article, column, itemRow } from '../helpers/boardLocators';
+import { article, column, itemRow, itemRowButton } from '../helpers/boardLocators';
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // A Stub's drag through the Descendants and Column layers. The cases
@@ -53,7 +53,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     await projectSidebar.openBoard(name);
     await expect(article(page, 'P')).toBeVisible();
 
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRowButton(page, x.id, 'X'));
     // The drag starts already inside the Descendants layer — no pop needed
     // to reach it (contrast a Free Card, which always starts at Board/
     // Column layer and only reaches a Card by zooming in).
@@ -97,7 +97,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     await projectSidebar.openBoard(name);
     await expect(article(page, 'P').getByText('S1a')).toBeVisible();
 
-    await pickUp(page, itemRow(page, s1a.id).getByRole('button', { name: 'S1a' }));
+    await pickUp(page, itemRowButton(page, s1a.id, 'S1a'));
     // The section is P's whole Descendants layer, not S1's — even though
     // S1a's real, direct parent is S1, not P.
     await awaitDragContext(page, descendantsRegionKey(p.id));
@@ -125,7 +125,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, itemRow(page, s1a.id).getByRole('button', { name: 'S1a', exact: true }));
+    await pickUp(page, itemRowButton(page, s1a.id, 'S1a'));
     await awaitDragContext(page, descendantsRegionKey(p.id));
     await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
 
@@ -166,7 +166,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRowButton(page, x.id, 'X'));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // Q sits outside P's whole card, so the pop-out eventually fires on the
@@ -223,7 +223,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     await seedDragTuning(page, { ...NO_POP, popDistancePx: 10 });
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRowButton(page, x.id, 'X'));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // Well outside P's whole card — one hoverTo, far past P's Descendants
@@ -261,7 +261,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     });
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRowButton(page, x.id, 'X'));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
@@ -316,7 +316,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     // (outside P's whole card, unaffected by P's own shrink) rather than
     // "past the column's content," which P's tall, single-child card would
     // otherwise swallow entirely.
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRowButton(page, x.id, 'X'));
     await awaitDragContext(page, descendantsRegionKey(p.id));
     await hoverTo(page, await atFraction(article(page, 'Other'), 0.5));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));

@@ -1,3 +1,4 @@
+import { article, column } from '../helpers/boardLocators';
 import type { APIRequestContext } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
@@ -79,7 +80,7 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
 
   tuning = await seedDragTuning(page, POP_OUT_ONLY);
   await projectSidebar.openBoard(PROJECT_NAME);
-  await expect(page.getByRole('group', { name: 'Column One' })).toBeVisible();
+  await expect(column(page, 'Column One')).toBeVisible();
 });
 
 // Drag gesture recipe: tests/helpers/dragGesture.ts — see it for why a real
@@ -97,13 +98,13 @@ async function getC(request: APIRequestContext) {
 test.describe('1: extreme boundary moves within column 1', () => {
   // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; dragging onto the topmost card shifts it away in dnd-kit's swap preview, and the drop lands on a different anchor than the one aimed at, the same wrong value every run.
   test.skip('1.a — drag C onto card A', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardA = page.getByRole('article', { name: 'Item A', exact: true });
+    const cardC = article(page, 'Item C');
+    const cardA = article(page, 'Item A');
     await dragTo(page, cardC, () => center(cardA));
 
     // UI: reorders within column 1's own group.
-    const colOne = page.getByRole('group', { name: 'Column One' });
-    await expect(colOne.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    const colOne = column(page, 'Column One');
+    await expect(article(colOne, 'Item C')).toBeVisible();
 
     // Server truth — the API suite's identical case (1.a) passes cleanly at
     // 0.5, confirming the position math itself is correct. This DnD version
@@ -118,8 +119,8 @@ test.describe('1: extreme boundary moves within column 1', () => {
   });
 
   test('DRAG-1.23: 1.b — drag C below card E, into the empty column space', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const colOne = page.getByRole('group', { name: 'Column One' });
+    const cardC = article(page, 'Item C');
+    const colOne = column(page, 'Column One');
     await dragTo(page, cardC, () => pastColumnEnd(colOne));
 
     // Not a bare append: closestCorners still resolves this to card E (the
@@ -139,12 +140,12 @@ test.describe('1: extreme boundary moves within column 1', () => {
 test.describe('2: extreme boundary moves into column 2', () => {
   // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, here onto the topmost card of the other column.
   test.skip('2.a — drag C onto card B', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardB = page.getByRole('article', { name: 'Item B', exact: true });
+    const cardC = article(page, 'Item C');
+    const cardB = article(page, 'Item B');
     await dragTo(page, cardC, () => center(cardB));
 
-    const colTwo = page.getByRole('group', { name: 'Column Two' });
-    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    const colTwo = column(page, 'Column Two');
+    await expect(article(colTwo, 'Item C')).toBeVisible();
 
     // Skipped for the same drag-gesture precision issue as 1.a (see its
     // comment) — the API suite's identical case (2.a) passes cleanly at 1.5.
@@ -155,9 +156,9 @@ test.describe('2: extreme boundary moves into column 2', () => {
   });
 
   test('2.b — drag C below card D, into the empty column space', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const colOne = page.getByRole('group', { name: 'Column One' });
-    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    const cardC = article(page, 'Item C');
+    const colOne = column(page, 'Column One');
+    const colTwo = column(page, 'Column Two');
     // C starts locked to Column One — pop out to Board layer first, or a
     // release there commits Column One's own reorder instead. Popping out
     // while the pointer rests *outside* Column Two (the gap) rather than
@@ -174,7 +175,7 @@ test.describe('2: extreme boundary moves into column 2', () => {
     await hoverTo(page, await pastColumnEnd(colTwo));
     await release(page);
 
-    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    await expect(article(colTwo, 'Item C')).toBeVisible();
 
     // The bottom band places C after Column Two's last card: the request
     // anchors "after D", and D's true (workflow-wide) successor is E (5.0),
@@ -188,7 +189,7 @@ test.describe('2: extreme boundary moves into column 2', () => {
 
 test.describe('3: interior moves that stay in column 1 ("drop it back where it was")', () => {
   test('DRAG-1.24: 3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
+    const cardC = article(page, 'Item C');
     await setBackDownLeaning(page, cardC, 'up');
 
     // The same slot in Column One, but "after A" puts C between A and B in
@@ -200,7 +201,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
   });
 
   test('DRAG-1.24: 3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
+    const cardC = article(page, 'Item C');
     await setBackDownLeaning(page, cardC, 'down');
 
     // "Before E" puts C between D and E in the workflow-wide order,
@@ -214,10 +215,10 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
 
 test.describe("4: interior moves into column 2 that land in C's existing gap", () => {
   test('4.a — drag C to the bottom quarter of card B', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardB = page.getByRole('article', { name: 'Item B', exact: true });
-    const colOne = page.getByRole('group', { name: 'Column One' });
-    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    const cardC = article(page, 'Item C');
+    const cardB = article(page, 'Item B');
+    const colOne = column(page, 'Column One');
+    const colTwo = column(page, 'Column Two');
     // C starts locked to Column One — pop out to Board layer first, or a
     // release there commits Column One's own reorder instead. Popping out
     // while the pointer rests *outside* Column Two (the gap) rather than
@@ -245,10 +246,10 @@ test.describe("4: interior moves into column 2 that land in C's existing gap", (
   });
 
   test('4.b — drag C onto card D', async ({ page, request }) => {
-    const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardD = page.getByRole('article', { name: 'Item D', exact: true });
-    const colOne = page.getByRole('group', { name: 'Column One' });
-    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    const cardC = article(page, 'Item C');
+    const cardD = article(page, 'Item D');
+    const colOne = column(page, 'Column One');
+    const colTwo = column(page, 'Column Two');
     // Same reasoning as 4.a — pop out via the gap, not from already inside
     // Column Two, so its own carve-out has a chance to exist before this
     // becomes the hover target.
@@ -289,30 +290,30 @@ test.describe('5: an abandoned drop must not strand the cross-column preview', (
     // An item with no workphase surfaces in Unsorted → Unknown status.
     await seedItem(request, { title: 'Item U', projectId: scenario.project.id });
     await projectSidebar.openBoard(PROJECT_NAME);
-    const unsorted = page.getByRole('group', { name: 'Unsorted' });
-    await expect(unsorted.getByRole('article', { name: 'Item U', exact: true })).toBeVisible();
+    const unsorted = column(page, 'Unsorted');
+    await expect(article(unsorted, 'Item U')).toBeVisible();
 
-    const colOne = page.getByRole('group', { name: 'Column One' });
-    const colTwo = page.getByRole('group', { name: 'Column Two' });
-    await pickUp(page, colOne.getByRole('article', { name: 'Item C', exact: true }));
+    const colOne = column(page, 'Column One');
+    const colTwo = column(page, 'Column Two');
+    await pickUp(page, article(colOne, 'Item C'));
     await hoverTo(page, await center(colTwo));
     // C starts locked to Column One — the live cross-column preview only
     // shows once the drag has actually popped out to Board layer; still
     // locked, the ghost stays put in Column One.
     await popOutFully(page);
     // The live preview: C is now drawn in Column Two mid-drag.
-    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    await expect(article(colTwo, 'Item C')).toBeVisible();
 
     // Unsorted registers no region at all and Item U carries no
     // workphase either, so this stays Board layer, over nothing — never
     // popping *into* Column Two, which would otherwise make the release
     // commit there instead of writing nothing.
-    await hoverTo(page, await center(unsorted.getByRole('article', { name: 'Item U', exact: true })));
+    await hoverTo(page, await center(article(unsorted, 'Item U')));
     await release(page);
 
     // Nothing was written, so C is back where it started — on screen and on the server.
-    await expect(colOne.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
-    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toHaveCount(0);
+    await expect(article(colOne, 'Item C')).toBeVisible();
+    await expect(article(colTwo, 'Item C')).toHaveCount(0);
     const c = await getC(request);
     expect(c.workphaseId).toBe(scenario.colOnePhase.id);
     expect(c.position).toBe(3.0);

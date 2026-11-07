@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 steps 1–5 are done; at the step 5 stop, before Phase 3. The inventory and the batches are in [Story 10's second part](story-10-batches.md).
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 steps 1–5 are done and committed. Phase 3 is complete, including the authorized DRAG-6.25 fix; at the review/commit stop before batch 4a. The inventory and the batches are in [Story 10's second part](story-10-batches.md).
 
 ## Goal
 
@@ -243,6 +243,8 @@ This story takes the open cases outside the drag work too, rather than leaving t
 | Each batch's confirming Reconciler run (D5) | Test Planner |
 | Phase 5: D8's attributes, and the coverage goal | Coder |
 | Phase 5: the one Reconciler run | Test Planner |
+| Phase 5: D13 into the testing-strategy guide, for Nathan's approval | Architect |
+| Phase 5: D13 into the catalog README | Test Planner |
 | Phase 5: this story's audit | Auditor |
 
 Within a batch, the two work side by side on separate files: the Automator on `tests/`, the Coder on the app and the Vitest suites. The Planner's brief names the Automator's files.
@@ -373,6 +375,54 @@ A helper found later is written in the batch that finds it (D4).
 
 The full E2E suite is green before the phase and after it. Then the gate, and a stop for review and commit.
 
+#### Phase 3 results — 2026-11-06
+
+D4 is complete. The Planner delegated the Playwright work to the Test Automator, and Nathan authorized a Coder for the DRAG-6.25 defect the helper exercise exposed. The Planner did not read app or test code. No app hook was needed, no original Playwright assertion or ID was removed, and Phase 4 has not started.
+
+**Helpers for the next briefs:**
+
+| Helper | Contract now available |
+|---|---|
+| `boardLocators.ts` | Canonical `dragRegion(scope, key?)` and exact item-row buttons; the named column/card/row-button re-rolls are migrated. |
+| `dragGesture.ts` | `tabBy` reads the client's board indent. Quarter/fraction helpers remain as row/region aiming points, not before/after decisions. Pop waits use `clocksMargin`. |
+| `boardDragScenario.ts` | Shared fixtures and band aims extracted from `drag-column-bands.spec.ts`, using the existing reset, seed and gesture helpers. |
+| `requestHarness.ts`, beside `holdRequests.ts` | Delayed/refused answers and write observation, with method, URL and body; can hold a real successful answer. The board and sidebar request controls now use it. |
+| `forcedStopCause.ts` | Genuine resyncs from a refused item drop, a stale response carrying server-produced reindex pairs, or a refused column reorder. Existing setup support suffices. |
+
+DRAG-6's three existing Playwright declarations now live in `tests/ui/drag-preview-reconciliation.spec.ts`; DRAG-1 and DRAG-3 remain together in `drag-column-bands.spec.ts`. The [Phase 3 Reconciler report](../../audits/test-reconciliation-story-10-phase-3.md) confirms the moved assertions and repairs only the Automation paths for DRAG-6.1, DRAG-6.2, DRAG-6.5 and DRAG-6.6. Their statuses and approved internal pointers stay unchanged.
+
+**DRAG-6.25 defect and fix:** the genuine-cause exercise exposed an extra `PATCH /columns/reorder` when the held pointer was released after a column drag had stopped and reloaded. All three causes failed, confirmed in nine of nine column exercises; a quiet check before release ruled out a delayed setup write. Nathan authorized the small D7 fix. The Coder prepared it in isolation and applied its four client files only after the preservation run released the checkout, with baseline/revised hashes checked and no drift. A stopped or cancelled column gesture, or a release with no live column drag, now writes nothing; a fresh normal column gesture still reorders. The two permanent lifecycle regressions fail before the fix and pass afterward. Applied-checkout focused units passed 182/182, and the final gate includes the full 997-test client suite.
+
+The Coder also removed four stale TREE-2.8 title claims in the sidebar's internal tests, preserving their assertions and TREE-2.1. The final Reconciler scan finds no Manual-ID conflict. TREE-2.8 stays Manual. DRAG-6.25 stays Open and unmapped for batch 4d's complete surface case; this helper pass makes no new catalog coverage claim.
+
+**Validation reported by the Automator:**
+
+| Check | Result |
+|---|---|
+| Full E2E before edits | 240 passed, 24 existing skips; 4.1 minutes |
+| D2 preservation: 12 migrated/new spec files, 20 repeats each | 2,200 passed, 400 expected skipped runs; 1.0 hour |
+| Post-fix genuine causes: item/column drags across all three causes, 20 repeats each | 120 passed; 5.6 minutes |
+| Final full E2E | 240 passed, 24 existing skips; 4.0 minutes |
+| Final root gate | Passed: types, lint, formatting; 444 server, 997 client and 258 scripts tests |
+| Documentation | 422 files checked, zero hits; diff check passes |
+
+The preservation run used the unchanged app throughout; the fix landed after it, followed by the intact post-fix diagnostic and final full run. Playwright retries were zero, with no failed, flaky or retry-only pass in the completed runs. The original 153 ID-bearing Playwright titles and 24 skip/fixme declarations match exactly. No skipped unit test is added.
+
+The temporary `tests/ui/phase3-helper-smoke.spec.ts` was retained while its clause failed, passed all 120 post-fix exercises unchanged, and was then explicitly retired. It is not a coverage mapping or a substitute for batch 4d. The permanent unit regression remains.
+
+Commands used:
+
+```powershell
+npm.cmd run test:e2e -- --reporter=line
+npm.cmd run test:e2e -- tests/ui/attached-children.spec.ts tests/ui/drag-5-stub-detach.spec.ts tests/ui/drag-7-hierarchy-modal.spec.ts tests/ui/drag-7-modal-hold.spec.ts tests/ui/drag-7-overflow-row.spec.ts tests/ui/drag-card-zoom-in.spec.ts tests/ui/drag-column-bands.spec.ts tests/ui/drag-preview-reconciliation.spec.ts tests/ui/item-create-cap.spec.ts tests/ui/item-repositioning-cross-column-dnd.spec.ts tests/ui/project-tree-create-cap.spec.ts tests/ui/project-tree-drag.spec.ts --repeat-each=20 --reporter=line
+npm.cmd run test:e2e -- tests/ui/phase3-helper-smoke.spec.ts --repeat-each=20 --reporter=line
+npm.cmd run check
+```
+
+The diagnostic command above is historical: its temporary file is retired. Runtime evidence is in `tests/output/phase3-repeat.log`, `tests/output/phase3-cause-check.log` and `tests/output/phase3-final-e2e.log`.
+
+**Catalog and stop:** 485 cases remain: 318 Automated, 154 Open, 10 Manual, one Planned and two Pending PO. The 152 Open batch assignments are unchanged. Whole-catalog lost/unknown/Manual-ID checks are clean, and the baseline report is unchanged. The only catalog diff is four Automation-path substitutions. Phase 3 is ready for review and commit; batch 4a has not started, and no commit was made.
+
 ### Phase 4: the batches (D5)
 
 The batches, their cases, the skips' fates and the checkpoint after 4a are in [Story 10's second part](story-10-batches.md), and each batch's results go there. In run order:
@@ -393,6 +443,11 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **The one Reconciler run** (epic-done checklist), its report saved in `docs/audits/`. Its quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them.
 - **The close's list (D10):** every case in `docs/test-plans/` that isn't `Automated` or `Manual`, each with its status, why it's still open, and the plan that names it. Any tech-debt story D10 calls for is written by now.
 - The 80% coverage goal attempted, with the reason for any shortfall (epic-done checklist).
+- **D13 into the living docs.** The rule exists only in this plan, which goes to the archive at the close, so later stories would lose it. Each writes it as a standing rule, naming no story:
+  - the Architect adds it to `.claude/guides/testing-strategy.md`'s "What stays manual", for Nathan's approval;
+  - the Planner adds it to `docs/test-plans/README.md`'s "Which tests count, and what's manual", beside "One status per case" (Living-docs handoff).
+
+  If a batch has changed the rule by then, its amendment is the later word.
 - A stop for review and commit.
 - **This story's audit** (story-done checklist). Its range starts at `epic-3-5-story-8-13-audited`, the newest `*-audited` tag, since the close-out's end tag has no `-audited`. So it reads:
   - the close-out's Fix Now batches and the tests written beside them, which no audit has read (`docs/archive/story-8-close-out-audit.md`, D4 and Handoff);
@@ -420,6 +475,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Amendments
 
+- **2026-11-06 — D13 into the living docs at the close (Architect, at Nathan's direction).** D13 lives only in this plan, so Phase 5 now writes it into the testing-strategy guide (Architect, for Nathan's approval) and the catalog README (Planner). D12's table and the Living-docs handoff say so.
 - **2026-11-06 — Phase 2 step 4, Nathan's approvals (Architect).**
   - Every internal mapping the baseline proposed is declined, for a fresh look at whether a surface test can cover it. Where one still can't, an internal test is proposed again, case by case.
   - ATT-1.10 is routed to the Tags & Type System epic, and `epic-5-decisions.md` now names it.
@@ -469,6 +525,8 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-06 — Phase 2 step 5 (Test Planner).** Applied D13 to the 26 listed cases, retained all existing IDs and added DRAG-2.24, DRAG-6.30 and DRAG-6.31 as Manual. Reused DRAG-1.27 and TREE-2.8 for the other shared looks. Kept functional and geometry obligations in the automated cases and updated three supporting paint references, both catalog indexes and the batch handoff. The batch total is now 152 Open assignments, with no new coverage claim. Stopped before Phase 3.
 
+- **2026-11-06 — Phase 3 (Test Planner, from the Automator, Coder and Reconciler).** D4's helpers and spec split are complete. Nathan authorized the small DRAG-6.25 lifecycle fix exposed by the genuine-cause exercise; the fix and permanent regressions are applied. Four stale TREE-2.8 internal title claims are cleaned up, and four DRAG-6 Automation paths are repaired without changing coverage. The approved repeat bar, post-fix diagnostic, final E2E and root gate pass. Closed both Coder handoffs and stopped for review/commit before batch 4a.
+
 ## Open questions
 
 - **For the PO, not blocking: the sidebar drag before the project cap is read.** The baseline report's Candidate New Cases notes it. `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" pins permissive behaviour, which neither wiki project-tree §3 nor hierarchy-placement §6 settles. No case exists for it, so D10 doesn't hold this story up for it.
@@ -489,6 +547,10 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - **Planner applied in Phase 2 step 1:** the column clause is removed, DRAG-6.26 is Open, and DRAG-6.25 points to its banner and no-flash rule.
 - **D13's Split cases and their shared `Manual` cases, for the Planner** (Phase 2 step 5): the 26 cases listed in [Story 10's second part](story-10-batches.md), "The shared looks".
   - **Planner applied:** 24 existing IDs retain their automatable clauses. DRAG-1.27 and TREE-2.8 are reused as shared Manual cases; DRAG-2.24, DRAG-6.30 and DRAG-6.31 are added as Manual. The shared-look table records every source ID and its destination. No ID is retired or moved, and the 152 Open batch assignments exclude the two reused Manual IDs.
+- **D13 as a catalog convention, for the Planner** (Phase 5). The rule goes in `docs/test-plans/README.md`, "Which tests count, and what's manual":
+  - a case's look is checked by hand, in a shared `Manual` case, one per look;
+  - the rest of the case is automated;
+  - only how something is painted goes manual, never what's saved, which row is affected, which tier, form or state a row has, or where it's drawn and how big.
 - **A case for D11's fix, for the Planner to write** (Phase 1). The probe failed: filing a parent out of Unknown status left the Unsorted bucket's "needs attention" badge up until a reload, since the client moved only the written row, where the server also moves its attached descendants. Wiki boards-columns-unsorted §10 already states the rule (`needsAttention` counts an Attached item whose own workphase is unknown). The case: *given* a parent and its Attached descendants in Unknown status, *when* the parent is filed into a workflow workphase and the write's answer lands, *then* the badge goes without a reload. The Coder's tests carry no ID yet and take the Planner's: `useItemManagement.test.ts` ("filing a parent out of Unknown status") and `itemWriteReconciliation.test.ts` ("the workphase cascade").
   - **Planner applied in Phase 2 step 1:** BCU-5.6 is the case for the fix; BCU-5.7 holds the detached-descendant boundary. Both are Open. The baseline Reconciler assesses the candidate tests above and names which need the ID or more assertions; no mapping is presumed here.
 - **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §10 (Phase 1). The Planned passage is gone, its marker with it. A column drag the board stops now sits in the cue's own list: the banner is the same, and a bullet says it flashes nothing. The cue's opening line says the three resyncs show it on an item's drag or a column's. Nothing else on the page changed. Phase 2 step 1: hierarchy-placement §7 gains a sentence in its "One tier for the whole drag" bullet (an entry first drawn after pickup has no tier), and project-tree §1's mid-drag paragraph points to it (TREE-2.14).

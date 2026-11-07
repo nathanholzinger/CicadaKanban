@@ -92,7 +92,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
     expect(box.className).not.toContain('drag-tier');
   });
 
-  it('TREE-2.1, TREE-2.8: draws the dragged row at the ghost’s strength, and it has no tier', () => {
+  it('TREE-2.1: draws the dragged row at the ghost’s strength, and it has no tier', () => {
     const box = renderRow({ ghost: GHOST });
     expect(box).not.toHaveAttribute('data-drop-tier');
     for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
