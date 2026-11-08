@@ -143,9 +143,19 @@ export async function boxOf(locator: Locator) {
 // The element's box as it is painted right now, every transform included: what the user sees,
 // where `boxOf` is what dnd-kit's collision sees. For asserting where something is drawn, such as
 // the ghost under the cursor, never for aiming a drag.
-export async function paintedBoxOf(locator: Locator) {
+export async function paintedBoxOf(locator: Locator, { layoutSize = false }: { layoutSize?: boolean } = {}) {
   const box = await locator.boundingBox();
   if (!box) throw new Error('element not visible/measurable');
+  // A rotated copy's painted axis-aligned bounds grow even though its drag
+  // box does not. Keep the observed screen centre/translation and optionally
+  // measure its layout dimensions, without changing styles or reading app geometry.
+  if (layoutSize) {
+    const size = await locator.evaluate(element => {
+      if (!(element instanceof HTMLElement)) throw new Error('layout size needs an HTML element');
+      return { width: element.offsetWidth, height: element.offsetHeight };
+    });
+    return { x: box.x + (box.width - size.width) / 2, y: box.y + (box.height - size.height) / 2, ...size };
+  }
   return box;
 }
 

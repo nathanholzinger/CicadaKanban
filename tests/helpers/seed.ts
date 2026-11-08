@@ -82,6 +82,10 @@ export async function addWorkphases(
   return phases;
 }
 
+export async function deleteWorkphase(request: APIRequestContext, id: string): Promise<void> {
+  checkedOk(await request.delete(`${API}/workphases/${id}`), `DELETE /workphases/${id}`);
+}
+
 // The id of the workflow's default board, the one it is created with.
 async function defaultBoardId(request: APIRequestContext, workflowId: string): Promise<string> {
   const boards = await checkedJson(
@@ -286,6 +290,10 @@ export async function fetchItem(request: APIRequestContext, id: string) {
   return checkedJson(await request.get(`${API}/items/${id}`), `GET /items/${id}`);
 }
 
+export async function fetchItemTypes(request: APIRequestContext): Promise<Array<{ id: string; name: string }>> {
+  return checkedJson(await request.get(`${API}/item-types`), 'GET /item-types');
+}
+
 // The fields of a column that callers of `fetchDefaultBoard` read.
 export interface SeededColumn {
   id: string;
@@ -297,6 +305,15 @@ export interface SeededBoard {
   columns: SeededColumn[];
   itemDepthCap: number;
   showAttachedChildren: number;
+  unsorted: {
+    invalidItems: Array<{ id: string }>;
+    uncovered: Array<{ id: string }>;
+    needsAttention: boolean;
+  };
+}
+
+export async function fetchBoard(request: APIRequestContext, id: string): Promise<SeededBoard> {
+  return checkedJson(await request.get(`${API}/boards/${id}`), `GET /boards/${id}`);
 }
 
 // The workflow's auto-bootstrapped default board, resolved (columns + Unsorted)
@@ -304,7 +321,7 @@ export interface SeededBoard {
 // spec repeated.
 export async function fetchDefaultBoard(request: APIRequestContext, workflowId: string): Promise<SeededBoard> {
   const id = await defaultBoardId(request, workflowId);
-  return checkedJson(await request.get(`${API}/boards/${id}`), `GET /boards/${id}`);
+  return fetchBoard(request, id);
 }
 
 // The column whose entry workphase is `workphaseId` — a merged column that

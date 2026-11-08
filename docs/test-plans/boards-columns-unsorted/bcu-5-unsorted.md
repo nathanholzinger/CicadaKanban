@@ -2,15 +2,15 @@
 
 **Next ID:** BCU-5.8
 
-| ID | Case | Priority | Status |
-|---|---|---|---|
-| BCU-5.1 | `uncovered` lists each of the workflow's workphases that no column on the board covers | P1 | Automated |
-| BCU-5.2 | `invalidItems` lists each item the board shows whose workphase is missing or isn't the workflow's | P1 | Automated |
-| BCU-5.3 | `needsAttention` is true when `uncovered` or `invalidItems` holds anything | P1 | Automated |
-| BCU-5.4 | `invalidItems` lists an Attached item whose own workphase is missing or isn't the workflow's | P2 | Automated |
-| BCU-5.5 | An Attached item is in Unsorted only inside its Free ancestor's Card | P2 | Automated |
-| BCU-5.6 | Filing an Unknown-status parent clears its attached descendants' attention without a reload | P1 | Open |
-| BCU-5.7 | An Unknown-status detached descendant keeps attention when its ancestor is filed | P1 | Open |
+| ID      | Case                                                                                              | Priority | Status    |
+| ------- | ------------------------------------------------------------------------------------------------- | -------- | --------- |
+| BCU-5.1 | `uncovered` lists each of the workflow's workphases that no column on the board covers            | P1       | Automated |
+| BCU-5.2 | `invalidItems` lists each item the board shows whose workphase is missing or isn't the workflow's | P1       | Automated |
+| BCU-5.3 | `needsAttention` is true when `uncovered` or `invalidItems` holds anything                        | P1       | Automated |
+| BCU-5.4 | `invalidItems` lists an Attached item whose own workphase is missing or isn't the workflow's      | P2       | Automated |
+| BCU-5.5 | An Attached item is in Unsorted only inside its Free ancestor's Card                              | P2       | Automated |
+| BCU-5.6 | Filing an Unknown-status parent clears its attached descendants' attention without a reload       | P1       | Automated |
+| BCU-5.7 | An Unknown-status detached descendant keeps attention when its ancestor is filed                  | P1       | Automated |
 
 ---
 
@@ -61,18 +61,18 @@ and project `Q` on `WF2`, holding Free item `Q1` with no workphase, *when* a boa
 
 ## BCU-5.6 — Filing an Unknown-status parent clears its attached descendants' attention without a reload
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §10, wiki item-attachment §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §10, wiki item-attachment §2
 
 *Given* a board whose columns cover every workphase of its workflow, Free parent `P` with no workphase, attached child `A` of `P`, and attached child `G` of `A`, also with no workphase, and no other invalid item, with `P`'s section expanded and showing at least two levels, *when* the board is read, *then* `unsorted.invalidItems` contains exactly `P`, `A` and `G`, `uncovered` is empty and `needsAttention` is `true`. The board shows `P` in Unsorted, with `A` and `G` inside its expanded Card, and the attention badge is present.
 
 *When* `P` is filed into non-terminal workphase `W1` and the successful write's answer lands, *then*, without a page or board reload, `P` appears in `W1`'s column, with `A` and `G` still attached beneath it, and the attention badge disappears. All three now hold `W1`; a fresh board read has empty `invalidItems` and `uncovered`, and `needsAttention` is `false`. The client does not retain attention for the descendants' former Unknown status after their ancestor's write has succeeded.
 
-**Automation test:** —
+**Automation test:** `tests/ui/unsorted-filing.spec.ts`
 
 ## BCU-5.7 — An Unknown-status detached descendant keeps attention when its ancestor is filed
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §10, wiki item-attachment §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §10, wiki item-attachment §2
 
 *Given* a board whose columns cover every workphase, Free parent `P` with no workphase, attached child `A` of `P`, detached child `D` of `P`, and attached child `D1` of `D`, all with no workphase and with no other invalid item, with `P`'s and `D`'s sections expanded, *when* `P` is filed into non-terminal workphase `W1` and the successful answer lands, *then*, without a page or board reload, `P` and `A` appear together in `W1`'s column. `D` stays Free in Unsorted with `D1` inside its expanded Card, both still without a workphase. The attention badge remains present. A fresh board read has `invalidItems` containing exactly `D` and `D1`, empty `uncovered`, and `needsAttention` `true`. `D.parentId` remains `P`: the detached link stops the workphase cascade without severing the hierarchy.
 
-**Automation test:** —
+**Automation test:** `tests/ui/unsorted-filing.spec.ts`

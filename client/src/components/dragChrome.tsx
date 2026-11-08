@@ -14,18 +14,19 @@ import { CSS } from '@dnd-kit/utilities';
 import type { CarriedBranch, DropSide } from '../lib/hierarchyPlacement';
 import { OVERFLOW_TEXT_CLASS } from './cardMetrics';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
-import { useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
+import { useDragSession, useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
 import type { DropTier } from '../lib/dragTargets';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import { STOP_FLASH_MS } from './workflow/forcedStop';
 import type { OverlayForm } from './workflow/placement';
-import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
+import { DRAG_OVERLAY_ATTR, descendantsRegionKey } from './workflow/dragRegions';
 
 // The live drop-side indicator. Reads dnd-kit's live active/over state
 // directly via useDndContext — no prop drilling through
 // BoardColumn/BoardView — and names the anchor the way useBoardDnd's
-// handleDragEnd does (`namedAnchorFor`), so the line shown here always
-// matches what gets sent, at every row dropAnchorFor could ever name: a
+// handleDragEnd does (`namedAnchorFor`), for an ordinary live line. A held entry instead
+// takes its projected relation in `useItemRow`: a stationary pointer's stale neighbor
+// must not move its line away from the seeded gap. This covers every row dropAnchorFor could ever name: a
 // Card row, a Stub row or an overflow row, whichever the active drag happens to be. It's
 // never narrowed to a subset of roles, which would hide the line for a
 // Stub leaving its Card into a column, exactly the case it most needs to
@@ -153,15 +154,22 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
   const tier = dropTarget?.tier ?? overflowTier;
   const pending = useIsPending(isOverlay ? '' : itemId);
   const flashed = useIsFlashedAfterStop(isOverlay ? '' : itemId);
+  const session = useDragSession();
+  const holdSectionOrder =
+    !isOverlay &&
+    sectionCardId !== undefined &&
+    session?.entryPlacementHeld &&
+    session.pop.contextKey === descendantsRegionKey(sectionCardId);
+  const entryAnchor = holdSectionOrder ? session.projection?.resolved.anchor : null;
   return {
     attributes,
     listeners,
     setNodeRef,
     isDragging,
-    dropSide,
+    dropSide: holdSectionOrder ? (entryAnchor?.anchorId === itemId ? entryAnchor.side : null) : dropSide,
     sortableStyle: {
-      transform: CSS.Transform.toString(transform),
-      transition,
+      transform: CSS.Transform.toString(holdSectionOrder ? null : transform),
+      transition: holdSectionOrder ? 'none' : transition,
       // The flash's length is set here, where its class is chosen: `index.css` gives the class no
       // duration, so the one length is `STOP_FLASH_MS`.
       ...(flashed && { animationDuration: `${STOP_FLASH_MS}ms` }),

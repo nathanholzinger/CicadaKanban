@@ -39,14 +39,21 @@ describe('the carried copy carries DRAG_OVERLAY_ATTR', () => {
 // How strongly a row is drawn says what its target can be to the carried item (the tiers). The
 // opacity sits on a wrapper around the row's own content, so the drop line and a Card's section of
 // Stubs, which have their own strength, are not inside it.
-const sortable = vi.hoisted(() => ({ dragging: false }));
+const sortable = vi.hoisted(() => ({
+  dragging: false,
+  transform: null as { x: number; y: number; scaleX: number; scaleY: number } | null,
+}));
 vi.mock('@dnd-kit/sortable', async importOriginal => {
   const actual = await importOriginal<typeof import('@dnd-kit/sortable')>();
   return {
     ...actual,
     useSortable: (args: Parameters<typeof actual.useSortable>[0]) => {
       const result = actual.useSortable(args);
-      return sortable.dragging ? { ...result, isDragging: true } : result;
+      return {
+        ...result,
+        ...(sortable.dragging && { isDragging: true }),
+        ...(sortable.transform && { transform: sortable.transform }),
+      };
     },
   };
 });
@@ -112,6 +119,96 @@ describe('the drag-target tiers', () => {
       sortable.dragging = false;
     }
   }
+
+  it.each([
+    { name: 'in-list ghost', id: 'X', role: 'stub' as const, y: -56, dragging: true },
+    { name: 'sibling Stub', id: 'S1', role: 'stub' as const, y: 28, dragging: false },
+    { name: 'overflow row', id: 'overflow:S', role: 'overflow' as const, y: 28, dragging: false },
+  ])('DRAG-1.5: a held entry keeps the $name at its actual list slot', ({ id, role, y, dragging }) => {
+    sortable.transform = { x: 0, y, scaleX: 1, scaleY: 1 };
+    sortable.dragging = dragging;
+    try {
+      const session = makeDragSession({ ...sessionOf('X'), entryPlacementHeld: true });
+      const { result } = renderHook(() => useItemRow(id, role, { sectionCardId: 'P' }), {
+        wrapper: providers(session),
+      });
+      expect(result.current.sortableStyle.transform).toBeUndefined();
+      expect(result.current.sortableStyle.transition).toBe('none');
+      expect(result.current.dataAttrs['data-item-id']).toBe(id);
+      expect(result.current.dataAttrs[DRAG_OVERLAY_ATTR]).toBeUndefined();
+      if (dragging) expect(result.current.chromeClassName).toContain(GHOST);
+    } finally {
+      sortable.transform = null;
+      sortable.dragging = false;
+    }
+  });
+
+  it('DRAG-1.5: held entry leaves the carried overlay and other sections free to follow their own transforms', () => {
+    sortable.transform = { x: 12, y: -56, scaleX: 1, scaleY: 1 };
+    try {
+      const session = makeDragSession({ ...sessionOf('X'), entryPlacementHeld: true });
+      const wrapper = providers(session);
+      const overlay = renderHook(() => useItemRow('X', 'card', { isOverlay: true, overlayForm: 'stub' }), { wrapper });
+      const other = renderHook(() => useItemRow('S1', 'stub', { sectionCardId: 'other' }), { wrapper });
+      const card = renderHook(() => useItemRow('P', 'card'), { wrapper });
+      for (const row of [overlay, other, card]) expect(row.result.current.sortableStyle.transform).toContain('-56px');
+      expect(overlay.result.current.dataAttrs[DRAG_OVERLAY_ATTR]).toBe('true');
+      expect(overlay.result.current.dataAttrs['data-drag-overlay-form']).toBe('stub');
+    } finally {
+      sortable.transform = null;
+    }
+  });
+
+  it('DRAG-1.5: ordinary sibling shuffle resumes when movement releases the entry hold', () => {
+    sortable.transform = { x: 0, y: 28, scaleX: 1, scaleY: 1 };
+    let session = makeDragSession({ ...sessionOf('X'), entryPlacementHeld: true });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <DndContext>
+        <DragSessionContext value={session}>{children}</DragSessionContext>
+      </DndContext>
+    );
+    try {
+      const { result, rerender } = renderHook(() => useItemRow('S1', 'stub', { sectionCardId: 'P' }), { wrapper });
+      expect(result.current.sortableStyle.transform).toBeUndefined();
+      session = { ...session, entryPlacementHeld: false };
+      rerender();
+      expect(result.current.sortableStyle.transform).toContain('28px');
+    } finally {
+      sortable.transform = null;
+    }
+  });
+
+  it('DRAG-1.5: the held entry line names the projected last-child neighbor and no earlier row', () => {
+    const rows = [
+      makeItem('P'),
+      makeItem('A', { parentId: 'P', position: 1 }),
+      makeItem('B', { parentId: 'P', position: 2 }),
+      makeItem('X'),
+    ];
+    const session = makeDragSession({
+      activeItem: rows[3],
+      classification: classifyDragTargets('X', rows, 10),
+      pop: startPopSession(descendantsRegionKey('P')),
+      entryPlacementHeld: true,
+      projection: {
+        gap: 2,
+        depth: 0,
+        valid: true,
+        resolved: { parentId: 'P', anchor: { anchorId: 'B', side: 'after' } },
+        atOwnSlot: false,
+        slotHidden: false,
+        overflowBeside: null,
+      },
+    });
+    const wrapper = providers(session);
+    const last = renderHook(() => useItemRow('B', 'stub', { sectionCardId: 'P' }), { wrapper });
+    const first = renderHook(() => useItemRow('A', 'stub', { sectionCardId: 'P' }), { wrapper });
+    const ghost = renderHook(() => useItemRow('X', 'stub', { sectionCardId: 'P' }), { wrapper });
+
+    expect(last.result.current.dropSide).toBe('after');
+    expect(first.result.current.dropSide).toBeNull();
+    expect(ghost.result.current.dropSide).toBeNull();
+  });
 
   it('DRAG-2.15, DRAG-2.16: draws an anchor-only target and a target that is not even an anchor at their own strengths', () => {
     const session = sessionOf('X');

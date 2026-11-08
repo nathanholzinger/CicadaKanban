@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import {
@@ -8,22 +7,14 @@ import {
   seedPositionedItems,
   moveItem,
   pinItemPosition,
+  fetchItem,
 } from '../helpers/seed';
 import { article, column, itemPanel, titlesIn } from '../helpers/boardLocators';
+import { watchBoardLoads } from '../helpers/requestHarness';
 
 // The positioning rules a board shows without a drag: the order a column
 // renders in, what an inline create sends, and a write's answer folded into
 // the board rather than reloading it.
-
-// Every board load from now on: a GET of the board itself, which is what a
-// reload after a write would be.
-function watchBoardLoads(page: Page): string[] {
-  const loads: string[] = [];
-  page.on('request', r => {
-    if (r.method() === 'GET' && /^\/api\/boards\/[^/]+$/.test(new URL(r.url()).pathname)) loads.push(r.url());
-  });
-  return loads;
-}
 
 test.describe('item positioning on the board', () => {
   test.beforeAll(async () => {
@@ -52,6 +43,9 @@ test.describe('item positioning on the board', () => {
 
     // Not creation order, and done items hold no position.
     await expect.poll(() => titlesIn(column(page, 'Done'))).toEqual(['D2', 'D3', 'D1']);
+    expect(
+      (await Promise.all([d1, d2, d3].map(item => fetchItem(request, item.id)))).map(item => item.position),
+    ).toEqual([null, null, null]);
   });
 
   test("TC-2.11, TC-5a.1: an inline create sends no position, and the column takes the server's order without a reload", async ({

@@ -8,8 +8,8 @@
 // and turns into the gap among all the rows before anything is resolved. It also names the
 // overflow row the ghost sits directly beside, at its level, which the hold that opens the
 // hierarchy modal keys on (`overflowBeside`, `modalHoldTarget`), and takes a reading from the
-// cursor when the modal has just opened under it (`reseedProjection`), and keeps that reading
-// until the pointer moves (`holdsReading`).
+// cursor when the modal has just opened under it (`reseedProjection`). A foreign entry and a
+// modal reading keep their placement until the pointer moves (`holdsReading`).
 
 import type { Item } from '../../types';
 import {
@@ -47,8 +47,8 @@ interface Pointer {
 export interface ProjectionState {
   seed: ProjectionSeed | null;
   projection: DescendantsProjection | null;
-  /** Where the pointer was when the modal's reading was taken, while that reading is held (`holdsReading`). */
-  held: Pointer | null;
+  /** Where a foreign entry or modal reading was taken, while that placement is held (`holdsReading`). */
+  held: (Pointer & { entry?: true }) | null;
 }
 
 export const NO_PROJECTION: ProjectionState = { seed: null, projection: null, held: null };
@@ -87,14 +87,16 @@ export interface ProjectionSample {
 // last row's depth: when that row is nested, the ghost would become its
 // sibling. The entry sample's named neighbor is the layer before's, a Card
 // in the column the drag zoomed out of, so it names no gap unless it is a row
-// of this section, and the seed holds. Then the gap follows the named row —
-// the same "the gap is the ghost's slot" rule Column layer uses — or, with no
+// of this section, and the seed holds. A foreign entry keeps that seed until
+// the pointer moves. Then the gap follows the named row — the same "the gap is
+// the ghost's slot" rule Column layer uses — or, with no
 // row named (a hover over the section between rows, or before dnd-kit's first
 // move event), stays where it was. The depth is the seed's plus the pointer's travel since, in
 // indents, clamped to the gap's range and to one past the last shown level:
 // an overflow row stands for the children one level deeper than the section
-// draws, and nothing is offered right of it. A reading the modal took stands, and no neighbor
-// named meanwhile moves it, while the pointer is where it was taken (`holdsReading`).
+// draws, and nothing is offered right of it. A foreign entry's last-child placement, or a reading
+// the modal took, stands while the pointer is where it was taken (`holdsReading`): reshaping the
+// carried copy and mounting rows can name a different neighbor without a pointer move.
 export function advanceProjection(state: ProjectionState, sample: ProjectionSample): ProjectionState {
   const cardId = descendantsCardIdOf(sample.contextKey);
   if (!cardId) return NO_PROJECTION;
@@ -114,9 +116,15 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
 
   const pointer =
     sample.pointerX === null || sample.pointerY === null ? null : { x: sample.pointerX, y: sample.pointerY };
-  const held = !entering && holdsReading(state, pointer) ? state.held : null;
+  const holdEntry = entering && own === null;
+  const held =
+    holdEntry && pointer
+      ? { ...pointer, entry: true as const }
+      : !entering && holdsReading(state, pointer)
+        ? state.held
+        : null;
   const named = entering && sample.namedAnchor && !namesRowOf(rows, sample.namedAnchor) ? null : sample.namedAnchor;
-  const anchor = held ? null : named;
+  const anchor = held || holdEntry ? null : named;
   const gap = anchor ? gapForAnchor(rows, anchor) : (previousGap ?? seed.gap);
   const pointerX = sample.pointerX ?? seed.pointerX;
   const { depth, placement } = computeProjection(
@@ -199,11 +207,10 @@ export function reseedProjection(
   return { seed: { ...state.seed, gap, depth, pointerX }, projection: null, held: { x: pointerX, y: pointerY } };
 }
 
-// Whether the reading the modal took still stands: the pointer is where it was taken. Opening the
-// modal re-clamps the carried copy with the pointer still, and the move event that follows names a
-// neighbor against rows that are still sliding into place, a gap or more from the one the modal
-// drew under the cursor (wiki board-drag-interaction §7.3). A neighbor named with the pointer
-// still is that event's, not the user's, so the reading is kept until the pointer moves, along
+// Whether a foreign entry or modal reading still stands: the pointer is where it was taken.
+// The layer's shape change re-clamps the carried copy and mounts rows under a stationary pointer
+// (wiki board-drag-interaction §6.1, §7.3). A neighbor named with the pointer
+// still is that event's, not the user's, so the placement is kept until the pointer moves, along
 // either axis. Once it has moved, the reading is no longer held, and a return to the same point
 // doesn't hold it again.
 export function holdsReading(state: ProjectionState, pointer: Pointer | null): boolean {

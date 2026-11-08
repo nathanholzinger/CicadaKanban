@@ -103,6 +103,7 @@ export function DragCarveFrame({
   droppable,
 }: DragCarveFrameProps) {
   const session = useDragSession();
+  const isActiveContext = session?.pop.contextKey === regionKey;
 
   // Whether the active drag's own item is currently one of this region's
   // rendered rows — by list membership, never by whether this region is
@@ -127,6 +128,7 @@ export function DragCarveFrame({
   const wrap = (content: ReactNode, extraClassName = '') => (
     <div
       {...regionAttrs}
+      data-active-context={isActiveContext ? true : undefined}
       ref={droppable?.containerRef}
       className={`relative ${droppable?.className ?? ''} ${extraClassName}`}
     >
@@ -144,7 +146,6 @@ export function DragCarveFrame({
   if (!session) return wrap(cards);
   const pop = session.pop;
 
-  const isActiveContext = pop.contextKey === regionKey;
   if (pop.contextKey !== null) {
     // Locked into this region or a different one: no carve-out cues
     // anywhere (rule: nothing but the current 3 actions gets a cue). The

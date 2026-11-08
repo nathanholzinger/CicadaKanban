@@ -25,6 +25,7 @@ import TypePill from './item-detail/TypePill';
 import { DRAG_CARD_ATTR, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import type { CarriedBranch } from '../lib/hierarchyPlacement';
 import { hierarchyRows, sectionEntries } from './workflow/descendantsSection';
+import { parentOpinionOf } from './workflow/itemListOps';
 import { useHierarchyModal } from './workflow/HierarchyModalContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
@@ -141,6 +142,7 @@ export default function KanbanCard({
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
+  const [zoomedItem, setZoomedItem] = useState<{ id: string; parentId: string | null } | null>(null);
   const {
     setNodeRef,
     attributes,
@@ -226,9 +228,16 @@ export default function KanbanCard({
   // placement-aware: a childless Card the drag has zoomed into already has the
   // carried item's ghost as its one child, its one spot.
   const rows =
-    !isGhostLike && expanded && childCount > 0 && getAttachedChildren
+    !isGhostLike && (expanded || zoomedItem !== null) && childCount > 0 && getAttachedChildren
       ? hierarchyRows(item.id, getAttachedChildren)
       : [];
+  if (lockedHere && cardDragSession && zoomedItem?.id !== cardDragSession.activeItem.id) {
+    setZoomedItem({ id: cardDragSession.activeItem.id, parentId: parentOpinionOf(cardDragSession.origin) });
+  } else if (!lockedHere && zoomedItem) {
+    setZoomedItem(null);
+    const attached = !cardDragSession && rows.find(row => row.id === zoomedItem.id);
+    if (attached && attached.parentId !== zoomedItem.parentId) setExpanded(true);
+  }
   // What the section draws: `rows` cut at the last shown level, with an overflow row for the
   // children it hides, and without the branch the carried item takes with it. The board still places
   // against all of `rows`.

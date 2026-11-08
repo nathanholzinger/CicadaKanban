@@ -87,6 +87,7 @@ export function makeDragSession(overrides: Partial<DragSession> = {}): DragSessi
     origin: freeOrigin('todo'),
     containingCardId: null,
     projection: null,
+    entryPlacementHeld: false,
     branch: null,
     ...overrides,
   };

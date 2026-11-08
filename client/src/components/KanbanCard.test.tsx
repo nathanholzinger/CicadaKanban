@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { fireEvent, render, within } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import KanbanCard from './KanbanCard';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
@@ -126,6 +126,103 @@ describe('a Card the drag is locked at', () => {
 
     const locked = renderCard({}, { session: lockedAtP() });
     expect(locked.getByRole('article', { name: CARD.title })).toHaveStyle({ transition: 'none' });
+  });
+});
+
+describe('a zoomed Card retaining its expansion after attachment', () => {
+  const OTHER = makeItem('e');
+  const OTHER_CHILD = makeItem('ec', { parentId: OTHER.id });
+
+  function twoCards(
+    session: DragSession | null,
+    attached = false,
+    saved = false,
+    retainedParentId: string | null = null,
+  ) {
+    const incoming = saved
+      ? makeItem(CARRIED.id, { parentId: CARD.id })
+      : makeItem(CARRIED.id, { parentId: retainedParentId, isAttached: 0 });
+    const children = (parentId: string) => {
+      if (parentId === CARD.id) return attached ? [CHILD, incoming] : [CHILD];
+      return parentId === OTHER.id ? [OTHER_CHILD] : [];
+    };
+    return (
+      <DndContext>
+        <DragSessionContext value={session}>
+          <KanbanCard item={CARD} childCount={attached ? 2 : 1} getAttachedChildren={children} />
+          <KanbanCard item={OTHER} childCount={1} getAttachedChildren={children} />
+        </DragSessionContext>
+      </DndContext>
+    );
+  }
+
+  it.each([null, CARD.id])(
+    'DRAG-1.33: retains the zoomed target open from release through its saved answer for a Free item with retained parent %s, leaving another Card expanded',
+    retainedParentId => {
+      const { getByRole, rerender } = render(twoCards(null, false, false, retainedParentId));
+      const target = () => within(getByRole('article', { name: CARD.title }));
+      const other = () => within(getByRole('article', { name: OTHER.title }));
+      fireEvent.click(target().getByTitle('Hide attached children'));
+      expect(target().queryByText(CHILD.title)).toBeNull();
+      expect(other().getByText(OTHER_CHILD.title)).toBeInTheDocument();
+
+      const session = {
+        ...lockedAtP(),
+        activeItem: makeItem(CARRIED.id, { parentId: retainedParentId, isAttached: 0 }),
+      };
+      rerender(twoCards(session, true, false, retainedParentId));
+      expect(target().getByText(CHILD.title)).toBeInTheDocument();
+      expect(target().getByText(CARRIED.title)).toBeInTheDocument();
+
+      rerender(twoCards(null, true, false, retainedParentId));
+      expect(target().getByTitle('Hide attached children')).toBeInTheDocument();
+      expect(target().getByText(CARRIED.title)).toBeInTheDocument();
+      rerender(twoCards(null, true, true));
+      expect(target().getByText(CHILD.title)).toBeInTheDocument();
+      expect(target().getByText(CARRIED.title)).toBeInTheDocument();
+      expect(other().getByText(OTHER_CHILD.title)).toBeInTheDocument();
+
+      fireEvent.click(target().getByTitle('Hide attached children'));
+      rerender(twoCards(null, true, true));
+      expect(target().queryByText(CARRIED.title)).toBeNull();
+      expect(other().getByText(OTHER_CHILD.title)).toBeInTheDocument();
+    },
+  );
+
+  it.each(['pop-out', 'cancel'] as const)(
+    'DRAG-1.33: restores the collapsed target after %s without attachment and leaves another Card expanded',
+    ending => {
+      const { getByRole, rerender } = render(twoCards(null));
+      const target = () => within(getByRole('article', { name: CARD.title }));
+      fireEvent.click(target().getByTitle('Hide attached children'));
+      rerender(twoCards(lockedAtP(), true));
+      expect(target().getByText(CHILD.title)).toBeInTheDocument();
+
+      const after = ending === 'pop-out' ? makeDragSession({ pop: startPopSession(null) }) : null;
+      rerender(twoCards(after));
+      expect(target().queryByText(CHILD.title)).toBeNull();
+      expect(target().queryByText(CARRIED.title)).toBeNull();
+      rerender(twoCards(null));
+      expect(target().queryByText(CHILD.title)).toBeNull();
+      expect(within(getByRole('article', { name: OTHER.title })).getByText(OTHER_CHILD.title)).toBeInTheDocument();
+    },
+  );
+
+  it('DRAG-1.33: a same-parent Stub reorder does not replace the target Card’s collapsed preference', () => {
+    const { getByRole, rerender } = render(twoCards(null));
+    const target = () => within(getByRole('article', { name: CARD.title }));
+    fireEvent.click(target().getByTitle('Hide attached children'));
+    const session = makeDragSession({
+      activeItem: CHILD,
+      pop: startPopSession(descendantsRegionKey(CARD.id)),
+      origin: stubOrigin(CARD.id),
+      containingCardId: CARD.id,
+    });
+    rerender(twoCards(session));
+    expect(target().getByText(CHILD.title)).toBeInTheDocument();
+
+    rerender(twoCards(null));
+    expect(target().queryByText(CHILD.title)).toBeNull();
   });
 });
 

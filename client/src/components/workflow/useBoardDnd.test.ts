@@ -361,6 +361,20 @@ describe.each([
     expect(result.current.session?.pop.contextKey).toBe(cardKey);
     expect(moveItem).not.toHaveBeenCalled();
   });
+
+  it('DRAG-1.5: movement releases the rendered entry hold even when the chosen gap and depth stay unchanged', () => {
+    const { result, overP } = dragNamingP();
+    act(() => result.current.handleDragMove(overP));
+    pointerTo(insideP);
+    expect(result.current.session?.entryPlacementHeld).toBe(true);
+    const projection = result.current.session?.projection;
+
+    pointerTo({ x: insideP.x + 1, y: insideP.y });
+
+    expect(result.current.session?.entryPlacementHeld).toBe(false);
+    expect(result.current.session?.projection).toEqual(projection);
+    expect(moveItem).not.toHaveBeenCalled();
+  });
 });
 
 describe('useBoardDnd: a column reorder whose save fails', () => {

@@ -2,18 +2,18 @@
 
 **Next ID:** TC-6.14
 
-| ID | Case | Priority | Status |
-|---|---|---|---|
-| TC-6.1 | `completedAt` is set when a Free item enters a terminal workphase | P0 | Automated |
-| TC-6.2 | `completedAt` is cleared when a done item is reopened | P0 | Automated |
-| TC-6.3 | A done Free item has no stored position | P0 | Automated |
-| TC-6.4 | Done items are ordered by completion, the newest last | P0 | Open |
-| TC-6.5 | Attached children keep their positions under a terminal cascade | P0 | Automated |
-| TC-6.6 | `positionScope` stays `"attached-siblings"` under a terminal cascade | P0 | Automated |
-| TC-6.9 | A reopened done item takes the append fallback | P1 | Automated |
-| TC-6.10 | Done items completed at the same moment read in creation order | P2 | Automated |
-| TC-6.11 | Changing a workphase's terminal flag applies the split to the items already in it | P1 | Open |
-| TC-6.13 | Several Free items made done, or reopened, by one flag change | P2 | Pending PO |
+| ID      | Case                                                                              | Priority | Status     |
+| ------- | --------------------------------------------------------------------------------- | -------- | ---------- |
+| TC-6.1  | `completedAt` is set when a Free item enters a terminal workphase                 | P0       | Automated  |
+| TC-6.2  | `completedAt` is cleared when a done item is reopened                             | P0       | Automated  |
+| TC-6.3  | A done Free item has no stored position                                           | P0       | Automated  |
+| TC-6.4  | Done items are ordered by completion, the newest last                             | P0       | Automated  |
+| TC-6.5  | Attached children keep their positions under a terminal cascade                   | P0       | Automated  |
+| TC-6.6  | `positionScope` stays `"attached-siblings"` under a terminal cascade              | P0       | Automated  |
+| TC-6.9  | A reopened done item takes the append fallback                                    | P1       | Automated  |
+| TC-6.10 | Done items completed at the same moment read in creation order                    | P2       | Automated  |
+| TC-6.11 | Changing a workphase's terminal flag applies the split to the items already in it | P1       | Open       |
+| TC-6.13 | Several Free items made done, or reopened, by one flag change                     | P2       | Pending PO |
 
 ---
 
@@ -43,11 +43,11 @@
 
 ## TC-6.4 — Done items are ordered by completion, the newest last
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki item-positioning §6, wiki board-drag-interaction §10
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6, wiki board-drag-interaction §10
 
 *Given* done Free items `D1`, `D2` and `D3`, created in that order but completed at distinct times in the order `D2`, `D3`, `D1`, *when* their done list is sorted, *then* it reads `D2, D3, D1`: by `completedAt`, oldest first, regardless of their creation order. They have no stored positions. When completion times tie, creation order breaks the tie ([TC-6.10](part-6-active-done-split.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/item-positioning.spec.ts`
 
 ## TC-6.5 — Attached children keep their positions under a terminal cascade
 

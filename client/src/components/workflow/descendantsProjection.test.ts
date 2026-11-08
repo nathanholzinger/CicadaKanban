@@ -3,7 +3,7 @@ import { makeItem } from '../../test/itemFixture';
 import { overflowTree } from '../../test/overflowTreeFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
-import { columnRegionKey, descendantsRegionKey } from './dragRegions';
+import { columnRegionKey, descendantsRegionKey, subrowRegionKey } from './dragRegions';
 import type { DescendantsProjection } from './DragSessionContext';
 import { EVERY_LEVEL, overflowRowId } from './descendantsSection';
 import { getAttachedChildrenFrom } from './itemListOps';
@@ -191,6 +191,91 @@ describe('advanceProjection on the entry sample', () => {
   });
 });
 
+describe('a foreign entry held until the pointer moves', () => {
+  const outside = {
+    originCardId: null,
+    ownSlot: null,
+    classification: classifyDragTargets('X', items, 10),
+  };
+  const foreign = (fields: Partial<ProjectionSample> = {}) => sample({ ...outside, ...fields });
+
+  it.each([columnRegionKey('a'), subrowRegionKey('a', 'w1')])(
+    'DRAG-1.5: immediate release after entry from %s stays at the last child through stationary samples',
+    previousContextKey => {
+      let state = advanceProjection(NO_PROJECTION, foreign({ previousContextKey }));
+      for (const namedAnchor of [
+        { anchorId: 'S1', side: 'before' },
+        { anchorId: 'S2', side: 'after' },
+        { anchorId: 'S1', side: 'before' },
+      ] as const) {
+        state = advanceProjection(state, foreign({ previousContextKey: section, namedAnchor }));
+        expect(state.projection).toMatchObject({ gap: 3, depth: 0, atOwnSlot: false });
+        expect(descendantsReleasePlacement(state.projection, P)).toEqual({
+          parentId: P,
+          slot: { anchorId: 'S3', side: 'after' },
+        });
+      }
+    },
+  );
+
+  it.each([
+    {
+      axis: 'vertical',
+      pointerX: START_X,
+      pointerY: START_Y + 1,
+      depth: 0,
+      parentId: P,
+      anchor: { anchorId: 'S1', side: 'after' as const },
+    },
+    {
+      axis: 'horizontal',
+      pointerX: START_X + DESCENDANTS_INDENT_PX,
+      pointerY: START_Y,
+      depth: 1,
+      parentId: 'S1',
+      anchor: null,
+    },
+  ])('DRAG-1.5, DRAG-4.34: $axis pointer movement selects the new gap and depth without an entry hold', moved => {
+    const entered = advanceProjection(NO_PROJECTION, foreign());
+    const state = advanceProjection(
+      entered,
+      foreign({
+        previousContextKey: section,
+        namedAnchor: { anchorId: 'S1', side: 'after' },
+        pointerX: moved.pointerX,
+        pointerY: moved.pointerY,
+      }),
+    );
+
+    expect(state.projection).toMatchObject({
+      gap: 1,
+      depth: moved.depth,
+      resolved: { parentId: moved.parentId, anchor: moved.anchor },
+    });
+    expect(descendantsReleasePlacement(state.projection, P)).toEqual({
+      parentId: moved.parentId,
+      slot: moved.anchor ?? 'first',
+    });
+    expect(state.held).toBeNull();
+  });
+
+  it('DRAG-1.5: returning to the entry point after movement does not restore the entry hold', () => {
+    const entered = advanceProjection(NO_PROJECTION, foreign());
+    const moved = advanceProjection(entered, foreign({ previousContextKey: section, pointerY: START_Y + 1 }));
+    const returned = advanceProjection(
+      moved,
+      foreign({ previousContextKey: section, namedAnchor: { anchorId: 'S2', side: 'after' } }),
+    );
+
+    expect(returned.projection).toMatchObject({
+      gap: 2,
+      depth: 0,
+      resolved: { parentId: P, anchor: { anchorId: 'S2', side: 'after' } },
+    });
+    expect(returned.held).toBeNull();
+  });
+});
+
 // A section that draws fewer levels than it holds. Card P's tree, depth below the Card in
 // brackets:
 //   A (0)
@@ -227,6 +312,7 @@ describe('advanceProjection under a cut-off section', () => {
         previousContextKey: section,
         namedAnchor: anchor,
         pointerX: START_X + tabs * DESCENDANTS_INDENT_PX,
+        pointerY: START_Y + 1,
         ...fields,
       }),
     ).projection;
@@ -449,6 +535,19 @@ describe('descendantsReleasePlacement', () => {
 
 describe('reseedProjection', () => {
   const READ_AT = { pointerX: 400, pointerY: 300 };
+
+  it('a modal reading replaces the foreign-entry hold rather than carrying its row-freeze marker', () => {
+    const entered = advanceProjection(
+      NO_PROJECTION,
+      sample({ originCardId: null, ownSlot: null, classification: classifyDragTargets('X', items, 10) }),
+    );
+    expect(entered.held?.entry).toBe(true);
+
+    const reseeded = reseedProjection(entered, { gap: 1, depth: 0, ...READ_AT });
+
+    expect(reseeded.held?.entry).toBeUndefined();
+    expect(holdsReading(reseeded, { x: 400, y: 300 })).toBe(true);
+  });
 
   it('DRAG-7.15: takes the gap and depth it is given, measures the pointer’s travel from the new pointer, and drops the old reading', () => {
     const entered = advanceProjection(NO_PROJECTION, sample());

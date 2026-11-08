@@ -401,6 +401,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     }
     updateDescendantsProjection(priorContextKey, pop, current.classification, modalCardId);
     const { projection } = projectionRef.current;
+    const entryPlacementHeld = projectionRef.current.held?.entry === true;
     // The hold that opens the hierarchy modal runs on the projection just read, with the cursor
     // inside the layer. When it has run its whole length the modal opens, and the hold is done.
     pop = advanceModalHold(pop, pop.outsideSince === null ? modalHoldTarget(projection) : null, tuning, now);
@@ -413,8 +414,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // `advancePopSession`'s own "inside" branch keeps returning the same
     // `pop` object once `hover`/`outsideSince` are already both null,
     // exactly the case while the cursor roams choosing a gap and depth.
-    if (pop !== current.pop || !sameProjection(projection, current.projection)) {
-      const next = { ...current, pop, projection };
+    if (
+      pop !== current.pop ||
+      !sameProjection(projection, current.projection) ||
+      entryPlacementHeld !== current.entryPlacementHeld
+    ) {
+      const next = { ...current, pop, projection, entryPlacementHeld };
       updateSession(next);
       setGhost(current.activeItem.id, placementFor(next, regions));
       // Leaving the modal's layer closes it: the drag is out in the Card's column, and the
@@ -589,7 +594,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // same for both: resolve the structure, start
   // the pop machine there, seed the projection (a Stub's drag enters its own
   // section), and set the ghost from the session's own placement.
-  function beginDragAt(start: Omit<DragSession, 'pop' | 'projection'>) {
+  function beginDragAt(start: Omit<DragSession, 'pop' | 'projection' | 'entryPlacementHeld'>) {
     const { containingCardId, classification } = start;
     originCardIdRef.current = containingCardId;
     ownSlotRef.current = containingCardId
@@ -604,7 +609,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const regions = sampleRegions(startContextKey);
     const pop = startPopSession(startContextKey);
     updateDescendantsProjection(null, pop, classification);
-    const session: DragSession = { ...start, pop, projection: projectionRef.current.projection };
+    const session: DragSession = {
+      ...start,
+      pop,
+      projection: projectionRef.current.projection,
+      entryPlacementHeld: projectionRef.current.held?.entry === true,
+    };
     updateSession(session);
     setGhost(session.activeItem.id, placementFor(session, regions));
   }

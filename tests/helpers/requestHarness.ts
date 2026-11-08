@@ -27,6 +27,29 @@ export function watchWrites(page: Page): RecordedWrite[] {
   return writes;
 }
 
+// APIRequestContext reads are outside this observation, so a fresh saved-state
+// assertion does not masquerade as a reload made by the open board.
+export function watchBoardLoads(page: Page): string[] {
+  const loads: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'GET' && /^\/api\/boards\/[^/]+$/.test(new URL(request.url()).pathname)) {
+      loads.push(request.url());
+    }
+  });
+  return loads;
+}
+
+export function successfulWrite(page: Page, method: string, pathname: string) {
+  return page
+    .waitForResponse(
+      response => response.request().method() === method && new URL(response.url()).pathname === pathname,
+    )
+    .then(response => {
+      expect(response.ok(), `${method} ${pathname} succeeds (${response.status()})`).toBe(true);
+      return response;
+    });
+}
+
 const WRITE_GRACE_MS = 300;
 
 // A no-write assertion needs a quiet interval after the gesture settles: no page

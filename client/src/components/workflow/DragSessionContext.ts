@@ -1,5 +1,5 @@
 // The whole drag's context: activeItem, classification, pop, priorPlacement, origin,
-// containingCardId, projection, branch, plus PlacementsContext. useDropTargetState/
+// containingCardId, projection, entryPlacementHeld, branch, plus PlacementsContext. useDropTargetState/
 // useIsPending read it without prop drilling.
 
 import { createContext, useContext } from 'react';
@@ -102,6 +102,8 @@ export interface DragSession {
    * (`useBoardDnd.ts`).
    */
   projection: DescendantsProjection | null;
+  /** The foreign entry's seeded slot is held until pointer movement; its section rows must not shuffle toward a stale neighbor. */
+  entryPlacementHeld: boolean;
   /**
    * What the pickup takes with it, read once at pickup and held for the whole drag: the carried
    * item's attached descendants, a Card's children or a Stub's branch, which no list draws while it

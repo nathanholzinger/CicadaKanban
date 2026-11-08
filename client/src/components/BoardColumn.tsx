@@ -78,7 +78,14 @@ export default function BoardColumn({
   // math depends on a plain `relative` box with no extra spacing.
   const mergedRegion =
     column.displayMode === 'merged' && !column.broken
-      ? { key: columnRegionKey(column.id), isTerminal: columnIsTerminal, targetLabel: column.displayName }
+      ? {
+          key: columnRegionKey(column.id),
+          isTerminal: columnIsTerminal,
+          targetLabel: columnIsTerminal
+            ? (column.subRows.find(row => row.workphase.id === column.entryWorkphaseId)?.workphase.name ??
+              column.displayName)
+            : column.displayName,
+        }
       : undefined;
 
   function handleItemSubmit(title: string, type: string | null): boolean {
