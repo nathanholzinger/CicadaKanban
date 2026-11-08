@@ -14,6 +14,10 @@ Maintain a complete repository OpenAPI artifact and generated consumer declarati
 - M2–M4: actual operation/status/response associations, request representation probes, consumer boundaries and all automated/manual scenario dispositions.
 - Round table PO #1–#3 / Auditor #1/#3–#5: wiki owns meanings/refusals, generated reference owns exhaustive shapes, completeness has an independent reference, and catalog evidence is not inferred from a field's schema.
 - Q3–Q6 and optional Q8/product/publication questions remain in receiving work after migration; they do not become open blockers simply because this story closes the refactor.
+- **After the main merge only:**
+  - [M1 story audit](../../audits/code-quality-audit-m1-foundation.md) #28: `transportTypes.ts` rebuilds `UiItem`/`ItemDetailResponse` beside `types.ts`'s `ItemDetail`/`ActivityLogEntry`, and they differ (`workflowId?`). `ItemDetailPanel.tsx:126` stores one in the other's state. Alias the `types.ts` shapes to the generated declarations once Epic 3.5's UI changes are merged in.
+  - [M1 Reconciler run](../../audits/m1-reconciler-report.md): confirm that `main`'s Story 10 and Story 8 Reconcilers settled DRAG-7.27 (only spec skipped, proposed `Open`) and DRAG-7.15 (two below-gap specs skipped). Any status they left unwritten is written by the post-merge Reconciler run.
+  - OQ11 in [the M1 open-questions catalog](m1-catalog-open-questions.md) (the ATT-7.1 stamp) touches a test file shared with `main`. It's applied after the merge, if approved.
 
 ## Work, in batches
 

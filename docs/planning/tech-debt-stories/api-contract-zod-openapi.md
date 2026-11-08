@@ -1,6 +1,6 @@
 # API Contract — Zod/OpenAPI Migration
 
-**Type:** tech-debt epic · **Written:** 2026-09-26 by the Architect · **Replanned:** 2026-10-30 after the framework spike and round table · **Status:** M1 technical batches implemented/verified; normal review pending; remaining migration proceeds alongside Epic 3.5 · **Sequenced:** completed-main integration/revalidation is required before the final merge, not before M1–M5 development
+**Type:** tech-debt epic · **Written:** 2026-09-26 by the Architect · **Replanned:** 2026-10-30 after the framework spike and round table · **Status:** M1 Batches 1–3 committed and reviewed; audit fix Batches 4–5 planned; remaining migration proceeds alongside Epic 3.5 · **Sequenced:** completed-main integration/revalidation is required before the final merge, not before M1–M5 development
 
 ## Goal and current plans
 

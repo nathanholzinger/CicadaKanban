@@ -1,6 +1,6 @@
 # API Contract M1 — Foundation, Integration and Baseline
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** all technical batches implemented/verified; Batch 3 uncommitted; normal story audit/Reconciler review pending · **Depends on:** preserved planning/evidence checkpoint and current-branch baseline; Epic 3.5 completion is not a prerequisite
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** Batches 1–3 committed (Batch 3 as `4ecd49b`); story audit and proposing Reconciler run done; audit Fix Now Batches 4–5 planned, not started · **Depends on:** preserved planning/evidence checkpoint and current-branch baseline; Epic 3.5 completion is not a prerequisite
 
 **Execution update:** evidence is preserved on `api-contract-framework-spike-completed` at `5408bdb150cbb227298f53aba1cc57d3b7866d61`; tooling cleanup is committed as `575b33b`. Nathan clarified that all M1–M5 development may proceed while Epic 3.5 continues. [The progress ledger](m1-progress.md) distinguishes the current baseline from final integration evidence; completed-main verification belongs to the final merge gate.
 
@@ -61,6 +61,58 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 
 **Gate:** shared gate, independent omission/association failures, conversion checks, no database imported by generation and documented transport stability. Reconciler verifies the corpus's catalog claims; retain snapshot response assertions even if their catalog mapping is unconfirmed. Any necessary ID metadata correction must be isolated from snapshot payload/expectation changes.
 
+### Audit fix batches — scope and sorting
+
+The [story audit](../../audits/code-quality-audit-m1-foundation.md) (range `c1aa1de9..4ecd49bb`) and the [proposing Reconciler run](../../audits/m1-reconciler-report.md) are sorted by one rule. The existing suite passing unchanged is the migration's regression evidence, so:
+
+- **Fixed here (Batches 4–5):** findings in code the migration wrote (contract tooling, contract tests, schemas, transport types) and their wrong comments or titles. None changes an app behavior or a product test's expectation.
+- **Catalogued, not fixed:** anything that would change an app behavior or an existing test's expectation goes to [the open-questions catalog](m1-catalog-open-questions.md) (OQ1–OQ11), for after the migration.
+- **Routed to the story that reworks the code:** M2 receives audit #12 and the Watch List items its handlers and contract files reopen; M4 receives #16; M5 receives the UI-touching #28 and the Epic 3.5 coverage checks for after the main merge.
+- **Left to Epic 3.5 on `main`:** DRAG-7.27's lost coverage and DRAG-7.15's skipped specs (Story 10 and Story 8's close-out Reconcilers own them). Nothing in the drag catalog or specs is touched on this branch.
+
+Every batch below changes tooling, test infrastructure, types or comments only. The one runtime file is `parseRequest.ts`, and its change is type-only. Each batch ends with `npm run check` and a stop for Nathan's review and commit. Neither needs `npm run test:e2e` (no runtime behavior changes). Run it once after Batch 5 as M1's closing evidence.
+
+### Batch 4 — Contract tooling and test-infrastructure correctness
+
+Audit Fix Now #1, #3 and #4, with the optional #18, #19, #21, #22 and #24–#26 and the Reconciler's two tooling notes.
+
+- **#1, with #24, #25 and #26** (`tools/api-contracts/fieldDrills.ts`, `artifacts.ts`):
+  - Print `report` from the `finally` (or to stderr before rethrowing) and put the failing stage's output and diagnostics in each thrown error.
+  - #24: count the nullability drill as detected only on the expected `400`-for-`200` failure, and require a clean baseline before each drill. This also turns the Reconciler's note (TQ7: the drill picks its corpus example by the title filter `-t ATT-9.11`) into a loud failure if that example is ever retitled, rather than a false detection.
+  - #25: export the generated-artifact targets from `artifacts.ts` instead of the drill's own list, and compile each drill's diagnostics once.
+  - #26: restore each file in its own `try`. Signal handlers are not needed; the README's clean-tree step stays.
+  - Probe (audit-workflow §8): break one drill on purpose and show the report and cause printed, then restore.
+- **#3** (`server/tests/contracts/routeDiscovery.ts`): throw on a `mounted_app` layer so the header's "unknown layouts fail explicitly" is true. Add one fault test beside the existing ones in `routeDiscovery.test.ts`.
+- **#21** (`tools/api-contracts/document.ts:27`): throw on an unknown schema name. Drop the now-redundant guard at `responses.ts:50`.
+- **#22** (`tools/api-contracts/responses.ts`): make `ObservedResponse.text` required; both callers in `apiContracts.test.ts` already pass it. The first bodyless response M2–M4 registers then works.
+- **#18** (`server/src/lib/parseRequest.ts`): restrict the schema parameter to object schemas, so a falsy successful parse can't be read as "400 sent". All four callers pass object schemas. Type-only, before M2–M4 add about 45 callers.
+- **#19** (`compatibilityHarness.ts`): put `response.body` and the captured `console.error` calls into the status assertion's message. No snapshot changes.
+- **Reconciler note, `generationBoundary.test.ts:65-78`:** add a positive control showing that opening the database module with that `DB_PATH` does fail, so the freshness subprocess passing proves generation never opened it.
+- **#4** (`scripts/audit-scope/scan.mts`, root `AGENTS.md`): add `tools` to `INCLUDE`, add a scripts test that every non-docs `check-docs` `DEFAULT_SCOPE` entry falls under some `INCLUDE` entry, and add a `tools/` line to `AGENTS.md`'s repo layout. `scripts/audit-scope/` is shared with `main`; expect a one-line merge at final integration.
+
+**Size and risk:** about nine files, all tooling or test code plus one type signature. Gate: `npm run check`, plus `npm run contracts:drill` once (its output is what #1 changes).
+
+### Batch 5 — Client reindex envelope, titles and comments
+
+Audit Fix Now #5, #2, #8, #6 and #7, and the audit's notes for the plan owner.
+
+- **#5** (`client/src/api/shared.ts`, `transportTypes.ts`): make `ReindexedPosition` an alias of the generated schema. Build `PositionedWriteResponse<Row>` once from the generated declarations, with a `Pick` on `reindexed` so a renamed key is a build error. Define `ItemWriteResponse` and `ProjectWriteResponse` from it, keeping both names. This makes the `shared.ts` header and its comment true again.
+  - **Boundary:** no file outside `client/src/api/` and `client/src/lib/positionedWrite.ts` changes. Every UI and drag caller (`App.tsx`, `components/`, `components/workflow/`) uses the existing names. If one stops compiling, stop and defer that part to M5's post-merge work rather than editing a UI file here.
+- **#2** (`compatibilityCases.ts:126`, snapshot key): rename to `'item done anchor in scope refused for missing position'`. As with Batch 3's `TC-X.6` correction, it's a key rename only: compare all 77 payload strings before and after. The example carries no case ID, and the drill doesn't select it. No precedence case is added (the order of refusals is a detail the wiki leaves open).
+- **#8** (`compatibilityCases.ts:1`): the header names the two current consumers, `apiCompatibility.test.ts` and `apiContracts.test.ts`, not the retired candidates.
+- **#6** (`client/src/api/projects.ts:6-7`): delete the floating comment; `transportTypes.ts` carries the type.
+- **#7** (`server/src/schemas/common.ts:1-2`): reword the header to what the file holds.
+- **Audit note, `HierarchyRequest`:** it's now an alias of `HierarchyInput` (`itemHierarchy.ts:44`). Check that the A6 per-field comments survive on `HierarchyInput`, and restore any that were lost.
+- **No change:** `api-contract-framework-spike-results.md:155` describes the spike's baseline, where those declarations did live in `items.ts`/`projects.ts`.
+
+**Size and risk:** about six files. Client change is type-only; the one snapshot edit is a key rename. Gate: `npm run check`, the payload comparison, then the closing E2E run.
+
+### M1 close-out after Batch 5
+
+1. Fill the audit's close-out table from the current code (rows 1–8 fixed, 9–11 catalogued, 12 routed to M2), archive the report and delete `docs/audits/m1-foundation-scopes/`.
+2. The confirming Reconciler run has nothing to write on this branch: DRAG-7.27 stays with `main`'s Story 10, and the ATT-7.1 stamp is OQ11. It records that and archives the report.
+3. Update the progress ledger and this plan's status, and sign off.
+
 ## Code map and makes-dead account
 
 | Area | Change / makes dead |
@@ -91,6 +143,10 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 
 **Coder/Architect:** hand M2 the current development revision, inventory, command paths, response variants, retained tests, stable transport and import rules. Fill the makes-dead inventory and normal review/closeout handoff before sign-off. Hand M5 the final-integration refresh requirements separately.
 
+**Answered by Nathan, 2026-11-08 (from the Reconciler run):**
+- **`server/tests/contracts/` is not a counting surface** for lost-coverage scans. Its case IDs are supplementary claims; a case whose only ID-bearing test is in the corpus goes `Open`. Recorded in the [migration README's shared gate](README.md#shared-batch-gate).
+- **A change to an ID-bearing corpus snapshot goes past the Reconciler.** Recorded in the same gate.
+
 ## Living-docs and review handoff
 
 - **Behavior decisions / PO:** none newly made; no Planned passage built, superseded passage, wiki renumbering or product-field change. CF1–CF7 retain their receiving dispositions; capture current outcomes rather than correcting them during migration.
@@ -109,3 +165,5 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 - **2026-10-30:** Finished Batch 1's current-base source inventory, consumer/response handoff and owned exclusion record. Independently matched all 54 method/path rows, counted 26 Bruno requests and traced 18 existing skipped specs. Added source-observed CF7 to receiving work without changing behavior. Planning documents only; Batch 3 and normal story review remain pending.
 - **2026-10-30:** Nathan committed Batch 1 as `ee819ea` and directed Batch 3. Implemented shared vocabulary, independent mounted-route/pending-scope checks, ordinary status/parameter metadata, real response associations, database-free generation checks and bounded parse parity. Two focused runs and the first full gate pass. Corrected the corpus-ID counting omission and one incorrect `TC-X.6` title/key association without changing captured payloads. Final E2E/post-correction checks and normal M1 audit/Reconciler review remain pending; no commit or merge performed.
 - **2026-10-30:** Completed Batch 3 verification: final full gate 536 server / 604 client / 235 tooling; unchanged Playwright 219 passed / 18 inherited skips in 3.8 minutes, native exit 0 for both. All 77 snapshot payload strings compare identically after the single key rename (Vitest sorts that entry alphabetically). Generated artifacts and external tests/configuration remain unchanged. Corrected library-trial cross-references to roadmap D6 without changing the decision. Batch ready for review/commit; normal M1 structural audit and finished-code Reconciler remain before story sign-off.
+- **2026-11-08:** Batch 3 was committed as `4ecd49b`. The story audit and the proposing Reconciler run reported on 2026-11-07. Sorted their findings under Nathan's rule (fix migration code now; catalog behavior or test-expectation changes; defer Epic 3.5, drag and UI work until after the main merge). Added the sorting section, Batches 4–5, the close-out steps and two open questions. Extended the open-questions catalog to OQ11, and routed carry-forward findings into M2, M4 and M5's Inbound deferrals.
+- **2026-11-08:** Nathan answered both open questions (the corpus is not a counting surface; ID-bearing snapshot changes go past the Reconciler), and both are now in the migration README's shared gate. The audit tag `m1-foundation-audited` goes on the docs-only commit that records the audit, the Reconciler run and this sorting, not on `4ecd49b`. That commit changes no code, so the next audit's range is the same either way.

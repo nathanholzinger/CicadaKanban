@@ -59,6 +59,8 @@ M1's [independent source inventory](m1-api-inventory.md), verified against `575b
 - Generate declarations mechanically; freshness must fail usefully with the regeneration command. Check curated exposure policy separately from common value types.
 - Run `npm run check`, focused new contract/compatibility checks and the unchanged Playwright suite for each implementation batch. Run HTTP-heavy suites sequentially. Stable test transport is an M1 deliverable, not a permanent requirement to wait out port exhaustion.
 - Retain database isolation and refusal/no-write assertions. Log newly discovered correctness/wiki disagreements in receiving work; fix new regressions in the current story. Unit-test replacements and snapshot metadata changes need a specific evidence account, never a blanket coverage exemption.
+- `server/tests/contracts/` is not a counting surface for catalog coverage. A case ID in a corpus title or snapshot key is a supplementary claim. A case whose only ID-bearing test is in the corpus is `Open` on a lost-coverage scan.
+- A change to a corpus snapshot entry whose key carries a case ID goes past the Reconciler before it's committed. Golden values are captured from the code, so a regenerated snapshot proves nothing about the case on its own.
 
 No new product rule or Planned wiki passage is built by this migration. Each story lists impacted rule areas for the PO/Test Planner; catalog scope/mappings are their work, not invented in these drafts. Technical checks and independent characterization coexist with wiki-derived tests. Existing known disagreements remain explicitly deferred even when audit finds them again.
 

@@ -1,6 +1,6 @@
 # M1 Progress and Retained Evidence
 
-**Status:** Batches 1–3 implemented and verified; Batch 3 is uncommitted on `ee819ea`; normal M1 audit/Reconciler review remains pending. Epic 3.5 completion blocks final integration/merge only.
+**Status:** Batches 1–3 implemented, verified and committed (Batch 3 as `4ecd49b`). The story audit and proposing Reconciler run are done; their fix Batches 4–5 are planned in [the M1 plan](m1-foundation-and-baseline.md#audit-fix-batches--scope-and-sorting). Epic 3.5 completion blocks final integration/merge only.
 
 Nathan clarified that all M1–M5 work may proceed while Epic 3.5 remains in progress. Local main is `c1aa1de`; migration development continues from `575b33ba14b545c7fbdf9dca69dcca99d1337bf3`. These references and existing green verification form the current development baseline. No merge or completed-main compatibility result is claimed; that refresh belongs to the final integration gate.
 
@@ -79,6 +79,6 @@ Sandboxed `tsx` failed before project code at Node's OS-user lookup; a standalon
 
 ## Still pending
 
-**M1 review/closeout:** normal structural-refactor audit and Reconciler/catalog handoff against the finished review scope after Nathan reviews/commits Batch 3. The technical batch is complete; the corpus precheck grants no new catalog status or internal-test approval. Batch 2's test moves/retirement still require the normal whole-catalog lost-coverage check. No part of this work needs Epic 3.5 to finish.
+**M1 review/closeout:** the story audit ([report](../../audits/code-quality-audit-m1-foundation.md)) and the proposing Reconciler run ([report](../../audits/m1-reconciler-report.md)) are done. The Reconciler found no coverage lost to Batch 2's moves and retirement; its one lost case, DRAG-7.27, predates M1 and stays with Epic 3.5. Audit Fix Now lands in Batches 4–5, then the close-out steps in the M1 plan. No part of this work needs Epic 3.5 to finish.
 
 **Final merge gate only:** after Epic 3.5, merge main into migration, resolve conflicts, refresh affected inventory/baseline evidence and rerun the combined suites before merging back. Do not substitute old spike results for that future integration evidence.

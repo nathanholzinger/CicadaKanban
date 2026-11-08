@@ -15,6 +15,7 @@ M2/M3 own their resource schemas; this story completes cross-resource consumer a
 - Test Planner: bounded stdio evidence must cover tool listing, existing get/move success and error/result delivery, including a representative raw/malformed argument. HTTP-backed helper tests alone do not prove SDK dispatch.
 - CF5/Q6: no runtime MCP argument validation, SDK registration migration, generic snake-case converter, new tools or expanded inputs. Reuse primitive/field contracts only where interfaces mean the same thing; requiredness and exposure can intentionally differ.
 - No label consolidation, attachment UI, chat API, auth or polling redesign. No new field is introduced simply to make schemas uniform.
+- [M1 story audit](../../audits/code-quality-audit-m1-foundation.md) #16 (optional): `apiContracts.test.ts` covers both the HTTP contract and `lib/mcpItemTools.ts`. Move the MCP describe to `mcpItemTools.test.ts` when MCP checks expand. OQ7 in [the M1 open-questions catalog](m1-catalog-open-questions.md) (`urlPart` lets `.` and `..` through) stays preserved with CF5.
 - Preserve product tests. Technical shape/scenario checks are additions; a fresh generated schema is not an independent expected business outcome.
 
 ## Work, in batches
