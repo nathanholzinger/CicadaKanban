@@ -78,12 +78,17 @@ A table is read by its cells, trimmed, never by matching its text. Prettier pads
 
 ## Code map
 
-| File                                                          | Batch | Change                                                                                |
-| ------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------- |
-| `scripts/check-docs/extract.mts`                              | 1     | Title extraction records skips and the enclosing `describe`, or a sibling export does |
-| A new module, in `scripts/check-docs/` or a folder of its own | 1     | The catalog reader, the checks and the report                                         |
-| Its tests, beside it                                          | 1     | New                                                                                   |
-| `package.json` (root)                                         | 1     | The `report:catalog` command                                                          |
+| File                                                         | Batch | Change                                                                                                                                                |
+| ------------------------------------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/check-docs/extract.mts`                             | 1     | `testDeclarations`, a sibling of `testTitles`: each test and `describe` with its skip, the `describe`s around it, and the ways a computed title opens |
+| `scripts/check-docs/repoIndex.mts`                           | 1     | Exports `CASE_ID` and `caseIdOfHeading`, which the catalog reader shares with the case-heading reading                                                |
+| `scripts/report-catalog/catalog.mts`                         | 1     | The catalog reader (Decision 3): ID, both statuses, Automation line, and the fields it could not read                                                 |
+| `scripts/report-catalog/carriers.mts`                        | 1     | Which files carry which case: a title's leading IDs, an ID on a `describe`, skipped carriers apart                                                    |
+| `scripts/report-catalog/checks.mts`                          | 1     | The four checks (Decision 4)                                                                                                                          |
+| `scripts/report-catalog/report.mts`                          | 1     | The report text: the checks, the totals, the ID-to-files map (Decision 5)                                                                             |
+| `scripts/report-catalog/sources.mts`, `args.mts`, `main.mts` | 1     | Reading the catalog and the three test roots from disk; `--out`; the command and its exit codes                                                       |
+| Each of the above's tests, beside it                         | 1     | New; `extract.test.mts` gains the `testDeclarations` cases                                                                                            |
+| `package.json` (root)                                        | 1     | The `report:catalog` command                                                                                                                          |
 
 ## Acceptance
 

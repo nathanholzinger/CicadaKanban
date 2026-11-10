@@ -41,7 +41,9 @@ const SECTION_HEADING = /^#{1,6}\s+§?(\d+[a-z]?(?:\.\d+)*)\.?(?:\s|$)/;
 
 /** After a case ID's prefix: the suite part (digits with an optional letter, or one capital), then the number. */
 const CASE_ID_TAIL = String.raw`-(?:\d+[a-z]?|[A-Z])\.\d+`;
-const CASE_HEADING = new RegExp(String.raw`^##\s+([A-Z]+${CASE_ID_TAIL})(?=\s|$)`);
+/** A case ID under any prefix, as regular-expression source. */
+export const CASE_ID = String.raw`[A-Z]+${CASE_ID_TAIL}`;
+const CASE_HEADING = new RegExp(String.raw`^##\s+(${CASE_ID})(?=\s|$)`);
 
 export function buildIndex(source: IndexSource): RepoIndex {
   const sections = new Map([...source.wikiPages].map(([page, text]) => [page, headingSections(text)]));
@@ -109,7 +111,12 @@ export function headingSections(text: string): Set<string> {
 
 /** The case IDs a suite declares: each level-2 heading that opens with one, outside fences. */
 export function caseHeadings(text: string): string[] {
-  return unfencedLines(text).flatMap(({ text: line }) => CASE_HEADING.exec(line)?.[1] ?? []);
+  return unfencedLines(text).flatMap(({ text: line }) => caseIdOfHeading(line) ?? []);
+}
+
+/** The ID a line opens a case with, when it is a level-2 heading that starts with one. */
+export function caseIdOfHeading(line: string): string | null {
+  return CASE_HEADING.exec(line)?.[1] ?? null;
 }
 
 /** Every name the file declares at any depth: functions, variables, types, members. */

@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { extractBruno, extractCode, extractMarkdown, parseMarker, unfencedLines } from './extract.mts';
+import {
+  extractBruno,
+  extractCode,
+  extractMarkdown,
+  parseMarker,
+  parseScript,
+  testDeclarations,
+  unfencedLines,
+} from './extract.mts';
 
 const lines = (...parts: string[]): string => parts.join('\n');
 const commentTexts = (fileName: string, text: string): string[] =>
@@ -200,5 +208,124 @@ describe('extractBruno', () => {
     const { markers } = extractBruno(text);
     assert.equal(markers.length, 1);
     assert.deepEqual([markers[0].line, markers[0].targetLine, markers[0].rules], [4, 5, ['transient-id']]);
+  });
+});
+
+const declarationsOf = (text: string) => testDeclarations(parseScript('a.test.ts', text));
+const openingsOf = (text: string): string[][] => declarationsOf(text).map(declaration => declaration.openings);
+
+describe('testDeclarations', () => {
+  it('reads each test and describe, with the describes around it, outermost first', () => {
+    const text = lines(
+      "describe('outer', () => {",
+      "  describe('inner', () => {",
+      "    it('a test', () => {});",
+      '  });',
+      "  test('beside', () => {});",
+      '});',
+      "it('alone', () => {});",
+    );
+    assert.deepEqual(
+      declarationsOf(text).map(d => [d.openings[0], d.group, d.within.map(w => w.openings[0])]),
+      [
+        ['outer', true, []],
+        ['inner', true, ['outer']],
+        ['a test', false, ['outer', 'inner']],
+        ['beside', false, ['outer']],
+        ['alone', false, []],
+      ],
+    );
+  });
+
+  it('reads a Playwright describe, and an each table, as the same kinds of call', () => {
+    const text = lines(
+      "test.describe('group', () => {",
+      "  it.each([1, 2])('table %i', () => {});",
+      '});',
+      "describe.each([1])('grouped table', () => {});",
+    );
+    assert.deepEqual(
+      declarationsOf(text).map(d => [d.openings[0], d.group]),
+      [
+        ['group', true],
+        ['table %i', false],
+        ['grouped table', true],
+      ],
+    );
+  });
+
+  it('marks a declared skip: .skip, .fixme and .todo, on a test or on a describe', () => {
+    const text = lines(
+      "test.skip('s', () => {});",
+      "it.skip('i', () => {});",
+      "test.fixme('f', () => {});",
+      "it.todo('t');",
+      "test.describe.skip('d', () => {});",
+      "it('running', () => {});",
+    );
+    assert.deepEqual(
+      declarationsOf(text).map(d => d.skipped),
+      [true, true, true, true, true, false],
+    );
+  });
+
+  it('leaves a skip decided at run time as a running test', () => {
+    const text = lines(
+      "it.skipIf(process.platform === 'win32')('conditional', () => {});",
+      "test('body', () => { test.skip(true, 'not here'); });",
+    );
+    assert.deepEqual(
+      declarationsOf(text).map(d => [d.openings[0], d.skipped]),
+      [
+        ['conditional', false],
+        ['body', false],
+      ],
+    );
+  });
+
+  it('reads no hook, test.use, test.step or call without a title as a declaration', () => {
+    const text = lines(
+      'test.beforeEach(async () => {});',
+      'test.use({ viewport: { width: 1, height: 1 } });',
+      "test('real', async () => { await test.step('a step', async () => {}); });",
+      'it.each([1, 2])(name, () => {});',
+    );
+    assert.deepEqual(openingsOf(text), [['real']]);
+  });
+
+  it('reads no titled hook as a declaration', () => {
+    const text = lines(
+      "test.beforeEach('X-1.1: set up', async () => {});",
+      "test.afterAll('X-1.1: tear down', async () => {});",
+      "test('X-1.2: real', async () => {});",
+    );
+    assert.deepEqual(openingsOf(text), [['X-1.2: real']]);
+  });
+
+  it('reads a title chosen by a conditional, in parentheses or after a cast', () => {
+    const text = lines(
+      "test(wide ? 'X-1.1: wide' : 'X-1.2: narrow', async () => {});",
+      "test((wide ? 'X-1.3: a' : 'X-1.4: b') as string, async () => {});",
+    );
+    assert.deepEqual(openingsOf(text), [
+      ['X-1.1: wide', 'X-1.2: narrow'],
+      ['X-1.3: a', 'X-1.4: b'],
+    ]);
+  });
+
+  it('gives a title that opens with a conditional one opening for each branch', () => {
+    const text = "test(`${a ? 'X-1.1, X-1.2' : 'X-1.1'}: first ${b}`, () => {});";
+    assert.deepEqual(openingsOf(text), [['X-1.1, X-1.2: first ${b}', 'X-1.1: first ${b}']]);
+  });
+
+  it('follows a conditional whose branch is a template, and a title built with +', () => {
+    const nested = "test(`${a ? 'X-1.1' : `X-1.2${b ? ', X-1.3' : ''}`}: t`, () => {});";
+    assert.deepEqual(openingsOf(nested), [['X-1.1: t', 'X-1.2, X-1.3: t', 'X-1.2: t']]);
+    const sum = "test('X-1.1: part ' + (c ? 'one' : 'two') + ')', () => {});";
+    assert.deepEqual(openingsOf(sum), [['X-1.1: part one)', 'X-1.1: part two)']]);
+  });
+
+  it('leaves a substitution it cannot resolve as written', () => {
+    assert.deepEqual(openingsOf('test(`${name}: t`, () => {});'), [['${name}: t']]);
   });
 });

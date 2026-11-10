@@ -1,6 +1,8 @@
 // Pulls the checkable text out of a file: comments and test titles from code, and every
 // line outside a fenced block from Markdown or from a Bruno request's `docs` block. Ignore
-// markers come out separately, and are never checked themselves.
+// markers come out separately, and are never checked themselves. `testDeclarations` reads
+// the same test calls for what they declare, for the catalog report: skips, the `describe`
+// around a test, and the ways a computed title can open.
 
 import ts from 'typescript';
 
@@ -32,6 +34,12 @@ export interface Extracted {
 
 const MARKER = 'check-docs-ignore-next-line';
 const TEST_CALLEES = new Set(['it', 'test', 'describe']);
+/** Members that make a test call a declared skip. `skipIf` is decided at run time, so it isn't one. */
+const SKIP_MEMBERS = new Set(['skip', 'fixme', 'todo']);
+/** Members that take a title but declare no test: a step, and a hook, which may be titled. */
+const NOT_DECLARATIONS = new Set(['step', 'beforeAll', 'beforeEach', 'afterAll', 'afterEach']);
+/** The most openings one title expands to, so a title built from many conditionals stays small. */
+const MAX_OPENINGS = 32;
 
 // A block comment's body ends in `*/`. A Markdown marker arrives without its `-->`:
 // `extractMarkdown`'s pattern captures only what sits inside the comment.
@@ -233,7 +241,107 @@ function testTitles(sourceFile: ts.SourceFile): Segment[] {
 // and through the call or tagged template that makes the title call a second one
 // (`it.each(table)('title', fn)`, ``it.each`a | b`('title', fn)``).
 function isTestCallee(callee: ts.Expression): boolean {
-  if (ts.isPropertyAccessExpression(callee) || ts.isCallExpression(callee)) return isTestCallee(callee.expression);
-  if (ts.isTaggedTemplateExpression(callee)) return isTestCallee(callee.tag);
-  return ts.isIdentifier(callee) && TEST_CALLEES.has(callee.text);
+  return calleeParts(callee) !== null;
+}
+
+/** The identifier a test callee starts from and the members it passes through, outermost first; null for any other callee. */
+function calleeParts(callee: ts.Expression): { root: string; members: string[] } | null {
+  const members: string[] = [];
+  let node = callee;
+  for (;;) {
+    if (ts.isPropertyAccessExpression(node)) {
+      members.unshift(node.name.text);
+      node = node.expression;
+    } else if (ts.isCallExpression(node)) {
+      node = node.expression;
+    } else if (ts.isTaggedTemplateExpression(node)) {
+      node = node.tag;
+    } else {
+      break;
+    }
+  }
+  return ts.isIdentifier(node) && TEST_CALLEES.has(node.text) ? { root: node.text, members } : null;
+}
+
+export interface TestDeclaration {
+  /**
+   * The ways the title can begin. A plain title is its own text. Where the start is computed
+   * (`${gap ? 'DRAG-1.1, DRAG-1.2' : 'DRAG-1.1'}: …`), it is one text per branch. Any other
+   * substitution stays as written (`${name}`).
+   */
+  openings: string[];
+  /** A `describe`: its title covers every test inside it. */
+  group: boolean;
+  /** Declared a skip, with `.skip`, `.fixme` or `.todo` on the call. */
+  skipped: boolean;
+  /** The `describe`s around the call, outermost first. */
+  within: TestDeclaration[];
+}
+
+/**
+ * Every test and `describe` a file declares, with the `describe`s around each. A call is a
+ * declaration when it starts from `it`, `test` or `describe` and its first argument is a
+ * title: a string, a template, a sum of strings, or a conditional between them. A hook,
+ * `test.use` and `test.step` aren't, and neither is a call whose title is a bare name.
+ */
+export function testDeclarations(sourceFile: ts.SourceFile): TestDeclaration[] {
+  const found: TestDeclaration[] = [];
+  const visit = (node: ts.Node, within: TestDeclaration[]): void => {
+    let inner = within;
+    if (ts.isCallExpression(node)) {
+      const parts = calleeParts(node.expression);
+      const first = node.arguments[0];
+      if (parts && first && !parts.members.some(member => NOT_DECLARATIONS.has(member)) && isTitle(first)) {
+        const declaration: TestDeclaration = {
+          openings: openingsOf(first, sourceFile),
+          group: parts.root === 'describe' || parts.members.includes('describe'),
+          skipped: parts.members.some(member => SKIP_MEMBERS.has(member)),
+          within,
+        };
+        found.push(declaration);
+        if (declaration.group) inner = [...within, declaration];
+      }
+    }
+    ts.forEachChild(node, child => visit(child, inner));
+  };
+  visit(sourceFile, []);
+  return found;
+}
+
+function isTitle(expression: ts.Expression): boolean {
+  if (ts.isStringLiteralLike(expression) || ts.isTemplateExpression(expression)) return true;
+  if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)) return isTitle(expression.expression);
+  if (ts.isConditionalExpression(expression)) return isTitle(expression.whenTrue) || isTitle(expression.whenFalse);
+  return (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.PlusToken &&
+    (isTitle(expression.left) || isTitle(expression.right))
+  );
+}
+
+// What the expression can evaluate to, as far as the source shows it: both branches of a
+// conditional, every part of a sum or template. Anything else is left as `${…}`.
+function openingsOf(expression: ts.Expression, sourceFile: ts.SourceFile): string[] {
+  const join = (left: string[], right: string[]): string[] =>
+    [...new Set(left.flatMap(a => right.map(b => a + b)))].slice(0, MAX_OPENINGS);
+
+  if (ts.isStringLiteralLike(expression)) return [expression.text];
+  if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)) {
+    return openingsOf(expression.expression, sourceFile);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return [
+      ...new Set([...openingsOf(expression.whenTrue, sourceFile), ...openingsOf(expression.whenFalse, sourceFile)]),
+    ].slice(0, MAX_OPENINGS);
+  }
+  if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    return join(openingsOf(expression.left, sourceFile), openingsOf(expression.right, sourceFile));
+  }
+  if (ts.isTemplateExpression(expression)) {
+    return expression.templateSpans.reduce(
+      (sofar, span) => join(join(sofar, openingsOf(span.expression, sourceFile)), [span.literal.text]),
+      [expression.head.text],
+    );
+  }
+  return [`\${${expression.getText(sourceFile)}}`];
 }
