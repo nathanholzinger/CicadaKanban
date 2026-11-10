@@ -175,6 +175,8 @@ Nathan takes this as the starting point (2026-11-04). It's revisited at the chec
 - from 4c on, the 20 repeats and each batch's final full run use the runner's adopted worker count, so the repeats also run under load;
 - if no worker count passes the runner's acceptance, the suite stays on one worker and this bar is unchanged.
 
+**Adopted count and exception (Nathan, 2026-11-10): five workers.** After the extended trial, Nathan selects five for its measured full-suite speed gain with no newly observed failing test identity or mode. Re-evaluate with the smoke suite, when E2E execution should occupy less of each story and capacity for simultaneous work may weigh more heavily; revisit sooner if failures or contention change. Nathan accepts the runner trial with the recorded DRAG-7.10 and DRAG-3.16 failures so the suite runs faster during this story. DRAG-7.10 remains active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4h alongside the six legacy skips. The runner's raw stability/contention failures remain recorded; this adoption exception does not lower D2's twenty-repeat or batch-final-run requirements for the cases those batches add or change.
+
 The bar is this story's, set for its flaky drag specs. It isn't a process for other stories.
 
 **D3. A skipped spec is never unskipped as it stands.** Each one is:
@@ -216,7 +218,7 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - lists unresolved held-off cases, proposed Manual calls and internal mappings at its stop, for Nathan;
 - ends with the gate and its spec files green, then a stop for review and commit.
 
-**For 4c–4h, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel plan's decision 8 carry-forward remains pending Nathan's approval.
+**For 4c–4h, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
 
 **D6. Case IDs settle before any test is written** (Phase 2). The Planner's end-of-epic pass may revise, retire, move or renumber cases, and a test titled before it would need re-titling after (epic-done checklist, Tests).
 
@@ -488,7 +490,7 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **4e.** DRAG-8, the carried branch.
 - **4f.** DRAG-2 and ATT-4.9.
 - **4g.** TREE, with TREE-9.4 and TREE-11.7.
-- **4h.** Item 3's six legacy skips.
+- **4h.** Item 3's six legacy skips, plus the temporarily skipped DRAG-3.16 pair returned from 4a after the runner trial's setup connection reset.
 
 #### Batch 4a results — 2026-11-08
 
@@ -638,6 +640,10 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-09 — D2 on the parallel runner (Architect, Nathan's approval).** Nathan approved the runner plan's decision 8: 4a and 4b's one-worker repeat evidence stands, and from 4c on D2's repeats and each batch's final full run use the adopted worker count. Recorded in D2 and in the batches doc's execution boundary and Stop 4. D2 stays this story's bar only.
 
+- **2026-11-10 — Three-worker adoption with bounded failures (Nathan).** Accept the parallel-runner trial's recorded flaky failures to reduce suite runtime during Story 10. DRAG-7.10 stays active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4h alongside the six legacy skips. The [runner report](../tech-debt-stories/e2e-parallel-workers.md) holds all failures and comparisons; the batch plan holds the destinations. D2's bar and 4a/4b's prior evidence stand, and future repeats/final runs use three workers.
+
+- **2026-11-10 — Five-worker default after the extended trial (Nathan).** Five replaces three for future D2 repeats and batch-final full runs. The full-suite median is 3m 25.1s, 38.2s faster than four, with no newly observed failing test identity or mode. Six is dropped for its small additional saving. Re-evaluate with the smoke suite, when full E2E runs should occupy less of each story and capacity for simultaneous work may matter more; revisit sooner if failures or contention change. The known-failure deferrals and D2's bar remain in force.
+
 ## Open questions
 
 - **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
@@ -653,9 +659,11 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Living-docs handoff
 
+- **Catalog owner — temporary DRAG-3.16 proof gap:** both parameterized Playwright tests are skipped under Nathan's runner-adoption decision. Reconcile the existing Automated status/pointer with that temporary gap, and restore whole-Then certification when 4h fixes/re-enables them. The QA Engineer records the handoff without editing catalog fields. This does not convert the case to Manual or revise the frozen 4a evidence.
+
 - **Test retirement (Nathan), applied:** DRAG-4.35 and its dedicated B14 Playwright test are deleted, keeping Next ID DRAG-4.36 and reusing no ID. The Coder removed the retired ID stamp from the existing internal projection regression; Nathan accepted that return, and the generic regression body remains unchanged. The Automator also removed B09's disputed line-place guard; DRAG-4.30's other assertions remain. No active automation claims the retired case. Future fresh cases belong to the deferred highlight-cue story; no wiki change is made in this retirement.
 
-- **Workflow wording, applied by the Testing Roles Refactor:** D7/D12 and the five stops now follow the new roles, the desk/reviewer flow, tree IDs, one current Results packet and one cold reconciliation per scope. The refactor's Architect-owned instructions are already rewritten; this amendment applies them to the remaining batches. The parallel plan's decision 8 remains a separate approval for Nathan.
+- **Workflow wording, applied by the Testing Roles Refactor:** D7/D12 and the five stops now follow the new roles, the desk/reviewer flow, tree IDs, one current Results packet and one cold reconciliation per scope. The refactor's Architect-owned instructions are already rewritten; this amendment applies them to the remaining batches. The parallel runner's adopted five-worker count and the bounded failure deferrals are recorded in D2; no further default-count approval remains pending.
 
 - **Behavior decisions made while building, for the PO to rule on:**
 - **Planned passages now built:** board-drag-interaction §10, "a column drag the board stops shows the banner too" (Phase 1).

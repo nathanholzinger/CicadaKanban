@@ -6,9 +6,9 @@
 // The ports and files sit in a block clear of the dev (3001/5173), old E2E
 // (3002/5174) and deep (3003/5175) stacks, so those can stay open during a run.
 
-// One worker until a trial picks the default. `E2E_WORKERS` overrides it, and
+// Five workers by default. `E2E_WORKERS` overrides it, and
 // the config starts that many stacks only.
-const DEFAULT_WORKERS = 1;
+const DEFAULT_WORKERS = 5;
 const SERVER_PORT_BASE = 3010;
 const CLIENT_PORT_BASE = 5180;
 
