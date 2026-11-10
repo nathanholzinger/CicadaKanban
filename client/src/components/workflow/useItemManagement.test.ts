@@ -271,6 +271,57 @@ describe('ATT-1.15: an older child answer cannot undo a later parent workphase c
   );
 });
 
+// The board's load asks how many item answers have been applied, to read again when one landed during a read.
+describe('answersApplied', () => {
+  it('counts an answer applied to the list: a drag’s, an inline create’s, the Sheet’s and a delete', async () => {
+    const { board, sendMove } = openBoard();
+    expect(board().answersApplied()).toBe(0);
+
+    sendMove('X')(makeItem('X', { position: 3 }));
+    expect(board().answersApplied()).toBe(1);
+
+    vi.mocked(createItem).mockResolvedValueOnce(makeItem('N', { position: 4 }));
+    await act(async () => board().handleCreateItem('todo', 'New', null));
+    expect(board().answersApplied()).toBe(2);
+
+    act(() => board().handleItemUpdated(makeItem('Y', { title: 'Renamed' })));
+    expect(board().answersApplied()).toBe(3);
+
+    act(() => board().handleChildCreated(makeItem('C', { parentId: 'Z' })));
+    expect(board().answersApplied()).toBe(4);
+
+    act(() => board().handleItemDeleted('Z'));
+    expect(board().answersApplied()).toBe(5);
+  });
+
+  it('counts neither an answer a later write for the same item superseded, nor a failed write, nor a create that failed', async () => {
+    const { board } = openBoard();
+    let first = 0;
+    let second = 0;
+    act(() => {
+      first = board().writes.begin('X', null);
+      second = board().writes.begin('X', null);
+    });
+
+    act(() => void board().writes.complete('X', first, makeItem('X', { position: 3 })));
+    act(() => board().writes.fail('X', second));
+    vi.mocked(createItem).mockRejectedValueOnce(new Error('down'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await act(async () => board().handleCreateItem('todo', 'New', null));
+
+    expect(board().answersApplied()).toBe(0);
+  });
+
+  it('is the same function across renders, so a load depending on it is not remade', () => {
+    const { board } = openBoard();
+    const first = board().answersApplied;
+
+    act(() => board().previewPlacement('X', { slot: 'last' }));
+
+    expect(board().answersApplied).toBe(first);
+  });
+});
+
 // The Sheet numbers its answers as they land, so a write the board sent before one is the older.
 describe('an answer the Sheet passes up, for a row’s workphase', () => {
   const family = () => [makeItem('P', { workphaseId: 'W1' }), makeItem('C', { parentId: 'P', workphaseId: 'W1' })];

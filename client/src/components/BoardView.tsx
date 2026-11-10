@@ -98,6 +98,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     placements,
     inversions,
     replaceItems,
+    answersApplied,
     previewPlacement,
     writes,
     childCounts,
@@ -142,6 +143,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     activeBoardId,
     setWorkphases,
     replaceItems,
+    answersApplied,
     reloadStarted,
     boardDrawn,
   });

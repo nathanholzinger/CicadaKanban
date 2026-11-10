@@ -210,14 +210,17 @@ The hooks and contexts that run it:
 
 The board's own state, outside the gesture:
 
-- `useItemManagement.ts` — the item state, the per-item write tracker, and the numbering of
-  every write across items.
+- `useItemManagement.ts` — the item state, the per-item write tracker, the numbering of
+  every write across items, and the count of answers applied, which the board's load reads.
 - `useBoardManagement.ts`, `useColumnManagement.ts`, `useWorkphaseManagement.ts` —
   board, column and workphase CRUD for `BoardView.tsx`; `useColumnManagement.ts` also
   holds the column-reorder drop.
 - `useBoardLoad.ts` — the one loader of the selected board, which every reload calls: it
   reads the selection when it starts, and a load that is not the latest, or whose board is no
-  longer selected, applies nothing and ends neither the loading state nor the stop cue.
+  longer selected, applies nothing and ends neither the loading state nor the stop cue. A read
+  during which an item answer was applied (`useItemManagement.ts`'s `answersApplied`) is read
+  again, as part of the same load, so a snapshot that predates a write never undoes it and the
+  stop cue's flash plays once, when the board is finally drawn.
 
 Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
 depth rule and the branch a carried item takes with it (`carriedBranchOf`), and

@@ -4,7 +4,9 @@
 // the board sends is also numbered across items (`lib/positionedWrite.ts::positionRecord`): an answer that
 // lands after a later-sent write's leaves the positions that write set, whether a disclosed pair or its own
 // row, and the workphases it set, its own row's and its attached descendants' through the cascade (the
-// number goes into `completeItemWrite`, which keeps that record in the list state).
+// number goes into `completeItemWrite`, which keeps that record in the list state). It also counts the
+// answers it applies (`answersApplied`), which a board read compares before and after it runs
+// (`useBoardLoad.ts`).
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
@@ -55,6 +57,9 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   const writeSeq = useRef(new Map<string, { seq: number; sent: number }>());
   // The writes sent, numbered, and which one last set each item's position.
   const positionWrites = useRef(positionRecord());
+  // How many item answers have been applied to the list: a board read that began before one landed may not
+  // have the write (`answersApplied`).
+  const answerCount = useRef(0);
   // Item ids with a write currently outstanding — from `begin` until the
   // matching non-stale `complete`/`fail` — backing `isPending`.
   // `placements` alone can't answer this: a live drag's ghost occupies the
@@ -104,6 +109,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
         const recorded = recordedPlacement.current.get(itemId) ?? null;
         recordedPlacement.current.delete(itemId);
         const newer = positionWrites.current.answer(latest.sent, response);
+        answerCount.current++;
         setList(s => completeItemWrite(s, response, recorded, newer, latest.sent));
         return { applied: true, needsResync: false };
       },
@@ -144,6 +150,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
       const sent = positionWrites.current.send();
       const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
       const newer = positionWrites.current.answer(sent, newItem);
+      answerCount.current++;
       setList(s => completeItemWrite(s, newItem, undefined, newer, sent));
     } catch (err) {
       console.error('Failed to create item:', err);
@@ -158,6 +165,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   function foldSheetAnswer(response: ItemWriteResponse) {
     const sent = positionWrites.current.send();
     positionWrites.current.answer(sent, response);
+    answerCount.current++;
     setList(s => completeItemWrite(s, response, undefined, undefined, sent));
   }
 
@@ -166,6 +174,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   }
 
   function handleItemDeleted(id: string) {
+    answerCount.current++;
     setList(s => ({ ...s, items: removeItemAndDescendants(s.items, id) }));
   }
 
@@ -175,11 +184,16 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
 
   const childCounts = computeChildCounts(items, placements);
 
+  // How many item answers have been applied, which a board read compares before and after it runs
+  // (`useBoardLoad.ts`). It reads a ref, so it is the same function for the life of the hook.
+  const answersApplied = useCallback(() => answerCount.current, []);
+
   return {
     items,
     placements,
     inversions,
     replaceItems,
+    answersApplied,
     previewPlacement,
     writes,
     childCounts,

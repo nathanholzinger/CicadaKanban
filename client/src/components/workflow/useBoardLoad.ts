@@ -7,6 +7,11 @@
 // - A load applies its answer, ends the loading state and finishes the drag-stop cue only while it is the
 //   latest load and its board is still selected. A late answer for another board, or for a load a later
 //   one replaced, changes none of them.
+// - A read that began before an item write's answer was applied is read again, as the project sidebar's is
+//   (wiki project-tree §4), since its snapshot may not have the write and applying it would undo it. The read
+//   made again belongs to the same load: the overtaken read applies nothing, leaves the loading state on and
+//   finishes no cue, and `reloadStarted` is not called again, so a flash waiting for the board plays once,
+//   when the board is finally drawn (wiki boards-columns-unsorted §3, wiki board-drag-interaction §10).
 // - A current load that fails draws no board but the one it read: the board shown for a different
 //   selection is cleared, so a failed switch never leaves A's columns under B's name and controls, while a
 //   failed reload keeps the board it was reloading.
@@ -21,13 +26,22 @@ interface BoardLoadDeps {
   activeBoardId: string | null;
   setWorkphases: (workphases: Workphase[]) => void;
   replaceItems: (items: Item[]) => void;
+  /** How many item answers have been applied so far. A read during which it grew is read again. */
+  answersApplied: () => number;
   /** A load is starting: the cue's flash still playing is let go. */
   reloadStarted: () => void;
   /** The loaded board is drawn: the cue's flash that waited for it plays. */
   boardDrawn: () => void;
 }
 
-export function useBoardLoad({ activeBoardId, setWorkphases, replaceItems, reloadStarted, boardDrawn }: BoardLoadDeps) {
+export function useBoardLoad({
+  activeBoardId,
+  setWorkphases,
+  replaceItems,
+  answersApplied,
+  reloadStarted,
+  boardDrawn,
+}: BoardLoadDeps) {
   const [board, setBoard] = useState<BoardWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   // Called first, so its effect runs ahead of the load effect below: a load a selection change starts
@@ -47,8 +61,15 @@ export function useBoardLoad({ activeBoardId, setWorkphases, replaceItems, reloa
     setLoading(true);
     const isCurrent = () => load === latestLoad.current && boardId === selected.current;
     try {
-      const data = await fetchBoard(boardId);
-      if (!isCurrent()) return;
+      // A read that began before an item answer was applied may not have the write, and applying it would
+      // undo the write. It applies nothing, and the board is read again as part of this same load.
+      let data: BoardWithDetails;
+      let applied: number;
+      do {
+        applied = answersApplied();
+        data = await fetchBoard(boardId);
+        if (!isCurrent()) return;
+      } while (applied !== answersApplied());
       setBoard(data);
 
       // Workphases are workflow-scoped (independent of which board is active) —
@@ -75,7 +96,7 @@ export function useBoardLoad({ activeBoardId, setWorkphases, replaceItems, reloa
         boardDrawn();
       }
     }
-  }, [selected, setWorkphases, replaceItems, reloadStarted, boardDrawn]);
+  }, [selected, setWorkphases, replaceItems, answersApplied, reloadStarted, boardDrawn]);
 
   useEffect(() => {
     // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is

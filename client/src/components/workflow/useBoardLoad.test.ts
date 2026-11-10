@@ -8,6 +8,7 @@ import type { BoardWithDetails, Item, Workphase } from '../../types';
 import { fetchBoard } from '../../api/boards';
 import { makeItem } from '../../test/itemFixture';
 import { useBoardLoad } from './useBoardLoad';
+import { useItemManagement } from './useItemManagement';
 
 vi.mock('../../api/boards');
 
@@ -72,9 +73,11 @@ function mountLoader(first: string | null) {
   const replaceItems = vi.fn<(items: Item[]) => void>();
   const reloadStarted = vi.fn();
   const boardDrawn = vi.fn();
+  // No item answer is applied during these tests' loads. Stable, like the item state's own.
+  const answersApplied = () => 0;
   const hook = renderHook(
     ({ activeBoardId }: { activeBoardId: string | null }) =>
-      useBoardLoad({ activeBoardId, setWorkphases, replaceItems, reloadStarted, boardDrawn }),
+      useBoardLoad({ activeBoardId, setWorkphases, replaceItems, answersApplied, reloadStarted, boardDrawn }),
     { initialProps: { activeBoardId: first } },
   );
   const select = (activeBoardId: string | null) => hook.rerender({ activeBoardId });
@@ -287,5 +290,211 @@ describe('a failed reload of the board already drawn', () => {
     expect(hook.result.current.loading).toBe(false);
     expect(shown()?.id).toBe('A');
     expect(boardDrawn).toHaveBeenCalledOnce();
+  });
+});
+
+// The loader composed with the board's item state, as `BoardView` wires them. The workflow has W1 and W2 and
+// the Free items X (in W1) and Y (in W2). Board A's one column CA covers both; board B has CB1 for W1 and
+// CB2 for W2. A read that predates the move of X to W2 has X in W1; one that follows it has X in W2.
+const itemX = (workphaseId: 'W1' | 'W2') => makeItem('X', { title: 'X', workphaseId });
+const itemY = makeItem('Y', { title: 'Y', workphaseId: 'W2' });
+const boardAWith = (xIn: 'W1' | 'W2') =>
+  boardOf('A', [
+    {
+      id: 'CA',
+      rows: [
+        { workphase: phase('W1', 'Ready', 1), items: xIn === 'W1' ? [itemX('W1')] : [] },
+        { workphase: phase('W2', 'Review', 2), items: xIn === 'W1' ? [itemY] : [itemX('W2'), itemY] },
+      ],
+    },
+  ]);
+const boardBWith = (xIn: 'W1' | 'W2') =>
+  boardOf('B', [
+    { id: 'CB1', rows: [{ workphase: phase('W1', 'Ready', 1), items: xIn === 'W1' ? [itemX('W1')] : [] }] },
+    {
+      id: 'CB2',
+      rows: [{ workphase: phase('W2', 'Review', 2), items: xIn === 'W1' ? [itemY] : [itemX('W2'), itemY] }],
+    },
+  ]);
+const B_BEFORE_THE_MOVE = { CB1: [['W1', ['X']]], CB2: [['W2', ['Y']]] };
+const B_AFTER_THE_MOVE = { CB1: [['W1', []]], CB2: [['W2', ['X', 'Y']]] };
+
+function mountBoard(first: string) {
+  const setWorkphases = vi.fn<(workphases: Workphase[]) => void>();
+  const reloadStarted = vi.fn();
+  const boardDrawn = vi.fn();
+  const hook = renderHook(
+    ({ activeBoardId }: { activeBoardId: string | null }) => {
+      const list = useItemManagement('p1', undefined);
+      const load = useBoardLoad({
+        activeBoardId,
+        setWorkphases,
+        replaceItems: list.replaceItems,
+        reloadStarted,
+        boardDrawn,
+        answersApplied: list.answersApplied,
+      });
+      return { list, load };
+    },
+    { initialProps: { activeBoardId: first } },
+  );
+  const select = (activeBoardId: string) => hook.rerender({ activeBoardId });
+  const shown = () => hook.result.current.load.board;
+  const loading = () => hook.result.current.load.loading;
+  const workphases = () => Object.fromEntries(hook.result.current.list.items.map(item => [item.id, item.workphaseId]));
+  const reload = () => act(() => void hook.result.current.load.loadBoard());
+  // The move of X to W2: sent now, and its successful answer applied when the returned function is called.
+  const sendMove = () => {
+    let seq = 0;
+    act(() => {
+      seq = hook.result.current.list.writes.begin('X', null);
+    });
+    return () =>
+      act(() => {
+        hook.result.current.list.writes.complete('X', seq, itemX('W2'));
+      });
+  };
+  const fetched = () => vi.mocked(fetchBoard).mock.calls.map(([id]) => id);
+  return { hook, select, shown, loading, workphases, reload, sendMove, fetched, reloadStarted, boardDrawn };
+}
+
+describe('BCU-1.10: a board read cannot undo a write whose answer was applied while it ran', () => {
+  it('on a switch to B, applies nothing from B’s older read and keeps B loading until the read made again shows X in W2', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardAWith('W1'));
+    const board = mountBoard('A');
+    await waitFor(() => expect(board.shown()?.id).toBe('A'));
+    const answerMove = board.sendMove();
+    const older = held<BoardWithDetails>();
+    const again = held<BoardWithDetails>();
+    vi.mocked(fetchBoard).mockReturnValueOnce(older.promise).mockReturnValueOnce(again.promise);
+    board.boardDrawn.mockClear();
+    board.select('B');
+
+    answerMove();
+    expect(board.workphases()).toEqual({ X: 'W2', Y: 'W2' });
+    await act(async () => older.resolve(boardBWith('W1')));
+
+    // The older read had X in W1: it neither restored that nor drew it, and B is still loading.
+    expect(board.workphases()).toEqual({ X: 'W2', Y: 'W2' });
+    expect(placedIn(board.shown())).not.toEqual(B_BEFORE_THE_MOVE);
+    expect(board.loading()).toBe(true);
+    expect(board.boardDrawn).not.toHaveBeenCalled();
+    expect(board.fetched()).toEqual(['A', 'B', 'B']);
+
+    await act(async () => again.resolve(boardBWith('W2')));
+
+    expect(board.loading()).toBe(false);
+    expect(board.shown()?.id).toBe('B');
+    expect(placedIn(board.shown())).toEqual(B_AFTER_THE_MOVE);
+    expect(board.workphases()).toEqual({ X: 'W2', Y: 'W2' });
+    expect(board.boardDrawn).toHaveBeenCalledOnce();
+    expect(board.fetched()).toEqual(['A', 'B', 'B']);
+  });
+
+  it('on a reload of the selected B, ends with X and Y in CB2 the same way', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardBWith('W1'));
+    const board = mountBoard('B');
+    await waitFor(() => expect(placedIn(board.shown())).toEqual(B_BEFORE_THE_MOVE));
+    const answerMove = board.sendMove();
+    const older = held<BoardWithDetails>();
+    const again = held<BoardWithDetails>();
+    vi.mocked(fetchBoard).mockReturnValueOnce(older.promise).mockReturnValueOnce(again.promise);
+    board.reload();
+
+    answerMove();
+    await act(async () => older.resolve(boardBWith('W1')));
+
+    expect(board.workphases()).toEqual({ X: 'W2', Y: 'W2' });
+    expect(placedIn(board.shown())).toEqual(B_BEFORE_THE_MOVE);
+    expect(board.loading()).toBe(true);
+
+    await act(async () => again.resolve(boardBWith('W2')));
+
+    expect(board.loading()).toBe(false);
+    expect(placedIn(board.shown())).toEqual(B_AFTER_THE_MOVE);
+    expect(board.workphases()).toEqual({ X: 'W2', Y: 'W2' });
+    expect(board.fetched()).toEqual(['B', 'B', 'B']);
+  });
+
+  it('leaves the stop cue to the one reload: it is neither completed by the older read nor started again by the read made again', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardBWith('W1'));
+    const board = mountBoard('B');
+    await waitFor(() => expect(board.shown()?.id).toBe('B'));
+    const answerMove = board.sendMove();
+    const older = held<BoardWithDetails>();
+    const again = held<BoardWithDetails>();
+    vi.mocked(fetchBoard).mockReturnValueOnce(older.promise).mockReturnValueOnce(again.promise);
+    board.reloadStarted.mockClear();
+    board.boardDrawn.mockClear();
+    board.reload();
+    expect(board.reloadStarted).toHaveBeenCalledOnce();
+
+    answerMove();
+    await act(async () => older.resolve(boardBWith('W1')));
+
+    expect(board.loading()).toBe(true);
+    expect(board.boardDrawn).not.toHaveBeenCalled();
+    expect(board.reloadStarted).toHaveBeenCalledOnce();
+
+    await act(async () => again.resolve(boardBWith('W2')));
+
+    expect(board.boardDrawn).toHaveBeenCalledOnce();
+    expect(board.reloadStarted).toHaveBeenCalledOnce();
+    expect(placedIn(board.shown())).toEqual(B_AFTER_THE_MOVE);
+  });
+});
+
+// Outside the catalog: when a read is made again, and how it ends.
+describe('a board read made again', () => {
+  it('is not made when the answer was applied before the read began', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardAWith('W1'));
+    const board = mountBoard('A');
+    await waitFor(() => expect(board.shown()?.id).toBe('A'));
+    board.sendMove()();
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardBWith('W2'));
+
+    board.select('B');
+
+    await waitFor(() => expect(board.shown()?.id).toBe('B'));
+    expect(board.fetched()).toEqual(['A', 'B']);
+  });
+
+  it('is made again while answers keep landing, until a read lands with none applied since it began', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardBWith('W1'));
+    const board = mountBoard('B');
+    await waitFor(() => expect(board.shown()?.id).toBe('B'));
+    const reads = [held<BoardWithDetails>(), held<BoardWithDetails>(), held<BoardWithDetails>()];
+    for (const read of reads) vi.mocked(fetchBoard).mockReturnValueOnce(read.promise);
+    board.reload();
+
+    // An answer lands during each of the first two reads.
+    board.sendMove()();
+    await act(async () => reads[0].resolve(boardBWith('W1')));
+    board.sendMove()();
+    await act(async () => reads[1].resolve(boardBWith('W1')));
+    expect(board.loading()).toBe(true);
+
+    await act(async () => reads[2].resolve(boardBWith('W2')));
+
+    expect(board.loading()).toBe(false);
+    expect(placedIn(board.shown())).toEqual(B_AFTER_THE_MOVE);
+    expect(board.fetched()).toEqual(['B', 'B', 'B', 'B']);
+  });
+
+  it('that fails ends the loading and finishes the cue once, leaving the board that was drawn', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardBWith('W1'));
+    const board = mountBoard('B');
+    await waitFor(() => expect(board.shown()?.id).toBe('B'));
+    const older = held<BoardWithDetails>();
+    vi.mocked(fetchBoard).mockReturnValueOnce(older.promise).mockRejectedValueOnce(new Error('down'));
+    board.boardDrawn.mockClear();
+    board.reload();
+
+    board.sendMove()();
+    await act(async () => older.resolve(boardBWith('W1')));
+
+    await waitFor(() => expect(board.loading()).toBe(false));
+    expect(board.boardDrawn).toHaveBeenCalledOnce();
+    expect(board.shown()?.id).toBe('B');
   });
 });
