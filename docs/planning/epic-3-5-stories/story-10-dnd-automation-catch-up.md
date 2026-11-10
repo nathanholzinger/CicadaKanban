@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batch 4a are committed. Batch 4b is complete for review: all 26 scoped cases are Automated, 1,400 repeat passes, final E2E 394 passed / 21 existing skips / zero failed and root gate green. [Story 10's second part](story-10-batches.md) holds the confirming report and close-out; 91 active story assignments remain Open. No commit or 4c work has started. Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batches 4a–4b are committed; 4b is `857720b9`. All 26 cases in 4b are Automated, with 1,400 repeat passes, final E2E 394 passed / 21 existing skips / zero failed and root gate green. [Story 10's second part](story-10-batches.md) holds the current resume packet and Review log; 91 active story assignments remain Open. Batch 4c has not started and waits for the catalog coverage report and parallel-runner work. The remaining work uses the new testing roles. Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
 
 ## Goal
 
@@ -155,7 +155,7 @@ None of the seven has a cause yet. Phase 5 needs two green full runs in a row, a
 - **Automated by an internal test Nathan approves,** one case at a time.
 - **Manual, by Nathan's approval:** too flaky or too costly for what it checks. Its reason is a present-tense condition.
 
-The Test Automator writes the Playwright tests and the Coder the Vitest ones, each titled with its case's ID (D12). The Reconciler proposes the internal mappings and the Manual calls, Nathan approves them, and the Reconciler writes the statuses.
+The QA Engineer writes the Playwright tests and shares Vitest work with the Coder under D12, each test titled with its case's ID. The Test Reviewer proposes mappings during authoring; the Reconciler may find new ones at the close. Internal mappings outside approved categories need Nathan's approval. The Reconciler confirms statuses and Automation lines; an approved Manual call can also be applied in a Planner session. The QA Engineer never sets either field.
 
 **D2. The flakiness bar** (item 8). A drag spec the story adds or changes stays only if:
 
@@ -169,6 +169,13 @@ A spec that misses the bar gets one of these, in order of preference:
 - Manual, by Nathan's approval.
 
 Nathan takes this as the starting point (2026-11-04). It's revisited at the checkpoint after batch 4a ([Story 10's second part](story-10-batches.md)), once it's clear how many specs miss it.
+
+**On the parallel runner** (Nathan, 2026-11-09, [Parallel E2E Workers](../tech-debt-stories/e2e-parallel-workers.md)' decision 8):
+- the 20-repeat evidence 4a and 4b earned on one worker stands, and isn't re-earned. The runner's contention check carries it onto the new runner;
+- from 4c on, the 20 repeats and each batch's final full run use the runner's adopted worker count, so the repeats also run under load;
+- if no worker count passes the runner's acceptance, the suite stays on one worker and this bar is unchanged.
+
+The bar is this story's, set for its flaky drag specs. It isn't a process for other stories.
 
 **D3. A skipped spec is never unskipped as it stands.** Each one is:
 
@@ -204,23 +211,24 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - reworks or deletes its suite's skips (D3);
 - extends partial tests, or writes new ones, as Phase 2's inventory sets out;
 - puts every drag spec it adds or changes through the bar (D2);
-- ends with a confirming Reconciler run over its cases. The Planner passes it the cases the Automator held off on;
-- lists that run's proposed Manual calls and internal mappings at its stop, for Nathan;
+- gets Test Reviewer passes while tests are written, with verdicts and desk answers recorded word for word in the batch doc's Review log;
+- ends with one cold Reconciler run, spawned by the QA Engineer from the agent's fixed inputs;
+- lists unresolved held-off cases, proposed Manual calls and internal mappings at its stop, for Nathan;
 - ends with the gate and its spec files green, then a stop for review and commit.
 
-**For the remaining batches, the five session stops in [Story 10's second part](story-10-batches.md) govern execution:** proof/variant review; tests/discovery; separate Coder/review when needed; frozen validation; reconciliation/closure. Each applicable stop returns a concrete handoff to Nathan before the next stage begins. This changes the execution boundaries, not D2, the assigned cases or batch order.
+**For 4c–4h, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel plan's decision 8 carry-forward remains pending Nathan's approval.
 
 **D6. Case IDs settle before any test is written** (Phase 2). The Planner's end-of-epic pass may revise, retire, move or renumber cases, and a test titled before it would need re-titling after (epic-done checklist, Tests).
 
 - **A case found wrong or untestable** while its test is being written goes to the Planner, or through the Planner to the PO, as an Open question.
-- **Neither the Coder nor the Automator edits the catalog or the wiki.**
+- **Neither the Coder nor the QA Engineer edits the catalog or the wiki.** The read-only Planner desk answers reading questions; rewording, a Split, a Pending PO question or a Manual call goes to a Planner session Nathan opens. The Planner spawns no automation or reconciliation agents.
 
-**D7. A defect a spec finds** (Nathan, amended after 4a). The Automator preserves the failing case-derived assertions and reports the expected clause, observed result and reproducer. The Planner records a concrete handoff in Open questions and stops for Nathan's check-in before Coder work begins.
+**D7. A defect a spec finds** (Nathan, amended by the Testing Roles Refactor). The QA Engineer preserves the failing case-derived assertions and records the failing clause, expected and observed surface results, reproducer and evidence in Open questions. It may say where diagnosis looked, never prescribe the fix. It stops work on the case for Nathan to route the handoff.
 
-- **Every Coder task uses a separate handoff and session:** an app fix, an observation hook, a test route, an internal test or a title-only stamp. The Planner does not spawn a Coder inside an automation batch, regardless of the size of the change.
+- **One separate Coder session per stop** carries that stop's hooks and test routes, followed by Nathan's check-in. A behavior change still gets its own handoff. Neither the Planner nor the QA Engineer spawns an in-session Coder. Approved title stamps and permitted Vitest work may be done by the QA Engineer under D12; they don't require a Coder solely because they are internal tests or stamps.
 - **A small fix may remain in this story,** with its regression test, but it requires the same handoff and review boundary. Nathan decides when the Coder starts and when the automation pass resumes.
 - **A larger fix** also waits for Nathan to route it.
-- **Before resuming automation,** the Coder's return identifies the wiki rule, changed behavior and files, regression evidence and validation. The original failing surface test is rerun unchanged first. A proposed case, assertion or observation change is shown separately to its owner; a green run alone does not justify changing the expected behavior.
+- **Before resuming automation,** the Coder's return identifies the wiki rule, changed behavior/files, start/end tree IDs, paired regression evidence, validation and `/code-review` record. It lists ID-bearing Vitest assertion/setup changes for the QA Engineer's Test Reviewer pass. Nathan checks in; then the original failing surface test is rerun unchanged first. Case or rule changes go separately to their owner. Neither test writer edits a test to make it pass.
 
 **D8. The unread `data-*` attributes are settled last** (item 6).
 
@@ -265,25 +273,27 @@ This story takes the open cases outside the drag work too, rather than leaving t
 - **If it fails:** the fix is small, and it lands in Phase 1 under D7's small-fix rule, with its unit test. The Planner writes its case. §10 already states the rule.
 - **If it passes:** it's dropped, and Phase 1's stop says so.
 
-**D12. Who does what** (Nathan, 2026-11-06). The split follows `.claude/guides/testing-strategy.md`, "Who writes which": the Test Automator writes the Playwright suites, and the Coder the Vitest ones.
+**D12. Who does what** (Nathan, amended by the Testing Roles Refactor). The split follows `.claude/guides/testing-strategy.md`, "Who writes which". The QA Engineer owns Playwright and its support, shares Vitest work with the Coder, and spawns the desk, Test Reviewer and end-of-scope Reconciler. The Planner owns case decisions and remains code-blind. Phases 1–3 and batches 4a–4b are complete; their results record the roles that ran them.
 
-| Work                                                                                                                                                                                                              | Who                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Phase 1: D9's build and D11's probe, with their Vitest tests                                                                                                                                                      | Coder                                    |
-| Phase 2: the end-of-epic pass, and the baseline Reconciler run it spawns                                                                                                                                          | Test Planner                             |
-| Phase 2: the inventory, in [Story 10's second part](story-10-batches.md)                                                                                                                                          | Architect                                |
-| Phase 2: D13's rewording and its shared `Manual` cases                                                                                                                                                            | Test Planner                             |
-| Phase 3: D4's helpers, all under `tests/`                                                                                                                                                                         | Test Automator, which the Planner spawns |
-| Phase 4: each batch's Playwright specs, skips included                                                                                                                                                            | Test Automator                           |
-| Phase 4: what a batch needs outside `tests/`: a test hook, a defect's fix (D7), a state-machine or pure-module test in place of a surface half (D2), and any Vitest test the inventory routes, such as TREE-9.4's | Coder                                    |
-| Each batch's confirming Reconciler run (D5)                                                                                                                                                                       | Test Planner                             |
-| Phase 5: D8's attributes, and the coverage goal                                                                                                                                                                   | Coder                                    |
-| Phase 5: the one Reconciler run                                                                                                                                                                                   | Test Planner                             |
-| Phase 5: D13 into the testing-strategy guide, for Nathan's approval                                                                                                                                               | Architect                                |
-| Phase 5: D13 into the catalog README                                                                                                                                                                              | Test Planner                             |
-| Phase 5: this story's audit                                                                                                                                                                                       | Auditor                                  |
+| Work                                                                                     | Who                                     |
+| ---------------------------------------------------------------------------------------- | --------------------------------------- |
+| Phase 1: D9's build and D11's probe, with their Vitest tests                             | Coder                                   |
+| The end-of-epic pass and later case decisions                                            | Test Planner                            |
+| A baseline Reconciler run                                                                | QA Engineer spawns the Reconciler       |
+| Phase 2: the inventory, in [Story 10's second part](story-10-batches.md)                 | Architect                               |
+| Phase 2: D13's rewording and its shared `Manual` cases                                   | Test Planner                            |
+| D4's helpers and each remaining batch's Playwright specs, skips included                 | QA Engineer                             |
+| Phase 4: app source, test hooks/routes and a defect's fix with its regression tests (D7) | Coder                                   |
+| Existing Vitest tests and approved held-off-case tests, under D12's limits               | Coder or QA Engineer, as Nathan assigns |
+| Each batch's Test Reviewer passes, Results and Review log                                | QA Engineer                             |
+| Each batch's confirming Reconciler run (D5)                                              | QA Engineer spawns the Reconciler       |
+| Phase 5: D8's attributes, and the coverage goal                                          | Coder                                   |
+| Phase 5: the one Reconciler run                                                          | QA Engineer spawns the Reconciler       |
+| Phase 5: D13 into the testing-strategy guide, for Nathan's approval                      | Architect                               |
+| Phase 5: D13 into the catalog README                                                     | Test Planner                            |
+| Phase 5: this story's audit                                                              | Auditor                                 |
 
-**The remaining automation batches use separate Coder sessions** (Nathan, after 4a). The Planner may delegate to the Test Automator and Test Reconciler. Implementation edits in an automation session are limited to the Playwright suites and support under `tests/`; the Planner and Reconciler retain their documentation responsibilities. App source, hooks, test routes and Vitest work require D7's handoff and Nathan's check-in, including work already listed in a batch. The Planner's brief states this boundary explicitly. The approved five-stop workflow in [Story 10's second part](story-10-batches.md) adds the authoring, review and execution boundaries; D2 and the remaining case assignments are unchanged.
+**The remaining automation batches use one session per stop.** Nathan names the file list. The QA Engineer never edits app source, including hooks and test routes; those go through D7's separate Coder session and return check-in. It or the Coder may edit an existing Vitest test, whoever Nathan asks first. It writes a new Vitest test only for a held-off case, after the Test Reviewer's internal-coverage verdict and Nathan's approval, from the Then, never a fix-pinned regression. The Coder lists ID-bearing Vitest assertion/setup changes for review. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze; the Reconciler stamps only what it finds new at the close. Tree IDs replace per-file fingerprints, and the QA Engineer keeps the current Results packet and append-only Review log in [Story 10's second part](story-10-batches.md). D2 and the remaining assignments are unchanged.
 
 **D13. A case's look is checked by hand; the rest is automated** (Nathan, 2026-11-06). Some cases say how something is drawn: a tier's strength, a pulse, a fade, a tilt, a colour. A test can read the attribute the client sets for it, such as `data-drop-tier`, `data-pending`, `data-stop-flash`, `data-active-context` or `data-drag-overlay-form`. It can't tell whether the result looks right.
 
@@ -314,6 +324,8 @@ The Split cases, and the shared looks proposed for them, are listed in [Story 10
   - the Planner removes only DRAG-6.22's column, no-cue clause, and makes DRAG-6.26 Open.
 
 ### Phase 2: the inventory
+
+This phase is complete under the prior roles. The numbered sequence and results below are historical; D12 governs any new baseline or case work.
 
 1. **The Planner's end-of-epic pass** (epic-done checklist, Tests, its first two items). It covers the features the epic touched: board-drag-interaction, project-tree, item-attachment and item-positioning. boards-columns-unsorted is one too, since the close-out's #5 changed its §3 and added BCU-1.7 and 1.8. After the pass, the case IDs hold still.
 2. **A baseline Reconciler run** over the drag suites, ATT-4.9, the six cases outside the drag work (What it starts from), and the new or revised cases listed in step 1's results below. Pending PO cases wait for a ruling before coverage can be confirmed. For each Open case, it lists the tests that carry its ID and what each one misses. It starts from what the earlier reports found, not from scratch. All of them are in `docs/archive/`:
@@ -407,7 +419,7 @@ The revised Open cases still assert saved outcomes, which row is affected, which
 
 ### Phase 3: the helpers (D4)
 
-The helpers every batch needs from the start, written by the Test Automator:
+Completed under the prior roles: the Test Automator wrote the helpers every batch needs from the start:
 
 - D4's list, from items 4, 6 and 7, with `drag-column-bands.spec.ts`'s split;
 - the request harness (#18);
@@ -492,14 +504,14 @@ The [confirming Reconciler report](../../audits/test-reconciliation-story-10-bat
 
 All 70 scoped variants pass twenty distinct executions each, **1,400/1,400 with zero failures/retries/skips**. Final full E2E is **394 passed / 21 existing skips / zero failed**, and the root gate passes **444 server / 1,040 client / 258 script tests, docs 433 / zero hits**, on the unchanged snapshot. The existing background run finishes during a usage-limit delivery interruption; recovery reruns nothing. Stop 4 takes about two hours three minutes of executed command time; final reconciliation performs no test execution or source edit.
 
-Catalog totals are now **378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO**, 484 cases total. Of 151 active story assignments, **91 remain Open** after 4a and 4b. Global identity checks are clean. Conditional DRAG-3.12 stays separately recorded and nonblocking; retired DRAG-4.35 remains outside the catalog. Stop at review/commit, without a commit, archive move, new Coder task or 4c work.
+Catalog totals are **378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO**, 484 cases total. Of 151 active story assignments, **91 remain Open** after 4a and 4b. Global identity checks are clean. Conditional DRAG-3.12 stays separately recorded and nonblocking; retired DRAG-4.35 remains outside the catalog. Batch 4b is committed in `857720b9`; no archive move, new Coder task or 4c work follows from that close.
 
 ### Phase 5: the close
 
 - D8's attributes.
 - No `test.skip`, `test.fixme` or `.skip(` left in `tests/` or the unit suites.
 - `npm run check`, then `npm run test:e2e` green twice in a row.
-- **The one Reconciler run** (epic-done checklist), its report saved in `docs/audits/`. Its quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them.
+- **The one cold Reconciler run, spawned by the QA Engineer** (epic-done checklist), from its fixed inputs: Scope/Review log, green-tree catalog report and run record, and the range's test/catalog diffs. Its report is saved in `docs/audits/`; open reviewer verdicts, quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them. Reconciliation is not repeated inside the audit.
 - **The close's list (D10):** every case in `docs/test-plans/` that isn't `Automated` or `Manual`, each with its status, why it's still open, and the plan that names it. Any tech-debt story D10 calls for is written by now.
 - The 80% coverage goal attempted, with the reason for any shortfall (epic-done checklist).
 - **D13 into the living docs.** The rule exists only in this plan, which goes to the archive at the close, so later stories would lose it. Each writes it as a standing rule, naming no story:
@@ -622,6 +634,10 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-08 — Batch 4a (Test Planner, from the Automator, Coder and Reconciler).** Closed all 34 cases through surface evidence, with six Coder handoffs resolved. Recorded DRAG-1.16's wiki-grounded clarification, 1,780 accepted repeat passes with the failed attempt/overlaps disclosed, final E2E 329 passed/24 existing skips and the green root gate. The inventory now retains 118 Open story assignments. Stopped at the checkpoint for Nathan; no 4b work or commit.
 
+- **2026-11-09 — Testing Roles Refactor, batch 4 (Test Planner).** With 4b committed in `857720b9`, applied the new roles to D1, D5–D7, D12, Phase 5 and the five stops in the batch doc. The QA Engineer owns automation and spawns the desk, Test Reviewer and one cold Reconciler per scope; the Planner owns case decisions and spawns none. One session per stop uses Nathan's file list, tree IDs, one current Results packet, an append-only Review log and background JSON ledgers. One separate Coder session carries each stop's hooks/routes, with Nathan's return check-in; a behavior change still gets its own handoff. Existing Vitest work is shared as Nathan assigns, and a new QA-authored Vitest test requires a held-off case, reviewer verdict and Nathan's approval. The catalog README pass is applied without changing any case/status/assignment. The catalog report and runner remain prerequisites for 4c. The runner's proposed D2 carry-forward is not adopted without Nathan's approval; earlier certification is not rerun here. This supersedes the post-4a workflow direction for future work and leaves historical results intact.
+
+- **2026-11-09 — D2 on the parallel runner (Architect, Nathan's approval).** Nathan approved the runner plan's decision 8: 4a and 4b's one-worker repeat evidence stands, and from 4c on D2's repeats and each batch's final full run use the adopted worker count. Recorded in D2 and in the batches doc's execution boundary and Stop 4. D2 stays this story's bar only.
+
 ## Open questions
 
 - **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
@@ -639,7 +655,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **Test retirement (Nathan), applied:** DRAG-4.35 and its dedicated B14 Playwright test are deleted, keeping Next ID DRAG-4.36 and reusing no ID. The Coder removed the retired ID stamp from the existing internal projection regression; Nathan accepted that return, and the generic regression body remains unchanged. The Automator also removed B09's disputed line-place guard; DRAG-4.30's other assertions remain. No active automation claims the retired case. Future fresh cases belong to the deferred highlight-cue story; no wiki change is made in this retirement.
 
-- **Workflow wording for the Architect, if made a shared convention:** Nathan requires separate Coder handoffs and check-ins for the rest of this story. D7/D12 and the batch brief state it now. Align the shared persona/agent/testing-process instructions if Nathan wants this direction applied beyond these batches; the Planner has not edited those Architect-owned living documents.
+- **Workflow wording, applied by the Testing Roles Refactor:** D7/D12 and the five stops now follow the new roles, the desk/reviewer flow, tree IDs, one current Results packet and one cold reconciliation per scope. The refactor's Architect-owned instructions are already rewritten; this amendment applies them to the remaining batches. The parallel plan's decision 8 remains a separate approval for Nathan.
 
 - **Behavior decisions made while building, for the PO to rule on:**
 - **Planned passages now built:** board-drag-interaction §10, "a column drag the board stops shows the banner too" (Phase 1).

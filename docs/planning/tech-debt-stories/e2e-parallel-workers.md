@@ -37,13 +37,13 @@ Proposed, for Nathan's approval. They're numbered 1–9 so they don't read as St
 
 **7. Every run leaves a JSON report beside the HTML one.** That gives per-test durations from every run, for this trial and for the smoke suite's budget later. The JSON file can be named per run, so a targeted re-run doesn't overwrite a full run's evidence.
 
-**8. Runner acceptance is kept separate from Story 10's case certification.** The two answer different questions: does the new runner isolate tests and run them reliably, and does each case still prove its whole Then. Proposed carry-forward for Story 10's D2:
+**8. Runner acceptance is kept separate from Story 10's case certification.** The two answer different questions: does the new runner isolate tests and run them reliably, and does each case still prove its whole Then. For Story 10's D2, approved by Nathan. D2 is Story 10's bar for its flaky drag specs, not a process for other stories:
 - the twenty-repeat evidence earned on one worker stands for the tests and snapshots it was earned on, and isn't re-earned;
 - this story's contention check (Acceptance 5) is what carries that evidence onto the new runner;
 - from 4c on, D2's twenty repeats and each batch's final full run use the adopted worker count, so the repeats also run under load, which a one-worker repeat never did;
 - if no worker count passes acceptance, the suite stays on one worker, D2 is unchanged, and the smoke suite is brought forward.
 
-If Nathan approves, the carry-forward is recorded as an amendment in Story 10's plan.
+It's recorded in Story 10's D2.
 
 **9. The Coder builds the runner, including its plumbing in `tests/`, and the QA Engineer validates it in a session of its own.** The runner's routing chain runs from the config through `tests/helpers/api.ts` and `tests/fixtures.ts` to the teardown. If it were split across two sessions by file, neither session could test it alone. The `tests/` changes are an address and a cleanup, not test content: no expected value changes. The Playwright config and `tests/` support are the QA Engineer's, so this needs Nathan's grant.
 
@@ -104,7 +104,6 @@ Each batch ends with the gate and a stop for Nathan's review.
 
 ## Open questions
 
-- **For Nathan:** decision 8, the carry-forward for Story 10's D2.
 - **For Nathan:** decision 9, the Coder editing `tests/helpers/api.ts`, `tests/fixtures.ts` and `tests/global-teardown.ts`.
 - **For Nathan:** the trial's size and target: three full runs per mode, five repeats of the drag specs, and a 40% saving. The Planner asked that these be agreed before the trial starts, so it doesn't become an open-ended proof.
 
@@ -113,8 +112,9 @@ Each batch ends with the gate and a stop for Nathan's review.
 - **The E2E Smoke Suite story** builds its tiers on this runner and measures its budget at the adopted worker count.
 - **The shorter timer profile** (round table 2b) is a later, separate experiment, groomed with the smoke suite. The Coder's and Automator's cautions are in the round table.
 - **Docs that name the old stack** (client 5174, server 3002, `test.db`): root `AGENTS.md` changes in batch 2 and the testing guide in batch 4. The Architect updates the agents' memory notes that name it.
-- **Story 10's plan** gets decision 8 as an amendment, once Nathan approves it.
+- **Story 10's plan:** decision 8 is recorded in its D2.
 
 ## Amendments
 
 - **2026-11-09 — The QA Engineer validates (Nathan).** The [Testing Roles Refactor](testing-roles-refactor.md) now lands before this story, and retires the Test Automator. Decision 9's validator, batch 3 and its probe spec are the QA Engineer's, which takes over everything this plan gave the Automator. One session builds and another validates, as before. The Playwright config and `tests/` support are now the QA Engineer's files, so decision 9's grant to the Coder is still needed.
+- **2026-11-09 — Decision 8 approved (Nathan).** Both parts: the one-worker repeat evidence stands, and from 4c on Story 10's repeats and final runs use the adopted worker count. D2 is Story 10's bar for its flaky drag specs, not a process for other stories, and decision 8 now says so. Recorded in Story 10's D2.
