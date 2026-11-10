@@ -113,6 +113,33 @@ describe('unfencedLines', () => {
     ]);
   });
 
+  it('keeps a fence-like line with text after its run as content, so only the real closing fence closes', () => {
+    const text = lines('```md', '```this is content', '## X-1.1 example', '```', 'after');
+    assert.deepEqual(unfencedLines(text), [{ text: 'after', line: 5 }]);
+
+    const tildes = lines('~~~', '~~~ not a close', 'inside', '~~~', 'after');
+    assert.deepEqual(unfencedLines(tildes), [{ text: 'after', line: 5 }]);
+  });
+
+  it('closes on a run followed by nothing but spaces or tabs, and opens on a run with an info string', () => {
+    const text = lines(
+      'before',
+      '```ts title="x"',
+      'inside',
+      '```  \t',
+      'between',
+      '~~~~',
+      'inside',
+      '~~~~~  ',
+      'after',
+    );
+    assert.deepEqual(unfencedLines(text), [
+      { text: 'before', line: 1 },
+      { text: 'between', line: 5 },
+      { text: 'after', line: 9 },
+    ]);
+  });
+
   it('numbers lines from 1 and drops each carriage return', () => {
     assert.deepEqual(unfencedLines('a\r\nb\r\n'), [
       { text: 'a', line: 1 },

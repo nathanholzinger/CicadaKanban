@@ -102,7 +102,9 @@ export interface MarkdownLine {
 
 /**
  * The lines of Markdown outside a fenced block. A fence closes with the same character, at
- * least as long as the one that opened it, so a longer fence can show a shorter one inside.
+ * least as long as the one that opened it, and nothing after the run but spaces or tabs, so a
+ * longer fence can show a shorter one inside, and a fence-like line with text after its run is
+ * content. An opening fence may carry an info string.
  */
 export function unfencedLines(text: string): MarkdownLine[] {
   const found: MarkdownLine[] = [];
@@ -110,9 +112,14 @@ export function unfencedLines(text: string): MarkdownLine[] {
 
   text.split('\n').forEach((raw, i) => {
     const line = raw.replace(/\r$/, '');
-    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence !== null) {
-      if (fenceMatch && fenceMatch[1][0] === fence[0] && fenceMatch[1].length >= fence.length) fence = null;
+      const closes =
+        fenceMatch &&
+        fenceMatch[1][0] === fence[0] &&
+        fenceMatch[1].length >= fence.length &&
+        /^[ \t]*$/.test(fenceMatch[2]);
+      if (closes) fence = null;
       return;
     }
     if (fenceMatch) {

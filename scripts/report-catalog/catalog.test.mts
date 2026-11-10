@@ -129,6 +129,27 @@ describe('readSuite', () => {
     );
   });
 
+  it('keeps a fence-like content line from closing a fence: no case from inside it, the prose after it read', () => {
+    const text = lines(
+      ...table('| X-1.1 | a | P1 | Open |', '| X-1.3 | c | P1 | Open |'),
+      '',
+      ...section('X-1.1', '**Priority:** P1 · **Status:** Open', '**Automation test:** —'),
+      '```md',
+      '```this is content',
+      '## X-1.2 — An example',
+      '**Automation test:** `shown.spec.ts`',
+      '```',
+      '',
+      ...section('X-1.3', '**Priority:** P1 · **Status:** Open', '**Automation test:** —'),
+    );
+    const { cases, problems } = readSuite(SUITE, text);
+    assert.deepEqual(problems, []);
+    assert.deepEqual(
+      cases.map(found => found.id),
+      ['X-1.1', 'X-1.3'],
+    );
+  });
+
   it('takes the status and priority from the table when the case has no line, and says so', () => {
     const text = lines(...table('| X-1.1 | a | P2 | Open |'), '', ...section('X-1.1', 'Prose, no fields.'));
     const { cases, problems } = readSuite(SUITE, text);

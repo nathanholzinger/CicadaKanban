@@ -19,7 +19,7 @@ export default defineConfig({
     fileParallelism: false,
 
     env: {
-      // Distinct from Playwright's server/data/test.db to avoid collisions.
+      // Distinct from the Playwright servers' databases, server/data/test-N.db (one per slot), to avoid collisions.
       DB_PATH: './data/vitest-test.db',
     },
 
