@@ -225,7 +225,7 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 
 ## Open questions
 
-- **For the Test Planner:** decision 16, the Review log's place in a story plan.
+- **For the Test Planner:** decision 16, the Review log's place in a story plan. Batch 3 put it after the Code map, beside Results, in the template's full story, and in a tech-debt story that writes tests for cases. The Planner confirms, or says where it goes instead.
 
 ## Handoff
 
@@ -243,3 +243,8 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
   - The Architect persona points to the Coder's "Code Review" section rather than repeating it.
   - `auditor-duplication-abstraction.md` is unchanged. Its one line on the Reconciler, that two tests asserting the same case are the Reconciler's to report, is still true.
   - The batch 1 files now capitalize the Test Reviewer and the Reconciler, as the other docs name roles.
+- **2026-11-09 — Batch 3 as built.**
+  - `documentation-standards.md` is unchanged. Its rows name the Test Planner and the Test Reconciler, and what they say is still true. No row names the Automator.
+  - `story-done-checklist.md`'s tech-debt section runs `npm run report:catalog`, which the [Catalog Coverage Report](catalog-coverage-report.md) adds next. No tech-debt story closes in between.
+  - The audit guide's §7 opening lists the findings merged into the reconciliation report, so §5's merge by reference has a place in the report.
+  - The template's handoff gains a line for Vitest tests whose assertions or setup changed (decision 7).

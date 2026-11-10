@@ -80,7 +80,7 @@ Spawn the four audit agents in parallel:
 
 **The audit reviews test code as code:** duplication, fixtures and helpers, file shape, the layer a test sits in, and how it sets up state (`.claude/guides/testing-strategy.md`). Each pass applies its lens to a test file as to any other.
 
-**What a test proves belongs to the Reconciler** (`.claude/agents/test-reconciler.md`): whether it covers its case, and whether it asserts the rule or restates the code. An audit doesn't file either as a finding. A pass that notices one adds a one-line note for the orchestrator, who routes it to the Test Reconciler (see Close-out).
+**What a test proves belongs to the Test Reviewer and the Reconciler** (`.claude/agents/test-reviewer.md`, `.claude/agents/test-reconciler.md`): whether it covers its case, and whether it asserts the rule or restates the code. An audit doesn't file either as a finding. A pass that notices one adds a one-line note for the orchestrator. If the reconciliation report doesn't already answer it (see Reconcile), the orchestrator routes it to the QA Engineer, who puts it to the Test Reviewer (see Close-out).
 
 ## 5. Reconcile
 
@@ -97,6 +97,7 @@ The orchestrating session does this itself; it's never delegated.
   - *Amendments:* which rules changed while the story was open, when judging whether code is vestigial.
   - *Code map:* for a cleanup refactor, each item on a "Makes dead" list is gone.
   - *Handoff items addressed to the audit,* or to "the next story or audit" and not routed anywhere since. Each one matches a pass's finding, or the orchestrator rules on it and tiers the ruling.
+- **The reconciliation report** from the close that runs the audit, in `docs/audits/`. A finding that overlaps one of its entries, such as a drift finding on a test title that promises more than its test checks, merges into that entry by reference. The audit report's opening lists it with the entry it cites, and it needs no Close-out row: each finding has one home.
 - **The wiki passage each correctness finding touches,** to classify it.
 
 Nothing else in the archive gets read.
@@ -157,7 +158,7 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 - the split: the instances each pass ran as, and the config if the run used one (see Scope);
 - what the passes got, from the script's summary: how many lines changed, how many removal sites there were, how many moved lines were left out, and which files were marked read whole;
 - the number of files, and a sentence on what the range contains;
-- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans).
+- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and the reconciliation report). Findings merged into the reconciliation report are listed here, each with the entry it cites.
 
 **Findings:**
 - **Numbered once across the whole report,** not per section, so a finding's number identifies it on its own.
@@ -184,6 +185,7 @@ Fix Now lands in batches (`.claude/guides/story-done-checklist.md`):
 - **Plan the batches up front:** correctness first, then duplication of a shared rule, then drift, then structural. Ask the decisions the findings need at the start, not mid-batch.
 - **Pull in the optional findings worth it.** One marked "can ride along with #N" changes a file that #N's batch already changes, so including it adds little to the batch or to the next audit's scope. Whether it's worth including is the planner's call.
 - **Say how large and how risky each change is,** concretely: the lines and files it touches, and what gates it (for example, "only runs when a pending placement exists").
+- **Each batch runs `/code-review` before its check-in,** as the Coder's build does (`.claude/personas/coder.md`, "Code Review"), at the same level and with the same record.
 - **Each batch ends with `npm run check`,** plus `npm run test:e2e` where it touches behavior, **and a stop** for Nathan's review and commit.
 - **A finding that can't be reproduced by hand is settled by a probe,** not by argument: a throwaway test on the test stack, deleted afterwards. Where possible, show it failing before the fix and passing after, and say which probes weren't shown failing first.
 
@@ -198,7 +200,7 @@ The audit stays open while its Fix Now work lands. It closes when every required
 
 **Every route lands in a plan before the audit closes.** At close the report goes to the archive, where nobody reads it again, so a route recorded only in the report is lost.
 - **Requests for a PO ruling:** the Open questions of the plan whose close runs the audit, addressed to the PO.
-- **Anything else for another role,** such as a test that may not prove its case, for the Test Reconciler, or a wiki statement that looks wrong: the same place, addressed to that role.
+- **Anything else for another role,** such as a test that may not prove its case, for the QA Engineer, or a wiki statement that looks wrong, for the PO: the same place, addressed to that role.
 - **Deferrals:** the destination's Inbound deferrals. If its plan isn't written yet, its roadmap entry; whoever writes the plan moves them in.
 
 **Check each disposition against the current code, not against memory.** A finding can get fixed as a side effect of other work. A note can also say a finding is fixed when it isn't. Read the file before writing the row.

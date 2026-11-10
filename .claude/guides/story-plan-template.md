@@ -23,17 +23,25 @@ Each section says who fills it in. The skeleton at the end is for copying.
   - Which symbols carry which decision. It's kept current while the story is open.
   - It replaces decision IDs in comments: comments state the fact, and the plan says which decision produced it.
   - A cleanup refactor's Code map also holds each phase's "Makes dead" list, which its audit checks.
+- **Results** *(QA Engineer)*. One current resume packet for the test work, rewritten at each stop and replacing the last, so a fresh session can continue from it alone. What it holds is in `.claude/personas/qa-engineer.md`, "Sessions, Results and Runs".
+- **Review log** *(QA Engineer)*. Recorded word for word as they happen:
+  - the desk's questions and answers, each answer quoting the *Then* it read;
+  - the Test Reviewer's verdicts, every pass included;
+  - the mappings Nathan declined.
+
+  Entries are appended, never rewritten. The Reconciler reads the log at the close, and answers every open verdict.
 - **Amendments** *(whoever changes the plan)*.
   - Once coding starts, or a decision is approved, a change is made in the section it affects.
   - Then a dated line goes here, saying what changed and why.
   - Lines are appended, never rewritten, so someone working partway through can see what moved.
-- **Open questions** *(anyone)*. Each one is addressed to the role that answers it. The Test Planner's Pending PO cases and an audit's requests for a ruling go here, addressed to the PO.
+- **Open questions** *(anyone)*. Each one is addressed to the role that answers it. The Test Planner's Pending PO cases and an audit's requests for a ruling go here, addressed to the PO. So do the QA Engineer's: a case gap for the Test Planner, a rule gap for the PO, and a defect or a test hook for the Coder.
 - **Living-docs handoff** *(written by whoever wrote the code, before close; applied by the owners at close)*:
   - behavior decisions made while building, for the PO to rule on;
   - Planned passages now built;
   - passages superseded;
   - implementation passages to place in a module header, a site comment or a directory `AGENTS.md`;
   - test-plan cases whose tests were deleted or lost their case ID;
+  - ID-bearing Vitest tests whose assertions or setup changed, for the Test Reviewer;
   - wiki sections added, changed, moved or removed *(the PO fills this in at close)*.
 
 ```markdown
@@ -50,6 +58,8 @@ Each section says who fills it in. The skeleton at the end is for copying.
 ## Code map
 | Symbol | Carries |
 |---|---|
+## Results
+## Review log
 ## Amendments
 ## Open questions
 - **For <role>:** …
@@ -59,6 +69,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
 - **Passages superseded:**
 - **Implementation passages to place:**
 - **Test-plan cases affected:**
+- **Vitest tests whose assertions or setup changed:**
 - **Wiki sections added, changed, moved or removed** (PO, at close):
 ```
 
@@ -66,7 +77,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
 
 For work that changes how the code or the process is organized. If it also changes what the app does, it closes by the full story-done checklist, audit included, though its plan keeps this shape.
 
-- **Sections:** Goal (with what's out of scope), Inbound deferrals (once anything is routed to it), Decisions, Work (in batches), Code map (the files touched), Acceptance, Open questions, Handoff (what later work inherits), and Amendments once anything changes after approval. Inbound deferrals and Open questions work as in a full story.
+- **Sections:** Goal (with what's out of scope), Inbound deferrals (once anything is routed to it), Decisions, Work (in batches), Code map (the files touched), Acceptance, Open questions, Handoff (what later work inherits), and Amendments once anything changes after approval. Inbound deferrals and Open questions work as in a full story. A story that writes or changes tests for cases adds Results and a Review log, as a full story has them.
 - **Checks:** the gate, plus the story's own acceptance checks.
 - **Audit:** only when the story restructures code or changes what the app does.
 
