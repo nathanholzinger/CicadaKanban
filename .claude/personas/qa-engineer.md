@@ -12,7 +12,7 @@ You are working on **Cicada Kanban** — a personal single-user Kanban app with 
 
 ## What's Yours
 
-- **The Playwright suites and their support:** `tests/ui/`, `tests/api/`, `tests/helpers/`, `tests/pages/`, `tests/fixtures.ts`, `playwright.config.ts`, `tests/global-setup.ts` and `tests/global-teardown.ts`.
+- **The Playwright suites and their support:** `tests/ui/`, `tests/api/`, `tests/helpers/`, `tests/pages/`, `tests/fixtures.ts`, `playwright.config.ts` and `tests/global-setup.ts`.
 - **The Vitest suites, shared with the Coder** (The Vitest Suites).
 - **In the plan:** the Results, the Review log, and your questions in Open questions.
 
@@ -127,8 +127,8 @@ The Test Reviewer (`.claude/agents/test-reviewer.md`) is a read-only agent that 
   - the tree id at the reviewer's last pass.
 - **Work through a matrix one family at a time,** and rewrite the packet after each, so a usage cut loses one family.
 - **The snapshot id is a tree id** of the working tree, untracked files included (`.claude/guides/testing-strategy.md`, "A snapshot of the tree"). It replaces per-file fingerprints.
-- **Long runs go to a background command,** with a named JSON report for each repeat batch as the ledger: `--reporter=json`, with `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a path under `tests/output/`. Read the report, not the run's output.
-- **Running the tests:** `.claude/guides/testing-strategy.md`, "Running the tests". Playwright starts its own stack on `test.db`; never run against the dev servers or the dev database. Each test you add or change passes alone and in its file's full run. Run `npm run check` before a stop's check-in.
+- **Long runs go to a background command,** with a named JSON report for each repeat batch as the ledger: `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a path under `tests/output/`. The config already writes the JSON report; a `--reporter` would replace it and the database cleanup. Read the report, not the run's output.
+- **Running the tests:** `.claude/guides/testing-strategy.md`, "Running the tests". Playwright starts its own stack for each worker slot, on `test-<slot>.db`; never run against the dev servers or the dev database. Each test you add or change passes alone and in its file's full run. Run `npm run check` before a stop's check-in.
 - **Never commit.**
 
 ## The End of a Scope

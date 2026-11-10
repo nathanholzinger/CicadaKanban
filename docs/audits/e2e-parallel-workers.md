@@ -1,6 +1,6 @@
 # Parallel E2E Workers
 
-**Type:** tech-debt story. It changes how the Playwright suite runs, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) (Proposal 2a and the responses to it) · **Sequenced:** after Epic 3.5 Story 10's batch 4b closes and the [Testing Roles Refactor](testing-roles-refactor.md)'s batch 2 lands, since its QA Engineer validates batch 3, and before 4c's Stop 1. Story 10 waits for it · **Status:** batch 3 accepted by Nathan with the recorded flaky failures deferred to Story 10. Five workers are adopted as the default after the extended trial. Batch 4's Architect documentation handoff remains.
+**Type:** tech-debt story. It changes how the Playwright suite runs, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) (Proposal 2a and the responses to it) · **Sequenced:** after Epic 3.5 Story 10's batch 4b closes and the [Testing Roles Refactor](testing-roles-refactor.md)'s batch 2 lands, since its QA Engineer validates batch 3, and before 4c's Stop 1. Story 10 waits for it · **Status:** batch 3 accepted by Nathan with the recorded flaky failures deferred to Story 10. Five workers are adopted as the default after the extended trial. Batch 4's docs are written, for Nathan's review (Batch 4 Results). The catalog owner's DRAG-3.16 handoff remains.
 
 ## Goal
 
@@ -112,8 +112,8 @@ No runner-default decision remains open. Nathan adopts five after the extended t
 
 - **The E2E Smoke Suite story** builds its tiers on this runner and measures its budget at the adopted worker count. Re-evaluate the five-worker default there, weighing shorter feedback against capacity for simultaneous work and the lower frequency of full E2E runs outside Story 10.
 - **The shorter timer profile** (round table 2b) is a later, separate experiment, groomed with the smoke suite. The Coder's and Automator's cautions are in the round table.
-- **Docs that name the old stack** (client 5174, server 3002, `test.db`): root `AGENTS.md` changes in batch 2 and the testing guide in batch 4. The Architect updates the agents' memory notes that name it.
-- **Architect, batch 4:** document the adopted default of five in the testing guide and correct root `AGENTS.md`'s Running the App line from “1 by default” to “5 by default.” The slot ports, no-reuse rule and serial override stay as implemented. The QA Engineer leaves these living-doc edits to their owner.
+- **Docs that name the old stack** (client 5174, server 3002, `test.db`): root `AGENTS.md` changes in batch 2 and the testing guide in batch 4. The Architect updates the agents' memory notes that name it. Done in batch 4; no memory note named it.
+- **Architect, batch 4:** document the adopted default of five in the testing guide and correct root `AGENTS.md`'s Running the App line from “1 by default” to “5 by default.” The slot ports, no-reuse rule and serial override stay as implemented. The QA Engineer leaves these living-doc edits to their owner. Done (Batch 4 Results).
 - **Story 10's plan:** decision 8 is recorded in its D2. Batch 4c owns DRAG-7.10's two observed failure modes; 4h owns DRAG-3.16's setup reset and restoration of both skipped variants alongside the six legacy skips. Evidence and full reproduction details remain below.
 - **Catalog owner:** the temporary skip suspends DRAG-3.16's automated proof. Reconcile its existing Automated status/pointer with this deferral and restore whole-case certification in 4h. The QA Engineer does not edit the catalog; the skip does not establish Manual coverage or erase the prior 4a evidence.
 
@@ -233,6 +233,21 @@ Both symptoms remain assigned to Story 10's 4c. DRAG-3.16 stays skipped for 4h a
 - **Shared-helper review, medium self-review:** the default and its comment change from three to five; `workerCount` continues to feed both pool creation and database cleanup. Explicit environment overrides and the serial script retain their precedence. No test body, assertion or skip changes from the extended trial. No correctness finding or cleanup suggestion. The named `/code-review` command is unavailable here; this is a manual self-review, not an independent verdict.
 
 The three completed five-worker full runs remain the execution evidence; selecting that already-measured count schedules no additional performance trial. Their two known DRAG-7.10 failures remain failures. Batch 4's Architect documentation and the catalog-owner handoff remain the next actions; this selection does not start Story 10's 4c.
+
+## Batch 4 Results
+
+**Session:** Architect, 2026-11-10. Docs only, for Nathan's review.
+
+- **`.claude/guides/testing-strategy.md`, "Running the tests":** the slot pool and its ports, the default of five, `E2E_WORKERS` and the serial script, the no-reuse rule and its one-run-at-a-time limit, and the reports. The guide also says that a `--reporter` on the command line replaces the configured reporters, so that run leaves no JSON report and no database cleanup (`tests/helpers/removeDatabasesReporter.ts`'s header). "Who writes which" drops the global teardown, which batch 2 replaced with that reporter.
+- **Root `AGENTS.md`:** "1 by default" becomes "5 by default".
+- **`.claude/personas/qa-engineer.md`:** "What's Yours" drops `tests/global-teardown.ts`, which no longer exists. Its reporter sits in `tests/helpers/`, already listed. "Running the tests" names the per-slot databases in place of `test.db`. A long run's named JSON report now comes from `PLAYWRIGHT_JSON_OUTPUT_NAME` alone: the persona's `--reporter=json` would have dropped the database cleanup.
+- **Memory notes:** none named the old stack.
+- **Left as they are, outside these docs:** four code and settings lines still name the old stack. Each is harmless today, and their owners can change them:
+  - `server/vitest.config.ts`'s `DB_PATH` comment names Playwright's `test.db`;
+  - `server/src/db/reset-test.ts`, an older CLI no script calls, defaults to `./data/test.db`;
+  - the refused-paths list in `server/tests/lib/deepSeed.test.ts` includes `./data/test.db`;
+  - the header of `tests/helpers/slots.ts` keeps the block clear of an "old E2E (3002/5174)" stack that no longer exists.
+- **Check:** `npm run check:docs`.
 
 ## Amendments
 

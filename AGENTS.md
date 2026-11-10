@@ -232,7 +232,7 @@ npm run dev
 - E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`.
   Playwright starts its own stack per worker slot, apart from the dev database: slot N
   is client `5180 + N` → server `3010 + N` on `server/data/test-N.db`. `E2E_WORKERS`
-  sets the worker count (1 by default) and starts that many stacks only;
+  sets the worker count (5 by default) and starts that many stacks only;
   `npm run test:e2e:serial` runs one worker. A run never reuses a stack, so two E2E
   runs can't share the ports at once
 

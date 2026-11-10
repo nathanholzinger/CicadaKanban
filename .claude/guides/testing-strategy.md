@@ -5,11 +5,15 @@ What each test layer is for, where tests live, how coverage is gated, and what s
 ## Running the tests
 
 - **`npm run check`** runs type-check, lint, format check, and the three unit suites: the server's and the client's on Vitest, and `scripts/`' on Node's `node:test`. It's the gate every phase runs.
-- **`npm run test:e2e`** runs Playwright. It starts its own stack and never touches the dev database:
-  - the server on port 3002, against `server/data/test.db`, with the test routes enabled;
-  - the client on port 5174, proxying to it.
+- **`npm run test:e2e`** runs Playwright on several workers at once, five by default (`tests/helpers/slots.ts`). Each worker has a slot, numbered from 0, and each slot starts its own stack, never touching the dev database:
+  - slot N's server on port `3010 + N`, against `server/data/test-N.db`, with the test routes enabled;
+  - slot N's client on port `5180 + N`, proxying to it.
 
-  The dev servers use 3001 and 5173, so the two don't collide.
+  The block stays clear of the dev stack (3001/5173) and the deep stack (3003/5175), so both can stay open during a run. A worker restarted after a failure keeps its slot, so it comes back to the same stack. Whole files are spread across the workers, and a file's tests run in order on one worker.
+- **`E2E_WORKERS`** sets the worker count, and a run starts that many stacks only. **`npm run test:e2e:serial`** runs one worker whatever `E2E_WORKERS` says, such as to tell whether a failure comes from load.
+- **A run never reuses a stack.** A server or client whose port is taken fails the run, rather than joining a leftover server on the wrong database or moving to a port nobody routes to. So two E2E runs can't share the machine at once: start one only after the last has finished.
+- **Each run leaves an HTML report in `tests/output/report/` and a JSON one with per-test durations,** in `tests/output/results.json` unless `PLAYWRIGHT_JSON_OUTPUT_NAME` names another path. Name it for a run whose evidence is kept, so a later run doesn't overwrite it. Once the servers stop, a reporter removes each slot's database files.
+  - A `--reporter` on the command line replaces all three reporters: that run leaves no JSON report, and its database files stay until the next run resets them. Leave it off a run whose evidence is kept.
 - **`npm run test:coverage`** runs the server suite with its coverage gate.
 
 There's no CI; everything runs locally.
@@ -27,7 +31,7 @@ There's no CI; everything runs locally.
 
 **Who writes which:**
 - **The Coder writes the Vitest suites** as part of the build, server routes included. The QA Engineer may edit a Vitest test too, whoever Nathan asks first. It writes a new one only for a case held off at the surface, once Nathan approves.
-- **The QA Engineer writes the Playwright suites** from the test-plan cases, and owns their helpers, fixtures, pages, config, and global setup and teardown (`.claude/personas/qa-engineer.md`).
+- **The QA Engineer writes the Playwright suites** from the test-plan cases, and owns their helpers, fixtures, pages, config and global setup (`.claude/personas/qa-engineer.md`).
 - **Neither edits a test to make it pass.**
 - **The Test Reviewer** (`.claude/agents/test-reviewer.md`) judges whether tests prove their cases while they're written. **The Reconciler** (`.claude/agents/test-reconciler.md`) confirms it at the end of a scope.
 
