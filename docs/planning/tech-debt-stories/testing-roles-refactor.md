@@ -142,6 +142,7 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 - `.claude/personas/qa-engineer.md`: decisions 1–5, 8, 9 and 12–14.
 - `.claude/agents/test-reviewer.md`, with read-only tools: decisions 6 and 7.
 - `.claude/agents/test-planner-desk.md`, with read-only tools: decision 3.
+- **`.claude/personas/test-planner.md`: the desk section** the desk agent points to (Nathan moved it here from batch 2). It's a new section, and nothing in today's flow reads it.
 
 **Batch 2 — the rewrites (Architect), after the runner's batch 3 stop.**
 - **`.claude/agents/test-reconciler.md`, rewritten** (decisions 10–12):
@@ -152,7 +153,6 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
   - a line on what's out of its scope.
 - **`.claude/personas/test-planner.md`:**
   - it no longer spawns the Automator or the Reconciler;
-  - a desk section, for the desk agent to point to;
   - the resume-packet rule for the end-of-epic pass;
   - its relationships, updated.
 - **`.claude/personas/coder.md`:** the QA Engineer in place of the Automator, the Vitest overlap, `/code-review` before a check-in, and the mirror rule.
@@ -174,7 +174,7 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
   - §5: the Reconcile step reads the reconciliation report and merges overlapping drift findings by reference;
   - §8: fix batches run `/code-review`.
 - **`.claude/guides/documentation-standards.md`:** the ownership rows that name the testing roles.
-- **`.claude/guides/story-plan-template.md`:** the Review log section (decision 16), and the two lines that name the Planner.
+- **`.claude/guides/story-plan-template.md`:** the Review log section (decision 16); a Results section holding the one current packet (decision 4), since only the Story 10 batches doc has one today; and the two lines that name the Planner.
 
 **Batch 4 — handoffs and Story 10 (Architect, with the Planner).** It can run alongside batch 3.
 - **The Planner's pass on the catalog README** (`docs/test-plans/README.md`), handed off to the Planner. It covers:
@@ -198,7 +198,7 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 | `.claude/agents/test-reviewer.md` | 1 | New, read-only |
 | `.claude/agents/test-planner-desk.md` | 1 | New, read-only |
 | `.claude/agents/test-reconciler.md` | 2 | Rewritten for the end of a scope |
-| `.claude/personas/test-planner.md` | 2 | No spawning; desk section; resume packet |
+| `.claude/personas/test-planner.md` | 1, 2 | Desk section (1); no spawning, resume packet (2) |
 | `.claude/personas/coder.md` | 2 | QA Engineer, Vitest overlap, `/code-review` |
 | `.claude/personas/architect.md` | 2 | `/code-review` |
 | `.claude/personas/product-owner.md` | 2 | Relationships |
@@ -209,7 +209,7 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 | `.claude/guides/epic-done-checklist.md` | 3 | Re-titling, reconciliation |
 | `.claude/guides/audit-workflow.md` | 3 | §4, §5, §8, §9 |
 | `.claude/guides/documentation-standards.md` | 3 | Ownership rows |
-| `.claude/guides/story-plan-template.md` | 3 | Review log; Planner lines |
+| `.claude/guides/story-plan-template.md` | 3 | Review log; Results; Planner lines |
 | `docs/test-plans/README.md` | 4 | The Planner's pass (handoff) |
 | `docs/planning/epic-3-5-stories/story-10-batches.md`, `story-10-dnd-automation-catch-up.md` | 4 | Amendment |
 
