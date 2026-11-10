@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, renderHook, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import type { ReactNode } from 'react';
-import { CarriedBranchLine, carriedBranchLabel, useItemRow } from './dragChrome';
+import { CarriedBranchLine, NamedAnchorSync, carriedBranchLabel, useItemRow } from './dragChrome';
 import { DragGhost } from './sidebar/SortableProjectRow';
 import { DragSessionContext, PlacementsContext, type DragSession } from './workflow/DragSessionContext';
 import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
@@ -11,6 +11,7 @@ import type { Placement } from './workflow/itemListOps';
 import KanbanCard from './KanbanCard';
 import { AttachedChildRow } from './StubRows';
 import { classifyDragTargets } from './workflow/dragClassification';
+import { columnData, itemRowData } from './workflow/dragCollision';
 import { DRAG_OVERLAY_ATTR, descendantsRegionKey } from './workflow/dragRegions';
 import { startPopSession } from './workflow/popSession';
 import { makeDragSession } from '../test/dragFixtures';
@@ -34,6 +35,20 @@ describe('the carried copy carries DRAG_OVERLAY_ATTR', () => {
 
     expect(container.querySelector(`[${DRAG_OVERLAY_ATTR}]`)).not.toBeNull();
   });
+});
+
+// What the live context holds, in place of the empty one a bare `DndContext` gives a test: the
+// carried item and the row it is over, read by `NamedAnchorSync`.
+const liveDnd = vi.hoisted(() => ({ context: null as { active: unknown; over: unknown } | null }));
+vi.mock('@dnd-kit/core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@dnd-kit/core')>();
+  return {
+    ...actual,
+    useDndContext: () => {
+      const live = actual.useDndContext();
+      return liveDnd.context ? { ...live, ...liveDnd.context } : live;
+    },
+  };
 });
 
 // How strongly a row is drawn says what its target can be to the carried item (the tiers). The
@@ -376,5 +391,35 @@ describe('the carried copy’s second line', () => {
     expect(line).toHaveAttribute('data-carried-branch');
     expect(line.classList).toContain('pointer-events-none');
     expect(line.classList).toContain('absolute');
+  });
+});
+
+// The pop machine hears of the named row from dnd-kit's events, which a change to the carried copy's
+// rect alone fires neither of, so this hands it the state the line reads at every render of the drag.
+describe('NamedAnchorSync', () => {
+  afterEach(() => {
+    liveDnd.context = null;
+  });
+  const itemActive = { id: 'x', data: { current: itemRowData('card') } };
+  const over = { id: 'p' };
+
+  it('hands the drag’s active item and the row it is over on every render', () => {
+    liveDnd.context = { active: itemActive, over };
+    const onSync = vi.fn();
+
+    const { rerender } = render(<NamedAnchorSync onSync={onSync} />);
+    expect(onSync).toHaveBeenCalledExactlyOnceWith(itemActive, over);
+    rerender(<NamedAnchorSync onSync={onSync} />);
+
+    expect(onSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands over nothing with no drag running, and nothing for a column’s drag', () => {
+    const onSync = vi.fn();
+    render(<NamedAnchorSync onSync={onSync} />);
+    liveDnd.context = { active: { id: 'a', data: { current: columnData() } }, over };
+    render(<NamedAnchorSync onSync={onSync} />);
+
+    expect(onSync).not.toHaveBeenCalled();
   });
 });

@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
+import type { Active, DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent, Over } from '@dnd-kit/core';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { column, rect, regionEl } from '../../test/dragFixtures';
@@ -268,7 +268,7 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
     },
   });
 
-  it('DRAG-4.35: is the row dnd-kit announces over a move event that names the row before it', () => {
+  it('is the row dnd-kit announces over a move event that names the row before it', () => {
     const { result } = startDrag({ items, getAttachedChildren: sectionRows });
 
     act(() => result.current.handleDragMove(eventOver('a') as unknown as DragMoveEvent));
@@ -278,6 +278,118 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
     // names B, after which the ghost is the last row.
     act(() => result.current.handleDragOver(eventOver('b') as unknown as DragOverEvent));
     expect(result.current.session?.projection?.gap).toBe(2);
+  });
+});
+
+// The same row, named from dnd-kit's state at a render: a change to the carried copy's rect with the
+// pointer and the row `over` where they were, as the copy changing form on a pop does, announces
+// neither event. The line reads the rect at render, and the zoom clock holds the Card the line names.
+describe('useBoardDnd: the row a drag names when only the carried copy changes', () => {
+  const listKey = columnRegionKey('a');
+  const insideList = { x: 50, y: 300 };
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    vi.mocked(moveItem).mockReset();
+    container = document.createElement('div');
+    container.append(
+      regionEl(
+        listKey,
+        rect(0, 0, 100, 400),
+        regionEl(descendantsRegionKey('p'), rect(10, 10, 80, 100)),
+        regionEl(descendantsRegionKey('q'), rect(10, 120, 80, 100)),
+      ),
+    );
+    document.body.append(container);
+  });
+  afterEach(() => container.remove());
+
+  // The drag of X in a merged column of X, P and Q, with the carried copy held above the middle of the
+  // ghost P's row slides to: it names P, after. A copy that grows under that same top leans below it.
+  function dragOverP() {
+    const deps: BoardDndDeps = {
+      ...depsWith(async () => {}),
+      board: {
+        columns: [column('a', ['todo'], { displayMode: 'merged' })],
+        itemDepthCap: 4,
+      } as unknown as BoardWithDetails,
+      items: [makeItem('x', { position: 1 }), makeItem('p', { position: 2 }), makeItem('q', { position: 3 })],
+      rootRef: { current: container },
+    };
+    const { result } = renderHook(() => useBoardDnd(deps));
+    act(() => result.current.handleDragStart(pickupOf('x')));
+    const translated = { top: 20, height: 24 };
+    const active = { id: 'x', data: { current: {} }, rect: { current: { translated } } } as unknown as Active;
+    const over = {
+      id: 'p',
+      rect: { top: 10, height: 100 },
+      data: {
+        current: { ...itemRowData('card'), sortable: { containerId: 'list', index: 1, items: ['x', 'p', 'q'] } },
+      },
+    } as unknown as Over;
+    act(() => result.current.handleDragOver({ active, over } as unknown as DragOverEvent));
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: insideList.x, clientY: insideList.y }));
+    });
+    return { result, active, over, translated };
+  }
+
+  it('names the neighbor the line now names, and holds the zoom clock on that Card', () => {
+    const { result, active, over, translated } = dragOverP();
+    expect(result.current.session?.pop.hover).toMatchObject({ regionKey: descendantsRegionKey('p'), side: 'after' });
+
+    translated.height = 104;
+    act(() => result.current.syncNamedAnchor(active, over));
+
+    expect(result.current.session?.pop.hover).toMatchObject({ regionKey: descendantsRegionKey('q'), side: 'before' });
+  });
+
+  it('keeps the clock running when the name did not change', () => {
+    const { result, active, over } = dragOverP();
+    const hover = result.current.session?.pop.hover;
+
+    act(() => result.current.syncNamedAnchor(active, over));
+
+    expect(result.current.session?.pop.hover).toBe(hover);
+  });
+
+  it('DRAG-4.22: a cancel leaves no clock counting toward a zoom in, and the next pickup holds nothing', () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = dragOverP();
+      expect(result.current.session?.pop.hover).not.toBeNull();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      act(() => result.current.handleDragCancel());
+
+      expect(result.current.session).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
+
+      act(() => result.current.handleDragStart(pickupOf('x')));
+      act(() => {
+        vi.advanceTimersByTime(DEFAULT_DRAG_TUNING.cardZoomDwellMs + DEFAULT_DRAG_TUNING.cardPopInDelayMs);
+      });
+
+      expect(result.current.session?.pop).toEqual({
+        contextKey: listKey,
+        hover: null,
+        outsideSince: null,
+        modalHold: null,
+      });
+      expect(moveItem).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('names nothing for a column’s drag', () => {
+    const { result, over } = dragOverP();
+    const hover = result.current.session?.pop.hover;
+    const column = { id: 'a', data: { current: columnData() }, rect: { current: { translated: null } } };
+
+    act(() => result.current.syncNamedAnchor(column as unknown as Active, over));
+
+    expect(result.current.session?.pop.hover).toBe(hover);
   });
 });
 

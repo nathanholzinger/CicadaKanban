@@ -23,6 +23,10 @@ export type PlacementSlot =
   | 'existing'
   | 'first'
   | 'last'
+  // At the end of the list, claiming no place among its rows: the request
+  // carries no anchor and the server appends (`dragRequest.ts::anchorFor`).
+  // It draws where `'last'` does; the two differ in what the request says.
+  | 'append'
   // Adjacent to a specific item in the rendered list — the same relation the
   // move request carries, so the picture before and after the response is
   // the same one.
@@ -52,10 +56,12 @@ export interface Placement {
 // append fallback instead: the server does the same thing for the same
 // reason (wiki item-positioning §2's workphase-only rule) — a position to
 // keep sorts as 'existing'; none (a reopened done item, a first assignment)
-// takes the append slot instead of the position-sort's null-coerced top
-// ordering.
-export function workphaseOnlySlot(position: number | null): 'existing' | 'last' {
-  return position === null ? 'last' : 'existing';
+// takes the `'append'` slot instead of the position-sort's null-coerced top
+// ordering. `'append'`, not `'last'`: the request sends no anchor, so the
+// server's append lands it last in the whole workflow, where an anchor
+// beside the list's last row would land it there.
+export function workphaseOnlySlot(position: number | null): 'existing' | 'append' {
+  return position === null ? 'append' : 'existing';
 }
 
 // Whether a Placement carries an opinion about parentage at all —
@@ -155,7 +161,7 @@ export function applyPlacements(sorted: readonly Item[], placements: Placements)
 
 function slotIndex(list: Item[], item: Item, slot: PlacementSlot, sortedIndex: Map<string, number>): number {
   if (slot === 'first') return 0;
-  if (slot === 'last') return list.length;
+  if (slot === 'last' || slot === 'append') return list.length;
   if (slot !== 'existing') {
     const anchorAt = list.findIndex(i => i.id === slot.anchorId);
     if (anchorAt !== -1) return slot.side === 'after' ? anchorAt + 1 : anchorAt;

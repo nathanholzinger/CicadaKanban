@@ -208,7 +208,7 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   const withCards = [A, B, C, P, Q];
   const namedP = (side: DropSide = 'after') => ({ anchorId: P.cardId, side });
 
-  it('DRAG-1.4: holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
+  it('DRAG-1.4, DRAG-4.20: holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
     let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     expect(s.hover).toEqual({ regionKey: P.key, since: 0, poppable: true, side: 'after', phase: 'dwell' });
     s = step(s, inA, DWELL, withCards, namedP());
@@ -216,14 +216,14 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
     expect(s.contextKey).toBe(A.key);
   });
 
-  it('DRAG-4.19: holding it through the cue zooms straight into the named Card’s Descendants layer, wherever the bare cursor happens to be', () => {
+  it('DRAG-4.19, DRAG-4.20: holding it through the cue zooms straight into the named Card’s Descendants layer, wherever the bare cursor happens to be', () => {
     const s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     const popped = step(s, inA, DWELL + CUE, withCards, namedP());
     expect(popped.contextKey).toBe(P.key);
     expect(popped.hover).toBeNull();
   });
 
-  it('DRAG-1.4: a different named card resets the hold from the dwell, even mid-cue', () => {
+  it('DRAG-1.4, DRAG-4.22: a different named card resets the hold from the dwell, even mid-cue', () => {
     let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     s = step(s, inA, DWELL + 10, withCards, namedP());
     expect(s.hover?.phase).toBe('cue');
@@ -231,12 +231,39 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
     expect(s.hover).toEqual({ regionKey: Q.key, since: DWELL + 20, poppable: true, side: 'after', phase: 'dwell' });
   });
 
-  it('DRAG-1.4: the same card on its other side resets the hold too', () => {
+  it('DRAG-1.4, DRAG-4.22: the same card on its other side resets the hold too', () => {
     let s = step(startPopSession(A.key), inA, 0, withCards, namedP('after'));
     s = step(s, inA, DWELL + 10, withCards, namedP('after'));
     expect(s.hover?.phase).toBe('cue');
     s = step(s, inA, DWELL + 20, withCards, namedP('before'));
     expect(s.hover).toEqual({ regionKey: P.key, since: DWELL + 20, poppable: true, side: 'before', phase: 'dwell' });
+  });
+
+  it('DRAG-4.22: leaving the column mid-cue clears the cue at once, and nothing counts toward a zoom in but the pop-out', () => {
+    let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
+    s = step(s, inA, DWELL + 10, withCards, namedP());
+    expect(s.hover?.phase).toBe('cue');
+
+    s = step(s, gap, DWELL + 20, withCards, namedP());
+
+    expect(s.hover).toBeNull();
+    expect(s.contextKey).toBe(A.key);
+    expect(popDueAt(s, tuning)).toBe(DWELL + 20 + OUT);
+  });
+
+  it('DRAG-4.22: a pop out leaves nothing of the hold, so the column entered again starts a fresh dwell', () => {
+    let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
+    s = step(s, inA, DWELL + 10, withCards, namedP());
+    s = step(s, gap, DWELL + 20, withCards, namedP());
+    s = step(s, gap, DWELL + 20 + OUT, withCards, namedP());
+    expect(s).toEqual(startPopSession(null));
+
+    const back = DWELL + 30 + OUT;
+    s = step(s, inA, back, withCards, namedP());
+    s = step(s, inA, back + IN, withCards, namedP());
+
+    expect(s.contextKey).toBe(A.key);
+    expect(s.hover).toEqual({ regionKey: P.key, since: back + IN, poppable: true, side: 'after', phase: 'dwell' });
   });
 
   it('DRAG-4.23: nothing named (alone in the list, or hovering nothing): no candidate at all', () => {
@@ -250,7 +277,7 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
     expect(s.contextKey).toBe(A.key);
   });
 
-  it('popDueAt schedules the dwell-end milestone first (so the cue can mount with the cursor perfectly still), then the final pop once the cue has started', () => {
+  it('DRAG-4.20: popDueAt schedules the dwell-end milestone first (so the cue can mount with the cursor perfectly still), then the final pop once the cue has started', () => {
     const dwelling = step(startPopSession(A.key), inA, 0, withCards, namedP());
     expect(popDueAt(dwelling, tuning)).toBe(DWELL);
     const cueing = step(dwelling, inA, DWELL, withCards, namedP());

@@ -29,6 +29,7 @@ describe('isIdentity', () => {
   it('DRAG-1.24: same workphase, empty others: any slot is identity — nothing to order against', () => {
     expect(isIdentity(origin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
     expect(isIdentity(origin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'append' }, [])).toBe(true);
     expect(isIdentity(origin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
   });
 
@@ -127,6 +128,14 @@ describe('TC-2.11: toRequest', () => {
       anchorId: 'C',
       side: 'after',
     });
+  });
+
+  it("DRAG-5.3: append names no place among others, so a detach into a populated list sends no anchor, where 'last' sends one", () => {
+    const stubOriginOfP = stubOrigin('P');
+    const detach = (slot: Placement['slot']) =>
+      toRequest({ workphaseId: null }, stubOriginOfP, { parentId: null, workphaseId: 'w2', slot }, others);
+    expect(detach('append')).toEqual({ workphaseId: 'w2', isAttached: false });
+    expect(detach('last')).toEqual({ workphaseId: 'w2', isAttached: false, anchorId: 'C', side: 'after' });
   });
 
   it('TC-7.3: first and last anchor on the rendered order, which breaks a position tie by creation time', () => {

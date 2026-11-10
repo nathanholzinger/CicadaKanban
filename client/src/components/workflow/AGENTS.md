@@ -250,6 +250,12 @@ the carried copy's second line and its wording).
     `onDragOver` is what announces the new one. Read from the move alone, the projection and
     the hold keyed on it part from the shuffle the section draws whenever the pointer stops
     in that move.
+  - **And from the live state at each render:** `dragChrome.tsx::NamedAnchorSync`, under
+    `DndContext`, hands `useBoardDnd.ts::syncNamedAnchor` the `active` and `over` the line
+    reads. `dropAnchorFor` leans on the carried copy's rect, which can change with the
+    pointer and the `over` row where they were (the copy changing form on a pop, a Stub's
+    height becoming a Card's), and neither event fires for that. Named from the events alone,
+    the zoom clock stays on a Card the line has left.
 - **What dnd-kit measures once, and from where:**
   - **A droppable is measured as it mounts.** A section's rows mount at the zoom, in the
     render that clears the column's shuffle, so the Card that holds the drag doesn't slide

@@ -54,6 +54,11 @@ export function dragOverlay(page: Page): Locator {
   return page.locator(`[${DRAG_OVERLAY_ATTR}]`);
 }
 
+// The existing cue fill element, without committing its colour or final look.
+export function zoomCue(scope: Page | Locator): Locator {
+  return scope.locator('[style*="animation-name: cue-fill"]');
+}
+
 // The hierarchy modal of the Card titled `cardTitle` (`HierarchyModal.tsx`).
 export function hierarchyModal(page: Page, cardTitle: string): Locator {
   return page.getByRole('dialog', { name: `Hierarchy of ${cardTitle}`, exact: true });

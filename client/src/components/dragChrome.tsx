@@ -7,8 +7,8 @@
 // and its wording (`carriedBranchLabel`). The Card tier's own render is
 // KanbanCard.tsx, the Stub tier's StubRows.tsx.
 
-import type { CSSProperties } from 'react';
-import { useDndContext } from '@dnd-kit/core';
+import { useEffect, type CSSProperties } from 'react';
+import { useDndContext, type Active, type Over } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { CarriedBranch, DropSide } from '../lib/hierarchyPlacement';
@@ -44,6 +44,20 @@ function useLiveDropSide(itemId: string): DropSide | null {
   if (!active || active.id === itemId || !isItemData(active.data.current)) return null;
   const anchor = namedAnchorFor(active, over);
   return anchor?.anchorId === itemId ? anchor.side : null;
+}
+
+// Hands the pop machine the name the live line reads, after every render of the drag. The line
+// reads dnd-kit's state at render, while the machine (`useBoardDnd.ts`) hears of it through
+// `onDragMove` and `onDragOver`, which a change to the carried copy's rect alone, with the pointer
+// and the row `over` where they were, fires neither of. Rendered once under `DndContext`, so the
+// Card the zoom clock holds and the row the line names are one answer (wiki board-drag-interaction
+// §2 rule 3; wiki board-drag-interaction §6.1).
+export function NamedAnchorSync({ onSync }: { onSync: (active: Active, over: Over | null) => void }) {
+  const { active, over } = useDndContext();
+  useEffect(() => {
+    if (active && isItemData(active.data.current)) onSync(active, over);
+  });
+  return null;
 }
 
 // How strongly a row is drawn says what its target can be to the carried item

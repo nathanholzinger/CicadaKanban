@@ -47,17 +47,19 @@ export function overlayFormFor(region: DragRegion | undefined): OverlayForm {
 // comparable in *this* list's order — `nonComparable`, true for a Stub's
 // own kept slot once it's previewing into a workflow-wide list (its
 // `origin` carries a `parentId`, never a `workphaseId`) — rests at the
-// append slot instead of `workphaseOnlySlot`'s read of a position that
+// `'append'` slot instead of `workphaseOnlySlot`'s read of a position that
 // means nothing here, matching the append fallback a detach without an
-// anchor actually resolves to (wiki board-drag-interaction §10). A Free
-// Card's origin gets `workphaseOnlySlot`'s answer.
+// anchor actually resolves to (wiki board-drag-interaction §10). It is
+// `'append'`, not `'last'`, because the request has to say the same: no
+// anchor, where `'last'` is the bottom band's anchor after the list's last
+// row. A Free Card's origin gets `workphaseOnlySlot`'s answer.
 function noAnchorSlot(
   region: Pick<CardListRegion, 'isTerminal'>,
   nonComparable: boolean,
   activeItemPosition: number | null,
-): 'existing' | 'last' {
+): 'existing' | 'append' {
   if (region.isTerminal) return 'existing';
-  return nonComparable ? 'last' : workphaseOnlySlot(activeItemPosition);
+  return nonComparable ? 'append' : workphaseOnlySlot(activeItemPosition);
 }
 
 // What a real drop in-context resolved to, distinct from "nothing computed

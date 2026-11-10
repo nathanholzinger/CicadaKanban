@@ -377,6 +377,12 @@ describe('applyPlacements', () => {
     expect(ids({ slot: 'last' })).toEqual(['A', 'C', 'E', 'X']);
   });
 
+  it("'append' draws at the end, as 'last' does, whatever the position sort says", () => {
+    const [a, c, e] = sorted();
+    const list = [a, item('X', { position: 2 }), c, e];
+    expect(applyPlacements(list, placements([['X', { slot: 'append' }]])).map(i => i.id)).toEqual(['A', 'C', 'E', 'X']);
+  });
+
   it("'existing' leaves the sort alone, and a list with no placed items comes back as-is", () => {
     const list = [...sorted(), x()];
     expect(applyPlacements(list, placements([['X', { slot: 'existing' }]])).map(i => i.id)).toEqual([
@@ -450,7 +456,7 @@ describe('selectors with placements', () => {
 describe('workphaseOnlySlot', () => {
   it('DRAG-6.10: keeps the position sort when there is a position to keep, appends otherwise', () => {
     expect(workphaseOnlySlot(3)).toBe('existing');
-    expect(workphaseOnlySlot(null)).toBe('last');
+    expect(workphaseOnlySlot(null)).toBe('append');
   });
 });
 

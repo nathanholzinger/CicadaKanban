@@ -21,7 +21,9 @@ import type { ItemWriteTracker } from './useItemManagement';
 // `itemListOps.ts::applyPlacements`); the server has no such concept, so
 // they resolve here to a concrete anchor beside `others`' own first/last
 // element (wiki item-positioning §7.1). An explicit `{anchorId, side}` slot
-// passes straight through.
+// passes straight through. `'append'` previews at the end as well, but names
+// no place among `others`, so it sends no anchor and the server appends
+// (wiki board-drag-interaction §10).
 function anchorFor(
   slot: Placement['slot'],
   others: readonly { id: string }[],
@@ -53,9 +55,9 @@ function anchorFor(
 // both name a `parentId` and it's the same one, or neither names a
 // `parentId` and the `workphaseId`s agree (an omitted `workphaseId` always
 // means "unchanged"). Same ordinal: `'existing'` always; `'first'`/`'last'`/
-// an explicit anchor only when `others` is empty, or the anchor isn't one of
-// them — genuinely nothing to order against (`others` excludes the active
-// item, so a stray self-reference never matches). A non-trivial
+// `'append'`/an explicit anchor only when `others` is empty, or the anchor
+// isn't one of them — genuinely nothing to order against (`others` excludes
+// the active item, so a stray self-reference never matches). A non-trivial
 // anchor/first/last is never identity even if it happens to already
 // describe the same neighbor.
 export function isIdentity(origin: Placement, placement: Placement, others: readonly { id: string }[]): boolean {
@@ -67,7 +69,7 @@ export function isIdentity(origin: Placement, placement: Placement, others: read
   // a property path (`placement.slot`) doesn't narrow inside a closure.
   const { slot } = placement;
   if (slot === 'existing') return true;
-  if (slot === 'first' || slot === 'last') return others.length === 0;
+  if (slot === 'first' || slot === 'last' || slot === 'append') return others.length === 0;
   return !others.some(i => i.id === slot.anchorId);
 }
 
@@ -115,7 +117,14 @@ export function toRequest(
     // among a different Card's Stubs.
     return { parentId: placement.parentId, isAttached: true, ...anchorFor(placement.slot, others) };
   }
-  return { workphaseId, ...anchorFor(placement.slot, others) };
+  // An append for a Free item names its workphase even when it is the one the
+  // item holds: a move with a workphase and no anchor is what the server answers
+  // with the append, and one with neither places nothing
+  // (`server/src/lib/itemHierarchy.ts::applyHierarchyRequest`).
+  return {
+    workphaseId: placement.slot === 'append' ? placement.workphaseId : workphaseId,
+    ...anchorFor(placement.slot, others),
+  };
 }
 
 // What stays on as the pending marker while the request is in flight: the
@@ -126,7 +135,9 @@ export function toRequest(
 // where `'first'` is first in the workflow, not in the column. The anchor
 // draws the same picture in the target list and says the same thing in both,
 // so the tripwire judges the anchor the server got
-// (wiki board-drag-interaction §10).
+// (wiki board-drag-interaction §10). A request with no anchor leaves the
+// marker as it is: `'append'` is the end of the workflow's list as well, where
+// the server puts it.
 function pendingPlacementFor(placement: Placement, request: MoveItemInput): Placement {
   if (request.anchorId === undefined || request.side === undefined) return placement;
   return { ...placement, slot: { anchorId: request.anchorId, side: request.side } };

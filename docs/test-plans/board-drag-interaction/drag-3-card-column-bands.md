@@ -54,7 +54,7 @@
 
 *Given* Card `X` with position `p` at Board layer over a region `X` isn't a covered member of, *when* the cursor is between the dividers and the user releases without popping in, *then* the request is a workphase-only move, with no `anchorId` and no `side`. After the response, `X.workphaseId` is the region's workphase and `X.position` is exactly `p` ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)). An `X` with no position gets one by the append fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)), and previews last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/placement.test.ts`
 
 ## DRAG-3.4 — Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor
 

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phase 1 and Phase 2 steps 1–5 are done and committed. Phase 3 is committed, including the authorized DRAG-6.25 fix. Batch 4a is complete and stopped at its checkpoint for Nathan; batch 4b has not started. The inventory and the batches are in [Story 10's second part](story-10-batches.md).
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batch 4a are committed. Batch 4b is complete for review: all 26 scoped cases are Automated, 1,400 repeat passes, final E2E 394 passed / 21 existing skips / zero failed and root gate green. [Story 10's second part](story-10-batches.md) holds the confirming report and close-out; 91 active story assignments remain Open. No commit or 4c work has started. Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
 
 ## Goal
 
@@ -81,6 +81,10 @@ Phase 2 starts from those reports.
   - **D13, Phase 2 step 5:** the 26 original Split cases are listed in [The shared looks](story-10-batches.md). DRAG-1.27 and TREE-2.8 keep their IDs as shared Manual cases; the other 24 retain their automatable clauses. New shared Manual cases: DRAG-2.24, DRAG-6.30 and DRAG-6.31. DRAG-6.27, TREE-1.1 and TREE-2.13 point their appearance clauses to those shared looks while keeping timing, placement and geometry. No existing ID moves or retires.
 
 - **4a case clarification:** DRAG-1.16 now states that a foreign/nowhere release commits the current locked-list ghost/highlight relation at release, including concrete A/after, A/before and B/after examples. Vertical movement may change the own-list slot; it does not freeze the pickup relation. The Descendants clause, ID, priority and Rule stay unchanged; the confirming Reconciler sets its status and Automation fields. This follows wiki board-drag-interaction §1.1 and §2 and needs no new PO ruling.
+
+- **4b case clarification:** DRAG-4.22 distinguishes a changed relation while locked, a Board release after a pop and cancellation with no request; return/new-pickup clocks start fresh. This corrects its overgeneralized final sentence from wiki board-drag-interaction §2, §3, §6.1 and §10 before test authoring. The ID, title, priority and Rule are unchanged; the confirming Reconciler owns its final coverage fields.
+
+- **4b retirement at Nathan's direction:** DRAG-4.35 is removed from the catalog, active scope and automation; its defect and fresh future coverage are held by [the Descendants highlight-cue story](../tech-debt-stories/descendants-highlight-cue.md). The ID is retired; Next ID remains DRAG-4.36. Batch 4b has 26 cases / 70 validated scoped variants. The active story inventory has 151 assignments; 4a and 4b close 60, leaving 91 Open. B09's disputed line-place guard is removed under the PO's ruling; DRAG-4.30's functional seed/last-child assertions remain. No app fix is part of the retirement itself.
 
 ## Inbound deferrals
 
@@ -482,6 +486,14 @@ All 89 drag variants have twenty accepted passes each, zero retries: 1,780 total
 
 Stopped at the checkpoint for Nathan's decisions on D2, the remaining batches' scope/routing and their order. Batch 4b has not started, and no commit has been made.
 
+#### Batch 4b results — confirming reconciliation complete
+
+The [confirming Reconciler report](../../audits/test-reconciliation-story-10-batch-4b.md) makes all **26 scoped cases Automated**: four Extend, 20 New and two Rework. The [batch close-out](story-10-batches.md) records five specs, one changed shared helper, the separate Coder returns and final coverage complements. Authored/changed scope is 26 expressions / 70 variants; the maintained file union is 71 with unchanged DRAG-1.14. No scoped case is held off and no new Manual or mapping approval is needed. Associated DRAG-3.3 Automation-pointer maintenance adds no closure or assignment to this count.
+
+All 70 scoped variants pass twenty distinct executions each, **1,400/1,400 with zero failures/retries/skips**. Final full E2E is **394 passed / 21 existing skips / zero failed**, and the root gate passes **444 server / 1,040 client / 258 script tests, docs 433 / zero hits**, on the unchanged snapshot. The existing background run finishes during a usage-limit delivery interruption; recovery reruns nothing. Stop 4 takes about two hours three minutes of executed command time; final reconciliation performs no test execution or source edit.
+
+Catalog totals are now **378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO**, 484 cases total. Of 151 active story assignments, **91 remain Open** after 4a and 4b. Global identity checks are clean. Conditional DRAG-3.12 stays separately recorded and nonblocking; retired DRAG-4.35 remains outside the catalog. Stop at review/commit, without a commit, archive move, new Coder task or 4c work.
+
 ### Phase 5: the close
 
 - D8's attributes.
@@ -523,6 +535,34 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 | The client's unread `data-*` attributes                                                                                                                                                                                                                  | D8                                     |
 
 ## Amendments
+
+- **Stop 5 complete (Test Planner, from the confirming Reconciler).** Batch 4b closes all 26 scoped cases, four Extend / twenty New / two Rework, with accepted D2/full-suite/gate evidence and clean global checks. Eligible clock complements and associated DRAG-3.3 pointer maintenance need no new approval. Catalog totals become 378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO; 91 active story assignments remain. DRAG-3.12 stays separate and nonblocking. Return the close-out for review/commit, without starting 4c or another discovery cycle.
+
+- **Stop 5 authorized (Nathan).** Confirm the accepted 26-case batch against the fixed snapshot and completed Stop 4 validation, apply eligible catalog fields and write the final report. Keep DRAG-3.12 separately recorded and nonblocking. Return the close-out for review without a commit, new Coder task or next-batch work.
+
+- **Stop 4 completion — recovered without reruns (Test Planner, from the Automator).** All 70 scoped variants meet twenty repeats with 1,400 passes and no failures/retries/skips; final E2E is 394/21/0 and root gate passes. The original background run completed during a usage-limit delivery interruption. Recovery verifies its ledger and unchanged app/test/configuration hashes without rerunning any command. Return at Stop 4 before confirming reconciliation; all 26 cases remain Open and DRAG-3.12 stays nonblocking outside scope.
+
+- **2026-11-09 — Stop 4 authorized; DRAG-3.12 left separate (Nathan).** Proceed with 4b's accepted 26-case/70-variant scope. The same Automator freezes the app/tests/configuration and exact selection, runs the twenty-repeat requirement, then final full E2E/root gate. Conditional DRAG-3.12 is recorded outside the batch and is not a prerequisite. No further discovery/reconciliation cycle or source repair is authorized during frozen validation; return at Stop 4 before Stop 5.
+
+- **2026-11-09 — Null-position return review (Test Planner, from Nathan, the Automator and Reconciler).** All supplied file hashes match. Recovered Coder results are 394 passed / 21 skipped / zero failed, including all 71 maintained batch/control variants; no rerun in this review. The DRAG-3.3 handoff is delivered, and DRAG-6.10 pointers retain their meaning. The extra workphase field is valid for locked-Column append; an existing conditional Board-own-region/null/peers DRAG-3.12 no-write gap is handed off separately with physical reachability unproved. No implementation/catalog edit, new ID, matrix expansion, D2 or final closure.
+
+- **2026-11-09 — Append-slot return and bounded checkpoint (Test Planner, from Nathan, the Automator and Reconciler).** The six-file return passes unchanged merged/expanded middle representatives. A single test-only aim correction gives expanded held-middle one pass with its original request/save assertions; the post-edit gate passes. The return review confirms the wider bare-container behavior and existing DRAG-6.12 proof, and routes the existing DRAG-3.3 null-position request gap separately. The batch plan records frozen inputs, all four focused attempts and pending complete affected-file/D2/final validation. No new case/ID, application/Vitest edit or matrix expansion.
+
+- **2026-11-09 — Post-Coder Stop 2 checkpoint (Test Planner, from the Automator and Reconciler).** Finished the 70-variant authoring scope and applied the three proposing proof corrections. A Board-middle Stub detach sends `B/after` despite the cursor being between the visible dividers; DRAG-5.3 requires no anchor/side. Preserved three failures plus a geometry replay, with correct saved fallback placement and no application/Vitest edits. The batch plan records the separate Coder packet, pending focused checks, source fingerprints and historical evidence limits. No coverage status changes or D2/final run.
+
+- **2026-11-09 — Coder return accepted; unfinished Stop 2 resumed (Nathan).** The named-selection fix and DRAG-4.20/4.22 clock work are delivered. Keep five sync support tests unstamped; the clock tests use the already-approved category. Nathan authorizes resumption, and the unchanged B13 replay passes before any test edit. The batch plan records the returned evidence, its source/concurrency limits and the remaining thirteen variants/proof corrections. No case is promoted and no D2 run begins.
+
+- **2026-11-09 — New Stop 2 selection blocker (Test Planner, from the Automator).** A stationary P/before highlight through dwell/cue enters Origin instead of P, confirmed three times with zero writes. The partial 57-variant snapshot is frozen; 13 variants remain unauthored. Root gate passes; the proposing Reconciler checks proof without catalog edits. Batch Results/Open questions hold the concrete separate Coder handoff; no in-session app fix or D2 run.
+
+- **2026-11-09 — Proposing review completed (Test Planner, from the Reconciler).** The [report](../../audits/test-reconciliation-story-10-batch-4b-proposing.md) independently confirms the selection defect, reviews all 26 cases and finds clean global identity checks. Three concrete test-proof corrections and the existing clock-test work are carried into the next authoring handoff. All cases remain Open; no source/catalog change or validation advancement is implied by the review.
+
+- **2026-11-08 — Retirement cleanup accepted; Stop 2 continues (Nathan).** The Coder removed DRAG-4.35's ID stamp from the internal regression and Nathan authorized continuation. The Automator verifies that title-only change, no retired-ID carrier and green retained Playwright pilots. Resume the reduced 26-case/70-variant matrix within the existing boundaries; no app repair or D2 sweep is authorized here.
+
+- **2026-11-08 — DRAG-4.35 deferred and retired (Nathan, after working through the defect with the PO).** Superseded the immediate repair handoff. The Planner removes the case and active assignment; the relevant test writers remove its automation. Both highlight defects are routed to the Descendants highlight-cue story. B09's DRAG-4.30 functional coverage stays. The batch Results track the internal-test cleanup boundary and green retained Playwright pilots; this does not resume broad authoring or D2.
+
+- **2026-11-08 — Batch 4b Stop 2 early checkpoint (Test Planner, from the Automator).** Authored five expressions / six variants and executed five unique representative variants before stopping expansion. Preserved DRAG-4.35's request/highlight mismatch and a separate nested-line question for the PO, each reproduced three times; saved orders are correct in the observed fixtures. No app/helper/Vitest edit or catalog promotion. The root gate passes; D2/full E2E/reconciliation remain unrun. Results/Open questions in the batch plan hold the separate-session handoff and unfinished-authoring scope.
+
+- **2026-11-08 — Batch 4b Stop 1 (Test Planner, with the Test Automator).** Completed the [proof/variant review](story-10-batch-4b-proof-plan.md) for the 27 assigned cases; forecast 78 scoped runnable variants plus one unchanged test in the file union. Clarified DRAG-4.22 and the legacy own-/cross-column case stamps; retained the separate Coder boundary for clock support. No tests, app changes or runtime execution. Stopped for Nathan before Stop 2; the resume packet is in the batch plan's Results.
 
 - **2026-11-08 — Five-stop workflow approved (Nathan).** D5/D12 now point to the mandatory session stops in the batch plan: proof/variant review, tests/discovery, separate Coder/review when needed, frozen validation and reconciliation/closure. Each stop provides a resume handoff and returns to Nathan before the next stage. D2, case assignments and batch order are unchanged.
 
@@ -584,10 +624,11 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Open questions
 
+- **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
+
 - **For a separate Architect review, with PO input if needed: 4a's production changes.** Review the retrospective's seven-file manifest and paired evidence against the wiki, especially DRAG-1.5's saved/visible placement and the DRAG-1.16/DRAG-3.19 interpretations. The completed Reconciler run establishes scoped test coverage, not whole-application conformance. The Planner has not read the source or started a separate implementation-review session; the retrospective uses existing reports and metadata.
 
 - **For the PO, not blocking: the sidebar drag before the project cap is read.** The baseline report's Candidate New Cases notes it. `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" pins permissive behaviour, which neither wiki project-tree §3 nor hierarchy-placement §6 settles. No case exists for it, so D10 doesn't hold this story up for it.
-- **For Nathan, at the checkpoint after 4a: D2 and the remaining scope/order.** All 89 variants meet the twenty-pass bar after the explicitly recorded interrupted-attempt recovery. The batch results record measured cost, six Coder rounds and no held-off case. Nathan decides whether to retain the bar, route any remaining batches under D10, or change their order before 4b begins.
 - **For Nathan and the Architect, separately: the epic-wide audit's scope** (Nathan, 2026-11-06). It doesn't hold up this story before Phase 5. Nathan's starting points:
   - **Choose the files, don't take the range.** audit-workflow §10's range, from the previous `epic-N-complete` tag, would take in nearly the whole repo, since the mid-epic refactors touched nearly everything. So it's scoped to the most important files, chosen the way the close-out audit chose its own.
   - **Weigh the cost against what it would find.** This story is mostly test files. So much of an epic-wide audit right after it would re-read code the close-out audit read in full, little changed since.
@@ -595,6 +636,8 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   This story's own audit (Phase 5) is part of the same question: what it reads, and whether the epic-wide audit takes it in.
 
 ## Living-docs handoff
+
+- **Test retirement (Nathan), applied:** DRAG-4.35 and its dedicated B14 Playwright test are deleted, keeping Next ID DRAG-4.36 and reusing no ID. The Coder removed the retired ID stamp from the existing internal projection regression; Nathan accepted that return, and the generic regression body remains unchanged. The Automator also removed B09's disputed line-place guard; DRAG-4.30's other assertions remain. No active automation claims the retired case. Future fresh cases belong to the deferred highlight-cue story; no wiki change is made in this retirement.
 
 - **Workflow wording for the Architect, if made a shared convention:** Nathan requires separate Coder handoffs and check-ins for the rest of this story. D7/D12 and the batch brief state it now. Align the shared persona/agent/testing-process instructions if Nathan wants this direction applied beyond these batches; the Planner has not edited those Architect-owned living documents.
 

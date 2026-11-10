@@ -9,6 +9,7 @@ import {
 } from './placement';
 import { freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
+import { toRequest } from './dragRequest';
 import { POP_TEST_TUNING as tuning, hoverAt, runPop, step, threeColumnBoard } from '../../test/popFixtures';
 
 // Every wait reads its value from the tuning object (`POP_TEST_TUNING`), never a
@@ -137,7 +138,7 @@ describe('placementFor', () => {
   it('DRAG-6.10: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
     expect(placementFor(subject(hoverAt(bMiddle), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
-      slot: 'last',
+      slot: 'append',
     });
     const poppedIn = runPop([
       [bMiddle, 0],
@@ -146,12 +147,57 @@ describe('placementFor', () => {
     ]);
     expect(placementFor(subject(poppedIn, { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
-      slot: 'last',
+      slot: 'append',
     });
     // The edge bands are unaffected — they already name an explicit anchor.
     expect(placementFor(subject(hoverAt(bTop), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
+    });
+  });
+
+  // The same composed question for a Free item with no position, such as a
+  // reopened done one: the placement above is its request, and a request that
+  // names an anchor beside the visible rows would put it there, where the
+  // append fallback puts it last in the whole workflow (wiki item-positioning §2).
+  describe('what an item with no position asks the server for', () => {
+    const rendered = [{ id: 'a' }, { id: 'b' }];
+    const reopened = { workphaseId: 'wp-done' };
+    const noPosition = (pop: PopSession) => subject(pop, { workphaseId: 'wp-done', position: null });
+
+    it('DRAG-3.3, DRAG-6.10: the Board-layer middle band sends the region’s workphase alone, with no anchor', () => {
+      const placement = placementFor(noPosition(hoverAt(bMiddle)), regions);
+      expect(toRequest(reopened, freeOrigin('wp-done'), placement, rendered)).toEqual({
+        workphaseId: B.targetWorkphaseId,
+      });
+    });
+
+    it('DRAG-6.10: a release on the bare container of the column it is already in names its workphase, which asks for the append', () => {
+      const own = { workphaseId: activeWorkphase };
+      const placement = placementFor(subject(startPopSession(A.key), { position: null }), regions, 'container');
+      expect(toRequest(own, freeOrigin(activeWorkphase), placement, rendered)).toEqual({
+        workphaseId: activeWorkphase,
+      });
+      expect(toRequest(own, freeOrigin(activeWorkphase), placement, [])).toBeNull();
+    });
+
+    it('DRAG-3.2: the bottom band still sends the anchor after the last row', () => {
+      const placement = placementFor(noPosition(hoverAt(bBottom)), regions);
+      expect(toRequest(reopened, freeOrigin('wp-done'), placement, rendered)).toEqual({
+        workphaseId: B.targetWorkphaseId,
+        anchorId: 'b',
+        side: 'after',
+      });
+    });
+
+    it('DRAG-3.3: an item with a position keeps it — the middle band sends the region’s workphase alone, and its own region nothing', () => {
+      const placed = (pop: PopSession) => subject(pop, { workphaseId: 'wp-done', position: 4 });
+      const middle = placementFor(placed(hoverAt(bMiddle)), regions);
+      expect(toRequest(reopened, freeOrigin('wp-done'), middle, rendered)).toEqual({
+        workphaseId: B.targetWorkphaseId,
+      });
+      const own = placementFor(subject(hoverAt(points.inA)), regions);
+      expect(toRequest({ workphaseId: activeWorkphase }, freeOrigin(activeWorkphase), own, rendered)).toBeNull();
     });
   });
 
@@ -170,7 +216,7 @@ describe('placementFor', () => {
     it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
       expect(placementFor(subject(startPopSession(A.key), { priorPlacement: prior }), regions)).toBe(prior);
       // Even where the fresh computation would have said something else —
-      // e.g. no position to keep, which alone would say 'last'.
+      // e.g. no position to keep, which alone would say 'append'.
       expect(placementFor(subject(startPopSession(A.key), { position: null, priorPlacement: prior }), regions)).toBe(
         prior,
       );
@@ -258,14 +304,14 @@ describe('placementFor', () => {
       expect(placementFor(drawn, [cardP])).toBe(origin);
     });
 
-    it('DRAG-6.12: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot', () => {
+    it("DRAG-6.12: reaching a card-list region previews Free (parentId: null) and rests at the append slot, never the position-sort's stale slot", () => {
       // activeItemPosition is a real number here on purpose — a Stub's own
       // attached-siblings-scope position, which must NOT be read as "a
       // position to keep" once it's previewing into a workflow-wide list.
       expect(placementFor(stub(startPopSession(A.key), 3), regions)).toEqual({
         parentId: null,
         workphaseId: activeWorkphase,
-        slot: 'last',
+        slot: 'append',
       });
     });
 
@@ -281,7 +327,42 @@ describe('placementFor', () => {
       expect(placementFor(stub(hoverAt(bMiddle), 3), regions)).toEqual({
         parentId: null,
         workphaseId: B.targetWorkphaseId,
-        slot: 'last',
+        slot: 'append',
+      });
+    });
+
+    // The placement above is what the release asks the server for
+    // (`dragRequest.ts::toRequest`), so the append slot has to come out as no
+    // anchor: a detach with no anchor is what the server answers with the
+    // append (wiki board-drag-interaction §10), where an anchor beside the
+    // list's last row is the bottom band's claim.
+    describe('what the append slot asks the server for', () => {
+      const rendered = [{ id: 'a' }, { id: 'b' }];
+      const stubItem = { workphaseId: null };
+
+      it('DRAG-5.3: the Board-layer middle band sends the detach and the region’s workphase, with no anchor', () => {
+        const placement = placementFor(stub(hoverAt(bMiddle), 3), regions);
+        expect(toRequest(stubItem, origin, placement, rendered)).toEqual({
+          workphaseId: B.targetWorkphaseId,
+          isAttached: false,
+        });
+      });
+
+      it('DRAG-5.1: a release on the bare container of the Card’s own column sends the detach, with no anchor', () => {
+        const placement = placementFor(stub(startPopSession(A.key), 3), regions, 'container');
+        expect(toRequest({ workphaseId: activeWorkphase }, origin, placement, rendered)).toEqual({
+          isAttached: false,
+        });
+      });
+
+      it('DRAG-3.2, DRAG-5.3: the bottom band still sends the anchor after the last row', () => {
+        const placement = placementFor(stub(hoverAt(bBottom), 3), regions);
+        expect(toRequest(stubItem, origin, placement, rendered)).toEqual({
+          workphaseId: B.targetWorkphaseId,
+          isAttached: false,
+          anchorId: 'b',
+          side: 'after',
+        });
       });
     });
 

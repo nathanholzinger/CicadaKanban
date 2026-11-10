@@ -1,134 +1,167 @@
 import { test, expect } from '../fixtures';
-import { resetAndSeedDb } from '../helpers/db';
+import { columnForWorkphase, fetchItem, seedItem } from '../helpers/seed';
+import { dragRegion, itemRow, zoomCue } from '../helpers/boardLocators';
 import {
-  seedTemplatedWorkflow,
-  pickWorkphases,
-  seedItem,
-  fetchItem,
-  fetchDefaultBoard,
-  columnForWorkphase,
-} from '../helpers/seed';
-import {
-  pickUp,
-  hoverTo,
-  release,
-  center,
-  gapBetween,
   awaitDragContext,
   awaitPoppedOut,
-  seedDragTuning,
+  center,
   clocksMargin,
+  dragMachine,
+  gapBetween,
+  hoverTo,
+  pickUp,
+  seedDragTuning,
+  NO_POP,
 } from '../helpers/dragGesture';
-import { article, column, dragRegion } from '../helpers/boardLocators';
+import {
+  dragBoxOf,
+  expectOneMove,
+  mergeRange,
+  paintedItemIds,
+  releaseMove,
+  seedBoardFixture,
+} from '../helpers/boardDragSurface';
+import { settledWrites, watchWrites } from '../helpers/requestHarness';
+import { dropLineOn } from '../helpers/overflowTree';
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
-// The Column → Card zoom-in, reached after the drag has passed through
-// Board layer (DRAG-4.15 for a Card in another column).
-//
-// A Card in a column the drag entered through Board layer must still
-// measure as a region: `DragCarveFrame` keeps a column's cards in one keyed
-// slot, so crossing Board layer doesn't remount them, and the drag re-reads
-// its structure whenever a region element detaches or newly mounts.
-//
-// `cardPopInDelayMs` is long enough that the column-layer state is still
-// there to observe (and to re-aim from) before the Card zoom-in fires. The
-// pop into a column aims at its region's center, its middle band, never
-// at a card: a column's last card can sit in its bottom band.
-//
-// Both cases below are skipped. The zoom-in candidate is the card the blue
-// line names, held through a dwell and a cue (DRAG-4.19, DRAG-4.20);
-// popping in inserts the carried item's attach-preview ghost row *inside*
-// the target Card and removes its own row from the column list, which can
-// shift the target Card's rect by a full row height the instant the drag
-// locks in. With a short seeded `popDelayMs` (150ms here) and Playwright's
-// frozen pointer (it never self-corrects the way a real hand's jitter
-// would), the pop-out clock this starts can undo the whole hold before the
-// next sample observes it locked in: the DOM briefly reads `descendants:<id>` for
-// ~150ms, then bounces back to the column. Real usage (default
-// `popDelayMs` 500ms) likely self-corrects long before that. They stay
-// skipped while the target Card can move out from under the cursor
-// mid-cue, unless the gesture is confirmed fine by hand.
+test.use({ viewport: { width: 1800, height: 1100 } });
 
-test.describe('Card zoom-in after passing through Board layer', () => {
-  test.beforeAll(async () => {
-    await resetAndSeedDb();
-  });
-
-  test.skip('a Card in a different column: pop out, pop into its column, then zoom into it and attach', async ({
+// Both former skipped zoom paths pass through Board. The own-column return
+// proves DRAG-4.1; only the foreign-column setup has DRAG-4.15's premises.
+for (const foreign of [false, true]) {
+  test(`${foreign ? 'DRAG-4.1, DRAG-4.15' : 'DRAG-4.1'}: B01 ${foreign ? 'cross-column' : 'own-column return'} zoom immediately attaches last with the parent workphase`, async ({
     page,
     request,
     projectSidebar,
   }) => {
-    const name = 'Zoom In Other Column Project';
-    const { project, workflow } = await seedTemplatedWorkflow(request, name);
-    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
-    const board = await fetchDefaultBoard(request, workflow.id);
-    const todoCol = columnForWorkphase(board, todo.id);
-    const inProgressCol = columnForWorkphase(board, inProgress.id);
-    const x = await seedItem(request, { title: 'X', projectId: project.id, workphaseId: todo.id });
-    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: inProgress.id });
-
-    const tuning = await seedDragTuning(page, { popDelayMs: 150, popInDelayMs: 150, cardPopInDelayMs: 1500 });
+    const name = `B01 ${foreign ? 'Cross' : 'Return'}`;
+    const s = await seedBoardFixture(request, name);
+    const p = await seedItem(request, {
+      title: 'P',
+      projectId: s.project.id,
+      workphaseId: foreign ? s.review.id : s.doing.id,
+    });
+    const s1 = await seedItem(request, { title: 'S1', parentId: p.id });
+    const s2 = await seedItem(request, { title: 'S2', parentId: p.id });
+    const x = await seedItem(request, { title: 'X', projectId: s.project.id, workphaseId: s.todo.id });
+    const targetColumn = await mergeRange(
+      request,
+      s.board,
+      foreign ? s.doing.id : s.todo.id,
+      foreign ? s.review.id : s.doing.id,
+      'merged',
+    );
+    const originColumn = foreign ? columnForWorkphase(s.board, s.todo.id).id : targetColumn;
+    const targetKey = columnRegionKey(targetColumn);
+    const originKey = columnRegionKey(originColumn);
+    const beforeP = await fetchItem(request, p.id);
+    const beforeS1 = await fetchItem(request, s1.id);
+    const beforeS2 = await fetchItem(request, s2.id);
+    const tuning = await seedDragTuning(page, {
+      ...NO_POP,
+      popDelayMs: 650,
+      popInDelayMs: 350,
+      cardZoomDwellMs: 650,
+      cardPopInDelayMs: 350,
+      popSnapMs: 0,
+    });
     await projectSidebar.openBoard(name);
-    const todoGroup = column(page, 'Todo');
-    const inProgressGroup = column(page, 'In Progress');
-
-    await pickUp(page, article(page, 'X'));
-    await awaitDragContext(page, columnRegionKey(todoCol.id));
-    await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
+    const writes = watchWrites(page);
+    await pickUp(page, itemRow(page, x.id));
+    await awaitDragContext(page, originKey);
+    const targetRegion = dragRegion(page, targetKey);
+    const outsideRegion = dragRegion(page, columnRegionKey(columnForWorkphase(s.board, s.done.id).id));
+    await hoverTo(page, await gapBetween(targetRegion, outsideRegion));
     await awaitPoppedOut(page, tuning);
-
-    await hoverTo(page, await center(dragRegion(inProgressGroup, columnRegionKey(inProgressCol.id))));
-    await awaitDragContext(page, columnRegionKey(inProgressCol.id), clocksMargin(tuning.popInDelayMs));
-    // Locking in redraws the column (the zones gone): aim at Q where it now sits.
-    await hoverTo(page, await center(article(inProgressGroup, 'Q')));
+    await awaitDragContext(page, null);
+    await hoverTo(page, await center(targetRegion));
+    await awaitDragContext(page, targetKey, clocksMargin(tuning.popInDelayMs));
+    await hoverTo(page, await center(itemRow(page, p.id)));
+    await expect.poll(() => dropLineOn(page)).toMatchObject({ row: p.id });
     await awaitDragContext(
       page,
-      descendantsRegionKey(q.id),
+      descendantsRegionKey(p.id),
       clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
     );
-    await release(page);
-
-    const updated = await fetchItem(request, x.id);
-    expect(updated.parentId).toBe(q.id);
-    expect(updated.isAttached).toBe(1);
+    // Immediate means no additional move or settling wait after entry.
+    expect(writes).toEqual([]);
+    await releaseMove(page, x.id);
+    expectOneMove(await settledWrites(page, writes), x.id, {
+      parentId: p.id,
+      isAttached: true,
+      anchorId: s2.id,
+      side: 'after',
+    });
+    const saved = await fetchItem(request, x.id);
+    expect(saved).toMatchObject({ parentId: p.id, isAttached: 1, workphaseId: p.workphaseId });
+    expect(saved.position).toBeGreaterThan(beforeS2.position);
+    expect(beforeS2.position).toBeGreaterThan(beforeS1.position);
+    const { children: previousChildren, ...previousFields } = beforeP;
+    const { children: currentChildren, ...currentFields } = await fetchItem(request, p.id);
+    expect(currentFields).toEqual(previousFields);
+    expect(previousChildren.map((child: { id: string }) => child.id).sort()).toEqual([s1.id, s2.id].sort());
+    expect(currentChildren.map((child: { id: string }) => child.id).sort()).toEqual([s1.id, s2.id, x.id].sort());
+    const savedSiblings = await Promise.all([s1, s2, x].map(row => fetchItem(request, row.id)));
+    expect(savedSiblings.sort((left, right) => left.position - right.position).map(row => row.id)).toEqual([
+      s1.id,
+      s2.id,
+      x.id,
+    ]);
+    expect(await fetchItem(request, s1.id)).toEqual(beforeS1);
+    expect(await fetchItem(request, s2.id)).toEqual(beforeS2);
+    expect(await paintedItemIds(itemRow(page, p.id))).toEqual([s1.id, s2.id, x.id]);
+    expect((await dragBoxOf(itemRow(page, x.id))).y).toBeGreaterThan((await dragBoxOf(itemRow(page, s2.id))).y);
+    await expect(itemRow(page, p.id).getByRole('button', { name: 'X', exact: true })).toBeVisible();
   });
+}
 
-  test.skip("a Card in the drag's own column: pop out, pop back in, then zoom into it and attach", async ({
-    page,
-    request,
-    projectSidebar,
-  }) => {
-    const name = 'Zoom In Same Column Project';
-    const { project, workflow } = await seedTemplatedWorkflow(request, name);
-    const [todo] = pickWorkphases(workflow, 'Todo');
-    const board = await fetchDefaultBoard(request, workflow.id);
-    const todoCol = columnForWorkphase(board, todo.id);
-    const x = await seedItem(request, { title: 'X', projectId: project.id, workphaseId: todo.id });
-    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
-
-    const tuning = await seedDragTuning(page, { popDelayMs: 150, popInDelayMs: 150, cardPopInDelayMs: 1500 });
-    await projectSidebar.openBoard(name);
-    const todoGroup = column(page, 'Todo');
-    const inProgressGroup = column(page, 'In Progress');
-
-    await pickUp(page, article(page, 'X'));
-    await awaitDragContext(page, columnRegionKey(todoCol.id));
-    await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
-    await awaitPoppedOut(page, tuning);
-
-    await hoverTo(page, await center(dragRegion(todoGroup, columnRegionKey(todoCol.id))));
-    await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popInDelayMs));
-    await hoverTo(page, await center(article(todoGroup, 'Q')));
-    await awaitDragContext(
-      page,
-      descendantsRegionKey(q.id),
-      clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
-    );
-    await release(page);
-
-    const updated = await fetchItem(request, x.id);
-    expect(updated.parentId).toBe(q.id);
-    expect(updated.isAttached).toBe(1);
+test('DRAG-4.15, DRAG-4.22: B27 a cleared cue followed by a Board release over P uses the merged column band, not attachment', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'B27 Board Contrast';
+  const s = await seedBoardFixture(request, name);
+  const a = await seedItem(request, { title: 'A', projectId: s.project.id, workphaseId: s.todo.id });
+  const x = await seedItem(request, { title: 'X', projectId: s.project.id, workphaseId: s.todo.id });
+  const p = await seedItem(request, { title: 'P', projectId: s.project.id, workphaseId: s.review.id });
+  await seedItem(request, { title: 'S1', parentId: p.id });
+  await seedItem(request, { title: 'S2', parentId: p.id });
+  const target = await mergeRange(request, s.board, s.doing.id, s.review.id, 'merged');
+  const originKey = columnRegionKey(columnForWorkphase(s.board, s.todo.id).id);
+  const targetKey = columnRegionKey(target);
+  const before = await fetchItem(request, x.id);
+  const tuning = await seedDragTuning(page, {
+    ...NO_POP,
+    popDelayMs: 350,
+    cardZoomDwellMs: 650,
+    cardPopInDelayMs: 1600,
+    popSnapMs: 0,
+  });
+  await projectSidebar.openBoard(name);
+  const writes = watchWrites(page);
+  await pickUp(page, itemRow(page, x.id));
+  await expect.poll(() => dropLineOn(page)).toEqual({ row: a.id, side: 'after' });
+  await expect(dragMachine(page)).toHaveAttribute('data-drag-zoom-phase', 'cue', {
+    timeout: clocksMargin(tuning.cardZoomDwellMs),
+  });
+  await expect(zoomCue(itemRow(page, a.id))).toBeVisible();
+  await hoverTo(page, await gapBetween(dragRegion(page, originKey), dragRegion(page, targetKey)));
+  await awaitPoppedOut(page, tuning);
+  await expect(zoomCue(page)).toHaveCount(0);
+  await expect(dragMachine(page)).not.toHaveAttribute('data-drag-zoom-phase');
+  await expect(dragMachine(page)).not.toHaveAttribute('data-drag-zoom-candidate');
+  await hoverTo(page, await center(itemRow(page, p.id)));
+  await awaitDragContext(page, null);
+  await expect(dragMachine(page)).toHaveAttribute('data-drag-band', 'middle');
+  expect(writes).toEqual([]);
+  await releaseMove(page, x.id);
+  expectOneMove(await settledWrites(page, writes), x.id, { workphaseId: s.doing.id });
+  expect(await fetchItem(request, x.id)).toMatchObject({
+    parentId: null,
+    isAttached: 0,
+    workphaseId: s.doing.id,
+    position: before.position,
   });
 });

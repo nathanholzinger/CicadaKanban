@@ -286,7 +286,7 @@ export function sameProjection(a: DescendantsProjection | null, b: DescendantsPr
   );
 }
 
-function sameAnchor(a: AnchorRelation | null, b: AnchorRelation | null): boolean {
+export function sameAnchor(a: AnchorRelation | null, b: AnchorRelation | null): boolean {
   if (a === null || b === null) return a === b;
   return a.anchorId === b.anchorId && a.side === b.side;
 }

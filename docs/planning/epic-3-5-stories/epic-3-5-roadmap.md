@@ -627,14 +627,10 @@ tests rather than carrying its coverage verdicts forward unchanged.
   by ID at close-out, under its existing catch-up scope.
 
 **Carried from Story 8.3 to Story 8's close-out — Test Reconciler.**
-- **DRAG-4.35, new, Open:** the Planner added the section's
-  ghost/release agreement after a final move crosses into a new row.
-  Assess the candidate untagged hook test in
-  `client/src/components/workflow/useBoardDnd.test.ts`, "the row a Stub's
-  drag names as the ghost's neighbor", for a Coder ID stamp and any
-  required internal-mapping approval. Compare the full case; do not
-  infer painted-ghost or committed-write assertions from the title.
-  Any remaining pointer-driven surface coverage is Story 10's.
+- **Final-crossing highlight/request mismatch, deferred by Nathan:**
+  DRAG-4.35 is retired, with its automation removed rather than an
+  immediate Story 10 fix. The defect and fresh future coverage belong to
+  [the Descendants highlight-cue story](../tech-debt-stories/descendants-highlight-cue.md).
 - **DRAG-7.15 and DRAG-7.27, skipped-spec coverage:** Phase 1 skipped
   the two below-gap DRAG-7.15 specs in `drag-7-modal-hold.spec.ts` and
   DRAG-7.27's in `drag-7-overflow-row.spec.ts`, each with its reason,
@@ -1699,10 +1695,9 @@ deferral and keep landing with their stories.
       pointers.
     - **From Story 8.3** (2026-10-29; its plan, Amendments, items 7, 8 and
       10):
-      - **DRAG-4.35:** final-row-crossing ghost/release agreement in the
-        Descendants section, including a carried subtree. Check the
-        close-out reconciliation's assessment of the existing hook test
-        before adding any missing surface assertions.
+      - **Retired DRAG-4.35:** the final-crossing obligation is removed
+        from Story 10's active scope at Nathan's direction; its known
+        defect is held by the Descendants highlight-cue tech-debt story.
       - **Three specs its fix skipped.** The hook now names the ghost's
         neighbor from the row dnd-kit announces when the pointer stops
         (`onDragOver`), not only from the move event before it. Each spec

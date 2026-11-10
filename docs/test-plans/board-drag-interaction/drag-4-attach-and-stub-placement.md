@@ -15,37 +15,36 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
-| DRAG-4.1 | Releasing immediately after zooming into a Card attaches as its last child, inheriting its workphase | P0 | Open |
-| DRAG-4.3 | A done Card beside the ghost can be zoomed into and attached to | P1 | Open |
-| DRAG-4.5 | The same aim means two things: a quick release inserts between, a hold attaches | P0 | Open |
-| DRAG-4.8 | Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]` | P0 | Open |
+| DRAG-4.1 | Releasing immediately after zooming into a Card attaches as its last child, inheriting its workphase | P0 | Automated |
+| DRAG-4.3 | A done Card beside the ghost can be zoomed into and attached to | P1 | Automated |
+| DRAG-4.5 | The same aim means two things: a quick release inserts between, a hold attaches | P0 | Automated |
+| DRAG-4.8 | Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]` | P0 | Automated |
 | DRAG-4.9 | Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child | P0 | Automated |
 | DRAG-4.10 | Descendants placement: shallower levels walk Top's ancestors; the shallowest is "before Bottom" | P0 | Automated |
 | DRAG-4.11 | Descendants placement: boundaries and clamping | P1 | Automated |
-| DRAG-4.12 | A childless Card has one Descendants placement state: its sole child | P1 | Open |
-| DRAG-4.13 | Placement among a done Card's Stubs works normally | P1 | Open |
-| DRAG-4.15 | An attach to a Card in another column takes three pops; the destination column's bands play no part | P0 | Open |
-| DRAG-4.17 | Popping out of the Card before release cancels the attach | P0 | Open |
+| DRAG-4.12 | A childless Card has one Descendants placement state: its sole child | P1 | Automated |
+| DRAG-4.13 | Placement among a done Card's Stubs works normally | P1 | Automated |
+| DRAG-4.15 | An attach to a Card in another column takes three pops; the destination column's bands play no part | P0 | Automated |
+| DRAG-4.17 | Popping out of the Card before release cancels the attach | P0 | Automated |
 | DRAG-4.18 | An over-cap tab state is reachable, marked, and commits nothing; a cycle is unreachable | P0 | Automated |
-| DRAG-4.19 | The Card zoomed into is the one the side highlight names | P0 | Open |
-| DRAG-4.20 | The hold is a silent dwell, then a visible cue on the named Card, ending in the zoom in | P1 | Open |
-| DRAG-4.21 | The cue never moves or resizes anything | P1 | Open |
-| DRAG-4.22 | Both stages reset when the named relation changes, on a pop out, and on a cancel | P1 | Open |
+| DRAG-4.19 | The Card zoomed into is the one the side highlight names | P0 | Automated |
+| DRAG-4.20 | The hold is a silent dwell, then a visible cue on the named Card, ending in the zoom in | P1 | Automated |
+| DRAG-4.21 | The cue never moves or resizes anything | P1 | Automated |
+| DRAG-4.22 | Both stages reset when the named relation changes, on a pop out, and on a cancel | P1 | Automated |
 | DRAG-4.23 | A ghost alone in its list names no Card, so nothing can be zoomed into | P1 | Automated |
 | DRAG-4.24 | The cue's progress says how long to keep holding, and that letting go still repositions | P2 | Manual |
 | DRAG-4.25 | Zooming in takes a deliberate hold, and once inside, the ghost reads as nesting | P1 | Manual |
 | DRAG-4.29 | A Stub set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
-| DRAG-4.30 | Zooming into a Card seeds the ghost independently of the cursor's gap | P1 | Open |
-| DRAG-4.32 | An over-cap tab state shows a visible invalid cue | P1 | Open |
-| DRAG-4.33 | Below a nested last item, a sibling placement after each of its ancestors is offered | P1 | Open |
-| DRAG-4.34 | After zooming in from outside, cursor movement chooses the ghost's gap and depth | P0 | Open |
-| DRAG-4.35 | A Descendants release after the last move lands at the ghost's gap and depth | P0 | Open |
+| DRAG-4.30 | Zooming into a Card seeds the ghost independently of the cursor's gap | P1 | Automated |
+| DRAG-4.32 | An over-cap tab state shows a visible invalid cue | P1 | Automated |
+| DRAG-4.33 | Below a nested last item, a sibling placement after each of its ancestors is offered | P1 | Automated |
+| DRAG-4.34 | After zooming in from outside, cursor movement chooses the ghost's gap and depth | P0 | Automated |
 
 ---
 
 ## DRAG-4.1 — Releasing immediately after zooming into a Card attaches as its last child, inheriting its workphase
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §7
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §7
 
 *Given* Free Card `X` in workphase `W1`, and Card `P` in `W2` with Stubs `S1, S2`, *when* `X` is locked into `P`'s column, the side highlight names `P` for the full zoom-in hold, and the user releases immediately after the zoom without moving the cursor, *then* the committed change is: `X.parentId = P`, `X.isAttached` true, `X.workphaseId = W2`, and `X` last among `P`'s attached children, after `S2`. The zoom starts the ghost in that last-child state. `X` now renders as a Stub inside `P`. `P` itself is unchanged ([ATT-2.1](../item-attachment/att-2-reparenting-is-one-way.md)), and every field lands in one commit ([ATT-3.6](../item-attachment/att-3-reparent-placement-atomicity.md)).
 
@@ -53,33 +52,33 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 
 Moving the cursor after the zoom chooses another placement at the same Descendants layer ([DRAG-4.34](drag-4-attach-and-stub-placement.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-attach-placement.spec.ts`, `tests/ui/drag-card-zoom-in.spec.ts`, `tests/ui/drag-descendants-placement.spec.ts`
 
 ## DRAG-4.3 — A done Card beside the ghost can be zoomed into and attached to
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §6.1, wiki board-drag-interaction §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §6.1, wiki board-drag-interaction §2
 
 *Given* Card `P` in a terminal workphase, the newest completion in its done column, *when* `X` pops into that done column, where its ghost rests after `P` as the newest completion (wiki board-drag-interaction §2, rule 6), the user holds the carried card over `P`, which is also the ghost's only neighbor, for the full zoom-in hold, and releases immediately after the zoom without moving the cursor, *then* the release commits the same attach as [DRAG-4.1](drag-4-attach-and-stub-placement.md): `X.parentId = P`, `X` attached, and last among `P`'s Stubs. What an attach to a done parent does to `X`'s workphase and `completedAt` is item-attachment's rule ([ATT-6.1](../item-attachment/att-6-attaching-to-done-parent.md)). A done column's single band ([DRAG-3.9](drag-3-card-column-bands.md)) governs only a release at Board layer, never a zoom into one of its Cards.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-attach-placement.spec.ts`
 
 ## DRAG-4.5 — The same aim means two things: a quick release inserts between, a hold attaches
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §6
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6
 
 *Given* Cards `A` and `B` next to each other in a column, and Card `X` locked in that column with its ghost between them and the side highlight on `B`, *when* the user releases before the full zoom-in hold completes, *then* the commit is a reposition, `{anchorId: B, side: before}`, with `X.parentId` unchanged: inserting is the default. *When* the user instead holds the same relation for the full zoom-in hold and releases immediately after the zoom without moving the cursor, *then* the commit is an attach to `B` as its last child ([DRAG-4.1](drag-4-attach-and-stub-placement.md)). The hold separates the two, not the aim.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-attach-placement.spec.ts`
 
 ## DRAG-4.8 — Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]`
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki hierarchy-placement §1, wiki hierarchy-placement §4, wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §1, wiki hierarchy-placement §4, wiki board-drag-interaction §7.1
 
 *Given* `X` at `P`'s Descendants layer over the tree, *when* the ghost is in the gap between `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *then* exactly four tab states are offered, at depths **0, 1, 2 and 3**, and each commits a different placement ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). None is shallower than `S2`'s depth: that would make `X` an ancestor of `S2`, and an item chooses its parent, never its children. *When* the ghost is in the gap between `S1` and `S1a` (Bottom is Top's child), *then* exactly one state is offered: depth 1, `S1`'s first child, before `S1a`.
 
 The gap is where the rows slide aside to make room, in the same list shuffle as a column's ([DRAG-1.2](drag-1-contexts-and-popping.md)). `X` and its own subtree are never Top or Bottom. Its attached branch is absent from the list, so the side highlight's named neighbor is the row directly beside the ghost (wiki board-drag-interaction §2, wiki board-drag-interaction §7.2).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`
 
 ## DRAG-4.9 — Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child
 
@@ -116,15 +115,15 @@ A `P` with no attached children offers the empty hierarchy's one state ([DRAG-4.
 
 ## DRAG-4.12 — A childless Card has one Descendants placement state: its sole child
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §7.1, wiki hierarchy-placement §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §7.1, wiki hierarchy-placement §2
 
 *Given* Valid Card `P` with no attached children, *when* `X` zooms into `P`, *then* the drag reaches `P`'s Descendants layer and offers exactly one state: gap 0, depth 0, `P`'s sole attached child. Moving within the Card, including offsets beyond either end of the depth range, keeps that one state. *When* the user releases, immediately or after moving, *then* the request attaches `X` to `P` with no anchor, and its position resolves by the append fallback in `P`'s empty Stub scope ([TC-2.20](../item-positioning/part-2-anchor-resolution.md)). The same holds when `P` has Free children but no attached ones: those children stay Free and aren't placement rows.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`
 
 ## DRAG-4.13 — Placement among a done Card's Stubs works normally
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §6, wiki board-drag-interaction §7.1, wiki item-positioning §7.4, wiki item-attachment §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §6, wiki board-drag-interaction §7.1, wiki item-positioning §7.4, wiki item-attachment §10
 
 *Given* Card `P` in terminal workphase `W_done`, with attached leaf children `S1, S2` in that order, and Free item `X` zoomed into `P`'s Descendants layer, each of these from that starting state:
 - *when* `X` is released immediately after the zoom without cursor movement, *then* the request attaches `X` to `P` after `S2`, and the saved attached-child order is `S1, S2, X`;
@@ -132,23 +131,23 @@ A `P` with no attached children offers the empty hierarchy's one state ([DRAG-4.
 
 In both, `X.parentId = P`, `X.isAttached` is true, `X.workphaseId = W_done`, `X.completedAt` is null, and `X` has a position in `P`'s attached-sibling scope. `P` and the existing siblings' positions are unchanged. The terminal workphase does not prevent naming `S1` or `S2` as an anchor ([TC-7.15](../item-positioning/part-7-board-placement-intents.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-attach-placement.spec.ts`
 
 ## DRAG-4.15 — An attach to a Card in another column takes three pops; the destination column's bands play no part
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6
 
 *Given* Free Card `X` locked in column `C1` (workphase `W1`), and a Valid Card `P` in column `C2`, a merged column covering `W2, W3`, with `P` in `W3`, *when* the cursor leaves `C1` for `popDelayMs` (out to Board), stays in `C2`'s middle band for `popInDelayMs` (into `C2`), the side highlight names `P` for the full zoom-in hold (into `P`'s Descendants), and the user releases immediately after that zoom without moving the cursor, *then* `X` is attached to `P` as its last child, with `X.workphaseId = W3`, inherited from `P`, not `C2`'s entry workphase `W2`, and no band anchor from `C2`. *When* the cursor rests on `P` at Board layer, without `C2`'s pop in having fired, *then* a release commits `C2`'s band meaning ([DRAG-3.1](drag-3-card-column-bands.md)), not an attach.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-card-zoom-in.spec.ts`
 
 ## DRAG-4.17 — Popping out of the Card before release cancels the attach
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §3, wiki board-drag-interaction §6
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3, wiki board-drag-interaction §6
 
 *Given* Free Card `X` zoomed into `P` in column `C`, *when* the cursor stays outside `P`'s box for `popDelayMs`, *then* one pop takes `X` out to `C`, at Column layer ([DRAG-1.17](drag-1-contexts-and-popping.md)): its Stub-row ghost is gone from `P`, and `X` is back in `C`'s list as shortCard. A release with the ghost after `C`'s Card `Q` and the side highlight on `Q` commits `{anchorId: Q, side: after}`, with `X.parentId` unchanged and `X` still Free. No attach request is made.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-attach-placement.spec.ts`
 
 ## DRAG-4.18 — An over-cap tab state is reachable, marked, and commits nothing; a cycle is unreachable
 
@@ -162,15 +161,15 @@ In both, `X.parentId = P`, `X.isAttached` is true, `X.workphaseId = W_done`, `X.
 
 ## DRAG-4.19 — The Card zoomed into is the one the side highlight names
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §6.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6.1
 
 *Given* Card `X` locked in a column rendering `A, B, Q`, *when* the side highlight names `A` (with `side: after`) for the full zoom-in hold, *then* `X` enters `A`'s Descendants layer, whichever card the cursor is over at the time. *When* the side highlight instead names `B` (with `side: before`) for the full hold, *then* `X` enters `B`'s Descendants layer. The card under the cursor plays no part: it also slides aside to open the ghost's gap.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`, `tests/ui/drag-zoom-cues.spec.ts`
 
 ## DRAG-4.20 — The hold is a silent dwell, then a visible cue on the named Card, ending in the zoom in
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6.1
 
 *Given* Card `X` locked in a column, with the side highlight naming Valid Card `A`:
 
@@ -180,19 +179,19 @@ In both, `X.parentId = P`, `X.isAttached` is true, `X.workphaseId = W_done`, `X.
 
 A release at any point before the cue completes commits the reposition ([DRAG-4.5](drag-4-attach-and-stub-placement.md)). The cue's look is open; this case asserts only the order of what appears.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-zoom-cues.spec.ts`, `client/src/components/workflow/popSession.test.ts`
 
 ## DRAG-4.21 — The cue never moves or resizes anything
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6.1
 
 *Given* the cue running on the named Card `A` ([DRAG-4.20](drag-4-attach-and-stub-placement.md)), *when* the positions and sizes of the cards, the ghost and the side highlight are compared from the cue's start to just before it completes, *then* none has changed: the ghost hasn't moved, and `A` is still the card named. A release during the cue commits what it would have when the cue started.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-zoom-cues.spec.ts`
 
 ## DRAG-4.22 — Both stages reset when the named relation changes, on a pop out, and on a cancel
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6.1, wiki board-drag-interaction §2, wiki board-drag-interaction §3, wiki board-drag-interaction §10
 
 *Given* the cue running on Card `A`, named with `side: after`:
 
@@ -200,9 +199,9 @@ A release at any point before the cue completes commits the reposition ([DRAG-4.
 - *when* the ghost moves past `A` so that `A` is named on its other side (`side: before`), *then* the cue also disappears and a fresh dwell starts: a change of side is a new relation;
 - *when* `X` pops out of the column, or the drag is cancelled, *then* the cue disappears, and nothing is left counting toward a zoom in.
 
-After any reset, a release commits the reposition for the relation named at that moment.
+After a card or side change while still locked in the column/sub-row, a release before the new cue completes commits the reposition for the relation named at that moment. After a pop out to Board, a release uses the current Board-layer meaning: the column/sub-row's band under the cursor, or no write where none is targeted. A cancel ends the drag with no request; the next pickup starts with fresh clocks. Returning to a column after a pop out also starts a fresh dwell, with no progress carried from the earlier cue.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-card-zoom-in.spec.ts`, `tests/ui/drag-zoom-cues.spec.ts`, `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/useBoardDnd.test.ts`
 
 ## DRAG-4.23 — A ghost alone in its list names no Card, so nothing can be zoomed into
 
@@ -238,7 +237,7 @@ After any reset, a release commits the reposition for the relation named at that
 
 ## DRAG-4.30 — Zooming into a Card seeds the ghost independently of the cursor's gap
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7
 
 *Given* Card `P` whose Stubs are `S1, S2`, where `S2` has a child `S2a`, so the last row is nested at depth 1:
 
@@ -247,19 +246,19 @@ After any reset, a release commits the reposition for the relation named at that
 
 From there, the cursor moves the ghost as usual ([DRAG-4.8](drag-4-attach-and-stub-placement.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`
 
 ## DRAG-4.32 — An over-cap tab state shows a visible invalid cue
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §3.2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §3.2
 
 *Given* `X` at `P`'s Descendants layer, *when* the user tabs to a state over the depth cap ([DRAG-4.18](drag-4-attach-and-stub-placement.md)), *then* the ghost shows a visible invalid cue there. *When* the user tabs back to a state in the same gap that fits, *then* the cue is gone. The cue's look is open; this case asserts only that it is there.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`
 
 ## DRAG-4.33 — Below a nested last item, a sibling placement after each of its ancestors is offered
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §2
 
 *Given* Card `P` whose Stubs are `S1, S2`, where `S2` has a child `S2a`, the last row, *when* `X` at `P`'s Descendants layer is in the gap below `S2a` (Top `S2a`, no Bottom), *then* exactly three states are offered, each committing a different placement:
 
@@ -267,11 +266,11 @@ From there, the cursor moves the ghost as usual ([DRAG-4.8](drag-4-attach-and-st
 - depth 1: `S2`'s child, after `S2a`;
 - depth 2: `S2a`'s first child.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`
 
 ## DRAG-4.34 — After zooming in from outside, cursor movement chooses the ghost's gap and depth
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §7, wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6, wiki board-drag-interaction §7, wiki board-drag-interaction §7.1
 
 *Given* Free Card `X` zoomed into Card `P`, with the tree, and its ghost starting as `P`'s last child, *when* the cursor moves to each of the following placements, *then* the carried Stub follows it within `P`'s whole box, the rows shuffle to open the chosen gap, and the ghost shows the corresponding depth:
 
@@ -281,17 +280,4 @@ From there, the cursor moves the ghost as usual ([DRAG-4.8](drag-4-attach-and-st
 
 Each release lands exactly where the ghost showed. The ghost neither stays in the starting last gap nor stays at the first row as the cursor moves to later rows. This holds after naming `P` from above or from below in its column. `X` is absent from the origin column's list while inside `P`, and the origin gap closes. *Given* instead `X` is a Stub of another Card, popped out to the column in the same drag, *then* the same placements reparent it to the selected parent in one write, with the new parent's workphase inherited.
 
-**Automation test:** —
-
-## DRAG-4.35 — A Descendants release after the last move lands at the ghost's gap and depth
-
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §2, wiki board-drag-interaction §7.1, wiki hierarchy-placement §1
-
-*Given* Card `P` with attached children `A, B, C, X`, where `A`, `B` and `C` are leaves, *when* `X` is dragged at `P`'s Descendants layer, the final pointer move crosses into a different row, and the pointer stops, *then* the side highlight names a neighbor of the gap the rows have opened for the ghost. No further pointer move is needed to make the release agree with that shown gap and depth. *When* the user releases there without moving again or opening the hierarchy modal, *then*:
-
-- with the ghost between `B` and `C`, at depth 0, `X.parentId = P`, still attached, and `P`'s children are `A, B, X, C`. The request names the neighbor the highlight shows: `B/after` or `C/before`;
-- with the ghost in that same gap, at depth 1, `X.parentId = B`, attached as `B`'s first child, and `P`'s children are `A, B, C`.
-
-In both, `X` keeps `P`'s workphase, and the write places it where the ghost was shown at release, rather than in the gap named before the final row crossing. The same holds when `X` carries an attached child `XC`: `XC` stays attached beneath `X`, and neither `X` nor `XC` is a gap neighbor. Each outcome holds when the final move approaches from above or below. Different approaches need not select the same gap at the same cursor point; each release must match its own shown placement.
-
-**Automation test:** —
+**Automation test:** `tests/ui/drag-descendants-placement.spec.ts`

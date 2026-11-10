@@ -41,12 +41,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  type Active,
   type CollisionDetection,
   type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
   type DragEndEvent,
   type Modifier,
+  type Over,
 } from '@dnd-kit/core';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
@@ -111,6 +113,7 @@ import {
   modalHoldTarget,
   pickupSlot,
   reseedProjection,
+  sameAnchor,
   sameProjection,
   type ProjectionState,
 } from './descendantsProjection';
@@ -222,10 +225,11 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // `handleDragStart`.
   const pickupRectRef = useRef<OverlayRect>(null);
   // The row `dropAnchorFor` names right now — the one the blue line draws —
-  // set from dnd-kit's `onDragMove` and `onDragOver` (`nameAnchorFrom`), since
-  // this hook isn't rendered under `DndContext` and can't read `useDndContext()`
-  // the way a row does. Fed into the pop machine and the projection as plain
-  // data.
+  // set from dnd-kit's `onDragMove` and `onDragOver` (`nameAnchorFrom`) and from
+  // a component under `DndContext` that reads its state at each render
+  // (`syncNamedAnchor`), since this hook isn't rendered under `DndContext` and can't
+  // read `useDndContext()` the way a row does. Fed into the pop machine and the
+  // projection as plain data.
   const namedAnchorRef = useRef<AnchorRelation | null>(null);
   // The Descendants layer's projection and the seed it's measured from
   // (`descendantsProjection.ts`); `session.projection` mirrors the former.
@@ -719,9 +723,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     });
   }
 
-  // dnd-kit's notice that `active`/`over` changed this frame — this hook's
-  // only source for the named anchor (`namedAnchorRef`, above), since it
-  // isn't rendered under `DndContext`. Names it exactly as the blue line and
+  // dnd-kit's notice that `active`/`over` changed this frame — one of this hook's
+  // two sources for the named anchor (`namedAnchorRef`, above; the other is
+  // `syncNamedAnchor`), since it isn't rendered under `DndContext`. Names it exactly as the blue line and
   // the release do (`namedAnchorFor`), then runs the pop machine against it
   // at once: dnd-kit's move events aren't guaranteed to interleave with the
   // raw `pointermove` listener in either order, so waiting for the next one
@@ -746,6 +750,21 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // change under it, reach the hook through this alone.
   function handleDragOver(event: DragOverEvent) {
     nameAnchorFrom(event);
+  }
+
+  // The name taken from dnd-kit's state at a render (`dragChrome.tsx::NamedAnchorSync`), for what
+  // neither event announces. `dropAnchorFor` leans on the carried copy's rect, and that rect can
+  // change with the pointer still and the same row `over`: the copy changing form on a pop is
+  // one (a Stub's height becomes a Card's), and the line, which reads the rect at render, then
+  // names the other neighbor. A name left to the events would stay on the old one and hold the
+  // zoom clock on a Card the line has left. Names, and runs the pop machine, only when the answer
+  // changed.
+  function syncNamedAnchor(active: Active, over: Over | null) {
+    if (isColumnData(active.data.current)) return;
+    const anchor = namedAnchorFor(active, over);
+    if (sameAnchor(anchor, namedAnchorRef.current)) return;
+    namedAnchorRef.current = anchor;
+    evaluateRef.current();
   }
 
   // The hierarchy modal, opened under the cursor by a hold and now placed, reports what the cursor
@@ -914,6 +933,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     handleDragStart,
     handleDragMove,
     handleDragOver,
+    syncNamedAnchor,
     handleDragEnd,
     handleDragCancel,
     readModalPlacement,

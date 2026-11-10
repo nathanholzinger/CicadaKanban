@@ -32,7 +32,7 @@ import { HierarchyModalContext } from './workflow/HierarchyModalContext';
 import { popState } from './workflow/popSession';
 import type { Point } from './workflow/dragRegions';
 import DragTuningPanel from './DragTuningPanel';
-import { tierVars } from './dragChrome';
+import { NamedAnchorSync, tierVars } from './dragChrome';
 
 interface BoardViewProps {
   workflowId: string;
@@ -192,6 +192,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleDragStart,
     handleDragMove,
     handleDragOver,
+    syncNamedAnchor,
     handleDragEnd,
     handleDragCancel,
     readModalPlacement,
@@ -326,6 +327,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
+          <NamedAnchorSync onSync={syncNamedAnchor} />
           <DragSessionContext value={session}>
             <PlacementsContext value={placements}>
               <DragTuningContext value={dragTuning}>
