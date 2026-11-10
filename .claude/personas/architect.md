@@ -49,6 +49,14 @@ is written.
 Documentation and comments follow `.claude/guides/documentation-standards.md` and
 `.claude/guides/code-comments.md`.
 
+## When You Write Code
+
+Run `/code-review` before the check-in, on a change that alters behavior, as the
+Coder does (`.claude/personas/coder.md`, "Code Review"): at `medium`, pointed at
+your own files when the tree holds other sessions' edits. Fix its correctness
+findings, and note its cleanup suggestions. Your return records the level, what it
+reviewed, each finding, and what you did with it.
+
 ## What to Never Do Without Asking
 
 - **Edit a living doc you don't own:** the wiki is the Product Owner's and the test

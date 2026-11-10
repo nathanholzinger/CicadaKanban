@@ -18,7 +18,7 @@ This pass traces logic line by line. Your lens is: **does this code do what it c
 - **Order and lifetime:** what happens when two answers land in the other order, including answers for different rows that touch the same data; when a first load or a reload answers after a newer write, or after the screen it was for has changed; and when a state machine can re-enter a state on a single input.
 - **DB mutations without rollback** in multi-step operations.
 - **FK constraints that aren't enforced** where that could cause problems.
-- **Test helpers, fixtures and seeds** that build a different state from the one their name or their caller expects. Whether a test proves its case is the Reconciler's question, not yours.
+- **Test helpers, fixtures and seeds** that build a different state from the one their name or their caller expects. Whether a test proves its case is the Test Reviewer's and the Reconciler's question, not yours.
 
 **Security surface** (a local app, so low stakes, but still):
 - **No SQL injection through raw string interpolation.** Drizzle ORM protects against this, but verify any custom queries.

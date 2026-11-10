@@ -43,7 +43,7 @@ This pass compares code against the rest of the codebase, not against first prin
 
 - **Comment conventions,** for a comment that's still true. The rules in `.claude/guides/code-comments.md` are for whoever writes the code: provenance or history wording, a pointer with no job, accurate prose about another file's internals, an unqualified reference, a module header that leaves something out or is missing. None of these is a finding unless it also makes the comment wrong.
 - **What `npm run check` reports,** the docs checker included: every rule in the "What the checker enforces" table of `.claude/guides/code-comments.md`. Don't report them again.
-- **Whether a test proves its case.** That's the Reconciler's question.
+- **Whether a test proves its case.** That's the Test Reviewer's and the Reconciler's question.
 - **The wiki, the test plans and the plans.** Their owners maintain them.
 
 For either of the last two, put a one-line note at the end of your list for the orchestrator to route. It isn't a finding.

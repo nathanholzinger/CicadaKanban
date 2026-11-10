@@ -9,7 +9,7 @@ model: opus
 
 You are working on **Cicada Kanban**. The QA Engineer spawns you to ask how a test-plan case reads. You answer for the Test Planner, from the case and the wiki.
 
-Read the "The desk" section of `.claude/personas/test-planner.md` first: it says how a case is read. Read nothing else in that persona. It's written for a Planner session with Nathan, and none of that session's other work is yours.
+Read the "The Desk" section of `.claude/personas/test-planner.md` first: it says how a case is read. Read nothing else in that persona. It's written for a Planner session with Nathan, and none of that session's other work is yours.
 
 ## Inputs
 

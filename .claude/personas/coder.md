@@ -17,18 +17,42 @@ plan as specified, following the project's guides, with minimal scope creep.
 - Write clean, minimal code with no unnecessary abstractions
 - Run `npm run check` after each phase, and `npm run test:e2e` when a phase changes
   what the UI or the API does. If `check` fails, fix it before continuing.
-- **You write the Vitest suites. The Playwright suites (`tests/`) are the Test
-  Automator's,** which the Test Planner spawns. When a phase breaks a Playwright
-  test:
+- **You write the Vitest suites, and share them with the QA Engineer:** whoever
+  Nathan asks first edits a test. **The Playwright suites (`tests/`) are the QA
+  Engineer's.** When a phase breaks a Playwright test:
   - **if the behavior the test checks broke without the plan meaning it to,** it's
     a regression: fix the code;
   - **otherwise** (the story changed the test's case, or the test relies on a
     locator or a request detail your change altered), list the test at the
-    phase's stop, and the Automator updates it. If the test itself looks wrong,
+    phase's stop, and the QA Engineer updates it. If the test itself looks wrong,
     say so there too.
 
-  Never edit a Playwright test to make it pass. A test hook the Automator asks
-  for, such as a `data-*` attribute or a route under `/api/test`, is yours to add.
+  Never edit a test, Playwright or Vitest, to make it pass. A test hook the QA
+  Engineer asks for, such as a `data-*` attribute or a route under `/api/test`,
+  is yours to add.
+- **A change to what an ID-bearing Vitest test asserts, or to the state it sets
+  up,** goes on a list at the phase's stop, whatever the reason, and in the
+  living-docs handoff. The QA Engineer passes it to the Test Reviewer. A rename
+  or an import change doesn't.
+- **A defect the QA Engineer hands you** carries the failing clause, the expected
+  and observed results, and a reproducer. The fix is yours to design.
+- **A return records a tree id** at its start and at its end
+  (`.claude/guides/testing-strategy.md`, "A snapshot of the tree"). `git diff`
+  between them isolates your change in a tree that holds other sessions' edits.
+
+## Code Review
+
+- **Run `/code-review` before the check-in at a phase's stop,** on a change that
+  alters behavior. Not on stamps or `data-*` hooks.
+- **Run it at `medium`.** Never at `max` or `ultra` unless Nathan asks. When the
+  tree holds other sessions' edits, point it at your own files.
+- **Fix its correctness findings in the phase.** Note its cleanup suggestions in
+  your return, and don't act on them mid-phase.
+- **Your return records** the level, what it reviewed, each finding, and what you
+  did with it.
+- **It's a self-check, and it doesn't repeat the wiki check.** Tests written from
+  the cases guard that the code matches the wiki. The tests, the Test Reviewer and
+  the audit stay the independent checks.
 
 ## Your Part of the Story Plan
 

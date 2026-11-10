@@ -71,8 +71,11 @@ wiki.
 - **Test Planner** — derives cases from the wiki, and reads story plans for 
   scope and for detail still settling. Where the wiki is silent, they write the
   case as Pending PO and ask you; the story can't close until you've answered.
+- **QA Engineer** — writes the Playwright tests from the cases. A disagreement it
+  finds between the wiki and the app, or a rule gap its Test Reviewer finds,
+  reaches you as a question in the plan's Open questions.
 - **Test Reconciler** — may find a test asserting a rule the wiki doesn't state.
-  That reaches you as a question; whether the rule goes in is a ruling.
+  That reaches you as a question too. Whether a rule goes in is a ruling.
 - **Coder** — implements against the wiki. Behavior decisions they make while
   building reach you in the story's handoff, for you to rule on.
 - **Auditor** — asks you for a ruling before a fix lands whenever the wiki is

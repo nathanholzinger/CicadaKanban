@@ -25,12 +25,20 @@ There's no CI; everything runs locally.
 | Client units | Next to the code, as `*.test.ts(x)` | Pure modules and hooks, in jsdom with Testing Library. Items come from `itemFixture.ts::makeItem` and projects from `projectFixture.ts::makeProject`, never a hand-written literal. |
 | Scripts | Next to the code in `scripts/`, as `*.test.mts` | Repo tooling, such as the docs checker, on `node:test`. |
 
-**Who writes which:** the Coder writes the Vitest suites, server routes included, as part of the build. The Test Automator (`.claude/agents/test-automator.md`), which the Test Planner spawns, writes the Playwright suites from the test-plan cases. Neither edits the other's to make a test pass.
+**Who writes which:**
+- **The Coder writes the Vitest suites** as part of the build, server routes included. The QA Engineer may edit a Vitest test too, whoever Nathan asks first. It writes a new one only for a case held off at the surface, once Nathan approves.
+- **The QA Engineer writes the Playwright suites** from the test-plan cases, and owns their helpers, fixtures, pages, config, and global setup and teardown (`.claude/personas/qa-engineer.md`).
+- **Neither edits a test to make it pass.**
+- **The Test Reviewer** (`.claude/agents/test-reviewer.md`) judges whether tests prove their cases while they're written. **The Reconciler** (`.claude/agents/test-reconciler.md`) confirms it at the end of a scope.
 
 **Which layer a test belongs in:**
 - A rule a user or an API caller can see gets a test through that surface: Playwright, or a server route test.
 - Logic whose correctness doesn't depend on the surface gets a unit test next to it.
 - A shape-only check (a required field, an enum) is cheapest as a route test.
+
+**Two writing rules make a test cheap to review:**
+- **A test asserts its Given before its When,** so it can't pass from the wrong starting state.
+- **Each observation helper's header says** whether it reads the screen or an attribute the app provides. A reviewer can then tell a test that observes the app from one that reads back what it set.
 
 ## Setting up a state the API refuses
 
@@ -39,6 +47,16 @@ Some tests need a state no request can produce, such as an exact position or a p
 - **E2E tests** can't reach the database, so they go through a test route under `/api/test`, which is mounted only with `ENABLE_TEST_ROUTES`. `tests/helpers/seed.ts` wraps each: `pinItemPosition` and `pinProjectPosition` pin a position, `pinProjectCreatedAt` a project's creation time, and `pinProjectParent` its parent.
 
 A new kind of setup gets its own test route. Never loosen a rule in the real API to make a test's setup possible.
+
+## A snapshot of the tree
+
+A frozen run's evidence, and a session's return, name the tree they ran on by a tree id. It's written through a temporary index, so it counts untracked files, skips ignored ones, and leaves the real index untouched:
+
+```bash
+idx=$(mktemp -u); GIT_INDEX_FILE="$idx" git -c core.safecrlf=false add -A && GIT_INDEX_FILE="$idx" git write-tree; rm -f "$idx"
+```
+
+`git diff <old> <new>` between two tree ids isolates what changed, even in an uncommitted tree that holds other sessions' edits.
 
 ## Coverage
 

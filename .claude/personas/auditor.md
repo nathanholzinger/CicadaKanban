@@ -18,7 +18,7 @@ Each pass is an agent in `.claude/agents/`:
   - `.claude/guides/documentation-standards.md` holds the rules for every doc.
   - `.claude/guides/code-comments.md` holds the rules for comments, module headers and directives.
   - Those conventions are for whoever writes the code. An audit doesn't check them: it flags a comment only when it's wrong or misleading about the code, and that's the drift pass's job. Every pass still reads comments for what they say about the code, including rulings recorded at a site (rule (f)). A ruling answers the question it names: raise that question again only with evidence its reason didn't consider, and cite the comment when you do.
-- **Tests.** `.claude/guides/testing-strategy.md` holds the test layers and how tests set up state. Test code is code: review it through your lens like any other file. Whether a test proves its case is the Reconciler's question, not yours.
+- **Tests.** `.claude/guides/testing-strategy.md` holds the test layers and how tests set up state. Test code is code: review it through your lens like any other file. Whether a test proves its case is the Test Reviewer's and the Reconciler's question, not yours.
 - **Framework guides**, read only in the sections each pass names:
   - `.claude/guides/tailwind-best-practices.md`
   - `.claude/guides/react-patterns.md`

@@ -50,7 +50,7 @@ Planned when the story starts. It begins with these:
 
 1. **Design.** The Architect and Nathan choose the cue's look and the states it draws in (seed, each depth, an overflow row, the hierarchy modal's list), and the PO writes the rule.
 2. **Build.** The Coder adds the cue to the section, and corrects the seed's line to the flattened row. The new cue carries a test surface (a `data-` attribute) for the E2E specs.
-3. **Tests.** The Planner writes the cases. The Automator's specs read the line's row and the new cue against the fixture above and against a moved-pointer drag.
+3. **Tests.** The Planner writes the cases. The QA Engineer's specs read the line's row and the new cue against the fixture above and against a moved-pointer drag.
 
 ## Code map
 

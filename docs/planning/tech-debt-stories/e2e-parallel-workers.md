@@ -1,6 +1,6 @@
 # Parallel E2E Workers
 
-**Type:** tech-debt story. It changes how the Playwright suite runs, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) (Proposal 2a and the responses to it) · **Sequenced:** right after Epic 3.5 Story 10's batch 4b closes (its Stop 5 and commit), before 4c's Stop 1. Story 10 waits for it · **Status:** planning, for Nathan's approval
+**Type:** tech-debt story. It changes how the Playwright suite runs, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) (Proposal 2a and the responses to it) · **Sequenced:** after Epic 3.5 Story 10's batch 4b closes and the [Testing Roles Refactor](testing-roles-refactor.md)'s batch 2 lands, since its QA Engineer validates batch 3, and before 4c's Stop 1. Story 10 waits for it · **Status:** planning, for Nathan's approval
 
 ## Goal
 
@@ -45,7 +45,7 @@ Proposed, for Nathan's approval. They're numbered 1–9 so they don't read as St
 
 If Nathan approves, the carry-forward is recorded as an amendment in Story 10's plan.
 
-**9. The Coder builds the runner, including its plumbing in `tests/`, and the Automator validates it in a session of its own.** The runner's routing chain runs from the config through `tests/helpers/api.ts` and `tests/fixtures.ts` to the teardown. If it were split across two sessions by file, neither session could test it alone. The `tests/` changes are an address and a cleanup, not test content: no expected value changes. Story 10's boundary keeps the Coder out of `tests/` by default, so this needs Nathan's grant.
+**9. The Coder builds the runner, including its plumbing in `tests/`, and the QA Engineer validates it in a session of its own.** The runner's routing chain runs from the config through `tests/helpers/api.ts` and `tests/fixtures.ts` to the teardown. If it were split across two sessions by file, neither session could test it alone. The `tests/` changes are an address and a cleanup, not test content: no expected value changes. The Playwright config and `tests/` support are the QA Engineer's, so this needs Nathan's grant.
 
 ## Work, in batches
 
@@ -65,14 +65,14 @@ Each batch ends with the gate and a stop for Nathan's review.
 - Root `AGENTS.md`'s "Running the App" line for the E2E stack is updated in the same change.
 - **Check:** the gate; `--list` is unchanged; one full run at one worker and one at three both pass.
 
-**Batch 3 — validation (Automator, its own session).** Runs against a frozen snapshot, with retries at 0 and no edits during a run. Every failed attempt is reported, not just the final result.
+**Batch 3 — validation (QA Engineer, its own session).** Runs against a frozen snapshot, with retries at 0 and no edits during a run. Every failed attempt is reported, not just the final result.
 - **Isolation probe.** A small spec, kept in the suite as an uncatalogued infrastructure check: a descriptive title, no case ID. Each slot seeds data named for its slot, waits across another slot's reset, and reads its data back through the API and in the browser. Run with repeats so the slots overlap.
 - **Replacement worker.** A deliberately failing test, run once and then removed, shows the restarted worker's next test still reaches its own stack.
 - **Separation from dev data.** The dev and deep databases are untouched by a run.
 - **Teardown.** After a run, no slot's database files are left, and nothing is still listening on the port block.
 - **Preservation.** The test list and the skips match batch 4b's close.
 - **Stability and speed.** Three full runs at one worker and three at the candidate count, on the same snapshot. Then the drag specs at the candidate count with `--repeat-each=5`. If three workers bring timing failures, try two, once, before anything else changes.
-- **Stop:** the Automator's report goes to Nathan, who picks the default count, or keeps one worker.
+- **Stop:** the QA Engineer's report goes to Nathan, who picks the default count, or keeps one worker.
 
 **Batch 4 — docs (Architect).** `.claude/guides/testing-strategy.md`'s "Running the tests", for Nathan's approval: the slot pool and its ports, `E2E_WORKERS` and the serial script, the no-reuse rule, and the one-run-at-a-time limit.
 
@@ -87,7 +87,7 @@ Each batch ends with the gate and a stop for Nathan's review.
 | `tests/fixtures.ts` | 2 | `baseURL` from the slot |
 | `tests/global-teardown.ts` | 2 | Every slot's database files |
 | `AGENTS.md` (root) | 2 | The E2E stack line |
-| `tests/ui/` (an isolation probe spec, named by the Automator) | 3 | New |
+| `tests/ui/` (an isolation probe spec, named by the QA Engineer) | 3 | New |
 | `.claude/guides/testing-strategy.md` | 4 | Running the tests |
 
 ## Acceptance
@@ -116,3 +116,5 @@ Each batch ends with the gate and a stop for Nathan's review.
 - **Story 10's plan** gets decision 8 as an amendment, once Nathan approves it.
 
 ## Amendments
+
+- **2026-11-09 — The QA Engineer validates (Nathan).** The [Testing Roles Refactor](testing-roles-refactor.md) now lands before this story, and retires the Test Automator. Decision 9's validator, batch 3 and its probe spec are the QA Engineer's, which takes over everything this plan gave the Automator. One session builds and another validates, as before. The Playwright config and `tests/` support are now the QA Engineer's files, so decision 9's grant to the Coder is still needed.

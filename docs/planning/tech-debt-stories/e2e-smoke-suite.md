@@ -31,15 +31,15 @@ Most responses agree on these, but none is decided yet. They're confirmed or cha
 - **A flaky test:** one unexplained failure means investigation, not a skip or a retry-to-green. A test confirmed intermittent leaves smoke only; it stays in full, and the seam it covered is recorded as a gap or given a replacement. It returns after a fix and repeated clean runs at smoke's own worker count.
 - **Ownership:**
   - the criteria go in `.claude/guides/testing-strategy.md` (the Architect, with Nathan's approval);
-  - the Automator tags tests and proposes the selection;
+  - the QA Engineer tags tests and proposes the selection;
   - the Reconciler checks the selected tests' assertions, the seam coverage and the measured budget;
-  - each story's Automator proposes additions and removals, and its Reconciler checks them at the story's close.
+  - each story's QA Engineer proposes additions and removals, and its Reconciler checks them at the story's close.
 
 ## Still to decide at grooming
 
 - Standard vs Full: whether there's a third tier.
 - The first selection itself, and the seam map it's checked against.
-- Who commissions a smoke flow test. The leaning is a Planner's brief naming each step's expected outcome and its seams. That extends the Automator's case-only brief, so it needs Nathan's approval.
+- Who commissions a smoke flow test. The leaning is a Planner's brief naming each step's expected outcome and its seams. That goes beyond the QA Engineer's tests written from single cases, so it needs Nathan's approval.
 - The repeat bar for a test returning to smoke. The Automator proposed twenty clean runs.
 - Which checklist calls which tier: the story-done checklist, a batch's stops, an audit's fix batches.
 - The exact tag names.
@@ -64,8 +64,8 @@ These came up at the round table. They speed up runs or diagnosis, but they aren
 Planned at grooming. A likely shape:
 
 1. The criteria into the testing guide (Architect, for Nathan's approval).
-2. Tags and the tier scripts (the Automator tags; the Coder adds any config).
-3. The first selection, proposed by the Automator and reviewed by the Planner.
+2. Tags and the tier scripts (the QA Engineer tags tests and adds any config).
+3. The first selection, proposed by the QA Engineer and reviewed by the Planner.
 4. The Reconciler's check of seam coverage and the measured budget.
 5. The checklists name which tier each gate runs.
 

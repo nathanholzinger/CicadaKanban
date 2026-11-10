@@ -1,6 +1,6 @@
 # Testing Roles Refactor
 
-**Type:** tech-debt story. It rewrites the testing roles' personas, agents and workflow guides, and changes no code, so it closes on Nathan's approval of the drafts and the gate, with no audit · **Written:** 2026-11-09 by the Architect, from the [testing roles round table](../round-tables/testing-roles.md) · **Sequenced:** after Epic 3.5 Story 10's batch 4b closes and is committed, on today's instructions. Its rewrites wait for [Parallel E2E Workers](e2e-parallel-workers.md)' batch 3, which the Test Automator validates as it works today. It lands before the [Catalog Coverage Report](catalog-coverage-report.md), the first Coder work to run `/code-review` under it. Story 10's batch 4c starts on the new roles · **Status:** planning, for Nathan's approval
+**Type:** tech-debt story. It rewrites the testing roles' personas, agents and workflow guides, and changes no code, so it closes on Nathan's approval of the drafts and the gate, with no audit · **Written:** 2026-11-09 by the Architect, from the [testing roles round table](../round-tables/testing-roles.md) · **Sequenced:** after Epic 3.5 Story 10's batch 4b closes and is committed, on today's instructions, and before [Parallel E2E Workers](e2e-parallel-workers.md), whose batch 3 the QA Engineer validates. It lands before the [Catalog Coverage Report](catalog-coverage-report.md), the first Coder work to run `/code-review` under it. Story 10's batch 4c starts on the new roles · **Status:** planning, for Nathan's approval
 
 ## Goal
 
@@ -18,7 +18,7 @@ Restructure the testing roles so that:
 - Which tests exist, what the cases say, and the catalog's statuses. They change only through the new roles' normal work.
 - A custom code-review agent. `/code-review` goes into the workflow instead (decision 9). A custom agent can be built later if the need shows.
 - The catalog coverage report: its own story, [Catalog Coverage Report](catalog-coverage-report.md), landing before 4c.
-- The parallel runner. Its decision 9 (one session builds the runner, another validates it) stands as written.
+- The parallel runner. Its decision 9 (one session builds the runner, another validates it) stands, with the QA Engineer as the validator.
 
 ## Decisions
 
@@ -138,13 +138,13 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 - **The record:** each return's notes (decision 9) show how the review runs (inside the calling session, or in fresh agents), what it costs, whether it follows root `AGENTS.md`'s conventions, and what it finds. The effort level is adjusted from those notes.
 - **None of these is a feature story,** so a firmer verdict waits for the Quick Items epic, the first feature epic after Story 10.
 
-**Batch 1 — the new files (Architect).** They're additive, and nothing uses them until batch 2 lands, so this batch can start once 4b is committed, alongside the runner story.
+**Batch 1 — the new files (Architect).** They're additive, and nothing uses them until batch 2 lands, so this batch can start once 4b is committed.
 - `.claude/personas/qa-engineer.md`: decisions 1–5, 8, 9 and 12–14.
 - `.claude/agents/test-reviewer.md`, with read-only tools: decisions 6 and 7.
 - `.claude/agents/test-planner-desk.md`, with read-only tools: decision 3.
 - **`.claude/personas/test-planner.md`: the desk section** the desk agent points to (Nathan moved it here from batch 2). It's a new section, and nothing in today's flow reads it.
 
-**Batch 2 — the rewrites (Architect), after the runner's batch 3 stop.**
+**Batch 2 — the rewrites (Architect).**
 - **`.claude/agents/test-reconciler.md`, rewritten** (decisions 10–12):
   - "On Every Run" becomes the close, reading the coverage report;
   - the proposing mode goes, since the reviewer replaces it;
@@ -232,6 +232,14 @@ Each batch ends with `npm run check`, whose lint step runs `check:docs` over `.c
 - **The Test Planner:** the catalog README pass (batch 4).
 - **Story 10:** the amendment (batch 4).
 - **[Catalog Coverage Report](catalog-coverage-report.md):** the rewritten reconciler reads its report and names its command. Its Coder batch is the first run of the `/code-review` trial.
-- **[Parallel E2E Workers](e2e-parallel-workers.md):** no change. Its batch 3 runs under today's Automator, before batch 2 here.
+- **[Parallel E2E Workers](e2e-parallel-workers.md):** the QA Engineer takes everything the plan gave the Automator, batch 3's validation included. Recorded in that plan's Amendments.
 
 ## Amendments
+
+- **2026-11-09 — This story before the runner (Nathan).** Nothing in the rewrites depends on how the suite runs, and the runner hadn't started, so batch 2 runs now rather than after the runner's batch 3. The QA Engineer takes everything the runner plan gave the Automator.
+- **2026-11-09 — Batch 2 as built.**
+  - `test-automator.md` is deleted (Nathan confirmed).
+  - The tree-id command lives in `testing-strategy.md`'s new "A snapshot of the tree" section. The Coder and QA Engineer personas point to it rather than each holding a copy.
+  - The Architect persona points to the Coder's "Code Review" section rather than repeating it.
+  - `auditor-duplication-abstraction.md` is unchanged. Its one line on the Reconciler, that two tests asserting the same case are the Reconciler's to report, is still true.
+  - The batch 1 files now capitalize the Test Reviewer and the Reconciler, as the other docs name roles.
