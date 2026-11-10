@@ -236,3 +236,56 @@ describe('BCU-1.8: a shared change begun on another board refreshes the board cu
     expect(vi.mocked(fetchBoard).mock.calls.map(([id]) => id)).toEqual(['A', 'B', 'B']);
   });
 });
+
+describe('BCU-1.9: a failed switch cannot show the previous board under the selected board’s name or controls', () => {
+  // A is loaded, B is selected, and B's read fails.
+  async function bFailsAfterALoaded() {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardA()).mockRejectedValueOnce(new Error('down'));
+    const loader = mountLoader('A');
+    await waitFor(() => expect(loader.shown()?.id).toBe('A'));
+    loader.select('B');
+    expect(loader.hook.result.current.loading).toBe(true);
+    await waitFor(() => expect(loader.hook.result.current.loading).toBe(false));
+    return loader;
+  }
+
+  it('ends B’s loading with no board drawn: A’s columns are gone, not shown under B', async () => {
+    const { shown, columnIds } = await bFailsAfterALoaded();
+
+    expect(shown()).toBeNull();
+    expect(columnIds()).toBeUndefined();
+  });
+
+  it('leaves the selection with B: no read of A follows the failure', async () => {
+    const { hook } = await bFailsAfterALoaded();
+
+    expect(vi.mocked(fetchBoard).mock.calls.map(([id]) => id)).toEqual(['A', 'B']);
+    expect(hook.result.current.board).toBeNull();
+  });
+
+  it('draws B’s board when a later load of B succeeds', async () => {
+    const { hook, shown } = await bFailsAfterALoaded();
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardB());
+
+    await act(async () => hook.result.current.loadBoard());
+
+    expect(shown()?.id).toBe('B');
+    expect(placedIn(shown())).toEqual(B_PLACED);
+  });
+});
+
+// Outside the catalog: the loader's own rule for a failed load of the board already drawn.
+describe('a failed reload of the board already drawn', () => {
+  it('keeps that board drawn, ends loading and finishes the cue', async () => {
+    vi.mocked(fetchBoard).mockResolvedValueOnce(boardA()).mockRejectedValueOnce(new Error('down'));
+    const { hook, shown, boardDrawn } = mountLoader('A');
+    await waitFor(() => expect(shown()?.id).toBe('A'));
+    boardDrawn.mockClear();
+
+    await act(async () => hook.result.current.loadBoard());
+
+    expect(hook.result.current.loading).toBe(false);
+    expect(shown()?.id).toBe('A');
+    expect(boardDrawn).toHaveBeenCalledOnce();
+  });
+});

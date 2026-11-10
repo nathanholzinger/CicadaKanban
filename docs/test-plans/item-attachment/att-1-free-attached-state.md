@@ -1,6 +1,6 @@
 # ATT-1 — Free / Attached state model
 
-**Next ID:** ATT-1.15
+**Next ID:** ATT-1.16
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | ATT-1.10 | A Card shows its tags | P2 | Planned |
 | ATT-1.12 | Attaching a done Free item clears its `completedAt` and gives it a sibling position | P1 | Automated |
 | ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Automated |
+| ATT-1.15 | An older child answer cannot undo a later parent workphase cascade | P0 | Open |
 
 ---
 
@@ -118,3 +119,18 @@ No read shows one consequence flipped and another not.
 *Given* project `P1`, *when* a create makes a top-level item in `P1` and sets the attachment flag, *then* it's refused with a 400, and no item is created. *When* a create makes a top-level item in `P1` and doesn't mention the flag, *then* the new item's flag is clear, as every top-level item's is.
 
 **Automation test:** `server/tests/routes/items.attached.test.ts`
+
+## ATT-1.15 — An older child answer cannot undo a later parent workphase cascade
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §2, wiki boards-columns-unsorted §10
+
+*Given* Free parent `P`, attached children `C` and `S` in that sibling order, and attached grandchild `G` under `C`, all holding non-terminal workphase `W1`, another non-terminal workphase `W2` of the same workflow, and a board whose columns cover every workphase of that workflow, *when* these writes are sent and saved in this order, with their successful answers held:
+
+- reorder `C` after `S` among `P`'s attached children, returning `C` with `workphaseId = W1`;
+- move `P` to a different workphase `W2`, cascading `W2` to its attached descendants;
+
+*then*, when `P`'s answer is applied first, `P`, `C` and `G` each hold `workphaseId = W2` in the board's item state. Applying `C`'s older answer second leaves all three at `W2`, matching their saved workphases. `P`'s Card stays in `W2`'s column with `C` and `G` as Stubs inside it. Neither `C`'s workphase nor the workphase cascaded from it to `G` returns to `W1`. Answering the same writes in their saved order ends with the same workphases and placement.
+
+*Given* instead the same hierarchy starts with no workphase on any item, so Unsorted's `invalidItems` includes `P`, `C`, `G` and `S` and `needsAttention` is true, *when* the same writes are saved and answered in either order, with the reorder's answer carrying `C.workphaseId = null`, *then* after `P`'s answer is applied every item in that hierarchy holds `W2`, `invalidItems` is empty and `needsAttention` is false. The older reorder answer cannot restore a missing workphase or raise attention again. There are no other items or uncovered workphases in this setup. Badge appearance is not prescribed.
+
+**Automation test:** —

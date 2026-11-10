@@ -7,6 +7,9 @@
 // - A load applies its answer, ends the loading state and finishes the drag-stop cue only while it is the
 //   latest load and its board is still selected. A late answer for another board, or for a load a later
 //   one replaced, changes none of them.
+// - A current load that fails draws no board but the one it read: the board shown for a different
+//   selection is cleared, so a failed switch never leaves A's columns under B's name and controls, while a
+//   failed reload keeps the board it was reloading.
 // The cue's two callbacks (`useForcedStop.ts`) are inputs, so the loader needs no drag to be tested.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -65,6 +68,7 @@ export function useBoardLoad({ activeBoardId, setWorkphases, replaceItems, reloa
       replaceItems(allItems);
     } catch (err) {
       console.error('Failed to load board:', err);
+      if (isCurrent()) setBoard(shown => (shown?.id === boardId ? shown : null));
     } finally {
       if (isCurrent()) {
         setLoading(false);

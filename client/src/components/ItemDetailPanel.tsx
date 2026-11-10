@@ -122,6 +122,7 @@ function ItemDetailPanelContent({
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const latestDepthRead = useRef(0);
 
   // Fires once per mount — a new itemId remounts this whole component (see
   // the `key` in ItemDetailPanel above) rather than this effect reacting to
@@ -237,10 +238,15 @@ function ItemDetailPanelContent({
   }
 
   // A write's response carries no depth, so after a reparent the item's own and its children's come from a
-  // read. The add-child control and the depth pills draw from them.
+  // read. The add-child control and the depth pills draw from them. Only the latest read's answer is applied:
+  // an earlier one, landing after it, would show the depth of a parent the item no longer has.
   function refreshDepths() {
+    const read = ++latestDepthRead.current;
     fetchItem(itemId)
-      .then(fresh => setDetail(prev => (prev ? { ...prev, depth: fresh.depth, children: fresh.children } : prev)))
+      .then(fresh => {
+        if (read !== latestDepthRead.current) return;
+        setDetail(prev => (prev ? { ...prev, depth: fresh.depth, children: fresh.children } : prev));
+      })
       .catch(err => console.error('Failed to refresh item depth:', err));
   }
 

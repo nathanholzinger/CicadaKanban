@@ -1,6 +1,6 @@
 # ATT-10 — Creating an item
 
-**Next ID:** ATT-10.9
+**Next ID:** ATT-10.10
 
 The rules every write is held to hold for a create too. A parentless create's attachment flag is [ATT-1.14](att-1-free-attached-state.md)'s, a create's workphase is [ATT-9](att-9-workphase-a-write-leaves.md)'s, a child's project is [ATT-5.6](att-5-cross-project-reparenting.md)'s and [ATT-5.7](att-5-cross-project-reparenting.md)'s, a parent's legality is [ATT-4.10](att-4-legal-parent-depth-cap.md)'s, and the activity entry is [ATT-8.3](att-8-hierarchy-changes-logged.md)'s.
 
@@ -14,6 +14,7 @@ The rules every write is held to hold for a create too. A parentless create's at
 | ATT-10.6 | The Sheet allows adding a child that reaches exactly the item cap | P1 | Automated |
 | ATT-10.7 | The Sheet's add-child control stays drawn but disabled at or past the item cap | P1 | Automated |
 | ATT-10.8 | After a reparent, the add-child control follows the item's new depth | P1 | Automated |
+| ATT-10.9 | An older depth read cannot enable adding a child after a later reparent reaches the cap | P1 | Open |
 
 ---
 
@@ -90,3 +91,13 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 *When* `X` is successfully reparented from its Sheet under `S`, so its new depth is `CAP - 1`, *then* the control for the updated item is enabled and offers a child create under `X`; the old depth does not leave it disabled. No child is created by the reparent itself. *When* `X` is successfully reparented under `T`, returning to depth `CAP`, *then* the control is drawn disabled again, with the same item-cap reason. It takes no click or keyboard focus and cannot start a child create. In both directions the control follows the current saved parent and depth, not a depth cached before the write. If the Sheet remains open through either write, the control updates there without closing and reopening the Sheet. This case does not prescribe whether the Sheet stays open after a reparent.
 
 **Automation test:** `client/src/components/ItemDetailPanel.test.tsx`
+
+## ATT-10.9 — An older depth read cannot enable adding a child after a later reparent reaches the cap
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §14, wiki item-attachment §8, wiki hierarchy-placement §6
+
+*Given* item cap `CAP >= 3`, root items at absolute depth 1, leaf `X` at depth `CAP` under `T` at `CAP - 1`, and legal parent `S` at `CAP - 2`, with `X` shown in its Sheet and its add-child control disabled, *when* `X` is successfully reparented from its Sheet under `S`, the ensuing depth read captures `X` at `CAP - 1` but its answer is held, and `X` is then successfully reparented back under `T`, *then*, when the second reparent's depth read arrives first, the add-child control is drawn disabled, with hover reason exactly `At the depth cap (N levels)`, `N = CAP`.
+
+*When* the held shallower answer then arrives, *then* `X`'s current saved parent remains `T` at resulting depth `CAP`, and the control stays drawn and disabled with the same reason. It remains exposed as disabled to assistive technology, takes no click or keyboard focus, and cannot open a child-create input or send a create request. No child is created by either reparent or by applying either read. If the Sheet remains open, this holds there without closing and reopening it; the case does not prescribe whether a reparent keeps it open. Answering the reads in their original order ends with the same disabled control after the second reparent's read.
+
+**Automation test:** —

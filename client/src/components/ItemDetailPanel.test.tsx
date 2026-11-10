@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ItemDetail } from '../types';
 import { makeItem } from '../test/itemFixture';
@@ -44,14 +44,14 @@ const reindexed = [
   { id: 'Y', position: 2 },
 ];
 
-function openPanel(shown: ItemDetail = detail, itemDepthCap = 12) {
+function openPanel(shown: ItemDetail = detail, itemDepthCap = 12, items = boardItems) {
   const onUpdate = vi.fn();
   const onChildCreated = vi.fn();
   vi.mocked(fetchItem).mockResolvedValue(shown);
   render(
     <ItemDetailPanel
       itemId="X"
-      items={boardItems}
+      items={items}
       itemTypes={[]}
       itemDepthCap={itemDepthCap}
       onClose={() => {}}
@@ -191,6 +191,87 @@ describe('the Sheet’s add-child control at the depth cap', () => {
     await userEvent.click(again);
     expect(screen.queryByPlaceholderText('Child title...')).not.toBeInTheDocument();
     expect(createItem).not.toHaveBeenCalled();
+  });
+
+  // X at the cap under T goes under S and back under T. The read after the move under S is held, and the read
+  // after the move back answers first. Resolving the held read afterwards lands the shallower depth last.
+  async function reparentedUpAndBackWithTheFirstReadHeld() {
+    const atCap = { ...detail, parentId: 'T', depth: CAP - 1 };
+    openPanel(atCap, CAP, [makeItem('X', { parentId: 'T' }), makeItem('S'), makeItem('T')]);
+    expect(await addChild()).toBeDisabled();
+    const parent = screen.getByRole('combobox', { name: 'Parent item' });
+    vi.mocked(fetchItem).mockClear();
+
+    let answerFirstRead!: (read: ItemDetail) => void;
+    const firstRead = new Promise<ItemDetail>(resolve => {
+      answerFirstRead = resolve;
+    });
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'S' }));
+    vi.mocked(fetchItem).mockReturnValueOnce(firstRead);
+    await userEvent.selectOptions(parent, 'S');
+    await waitFor(() => expect(fetchItem).toHaveBeenCalledTimes(1));
+
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'T' }));
+    vi.mocked(fetchItem).mockResolvedValueOnce(atCap);
+    await userEvent.selectOptions(parent, 'T');
+    await waitFor(() => expect(fetchItem).toHaveBeenCalledTimes(2));
+
+    const answerShallowerRead = () => act(async () => answerFirstRead({ ...detail, parentId: 'S', depth: CAP - 2 }));
+    return { answerShallowerRead };
+  }
+
+  it('ATT-10.9: stays disabled at the cap when the read after the first reparent lands after the read after the second', async () => {
+    const { answerShallowerRead } = await reparentedUpAndBackWithTheFirstReadHeld();
+
+    // The second reparent's read has answered: still at the cap.
+    const add = await addChild();
+    expect(add).toBeDisabled();
+    expect(add).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+
+    await answerShallowerRead();
+
+    // The held read answers X under S, a level short of the cap; X is saved under T, at the cap.
+    const after = await addChild();
+    expect(after).toBeDisabled();
+    expect(after).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    after.focus();
+    expect(after).not.toHaveFocus();
+    await userEvent.click(after);
+    expect(screen.queryByPlaceholderText('Child title...')).not.toBeInTheDocument();
+    expect(createItem).not.toHaveBeenCalled();
+  });
+
+  it('ATT-10.9: ends the same when the two reads answer in the order they were sent', async () => {
+    const atCap = { ...detail, parentId: 'T', depth: CAP - 1 };
+    openPanel(atCap, CAP, [makeItem('X', { parentId: 'T' }), makeItem('S'), makeItem('T')]);
+    expect(await addChild()).toBeDisabled();
+    const parent = screen.getByRole('combobox', { name: 'Parent item' });
+    vi.mocked(fetchItem).mockClear();
+
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'S' }));
+    vi.mocked(fetchItem).mockResolvedValueOnce({ ...detail, parentId: 'S', depth: CAP - 2 });
+    await userEvent.selectOptions(parent, 'S');
+    await waitFor(() => expect(fetchItem).toHaveBeenCalledTimes(1));
+    vi.mocked(updateItem).mockResolvedValue(makeItem('X', { parentId: 'T' }));
+    vi.mocked(fetchItem).mockResolvedValueOnce(atCap);
+    await userEvent.selectOptions(parent, 'T');
+    await waitFor(() => expect(fetchItem).toHaveBeenCalledTimes(2));
+
+    const add = await addChild();
+    await waitFor(() => expect(add).toBeDisabled());
+    expect(add).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    expect(createItem).not.toHaveBeenCalled();
+  });
+
+  // Outside the catalog: the depth pills draw from the same read, and ATT-10.9 does not assert their text.
+  it('shows the current depth in the pills when an older read lands last', async () => {
+    const { answerShallowerRead } = await reparentedUpAndBackWithTheFirstReadHeld();
+
+    await answerShallowerRead();
+
+    // The Sheet's own pill comes first, then its child's.
+    const pills = screen.getAllByText(/^(TOP|SUB\d+)$/).map(pill => pill.textContent);
+    expect(pills).toEqual([`SUB${CAP - 1}`, `SUB${CAP}`]);
   });
 
   it('reads the item again for a reparent only, not for another write to it', async () => {
