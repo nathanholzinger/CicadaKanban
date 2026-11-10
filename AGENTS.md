@@ -230,8 +230,11 @@ npm run dev
 - Gates: `npm run check` (from project root) — type-check, lint (which runs
   `check:docs`), format check, and unit tests across `client/`, `server/` and `scripts/`
 - E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`.
-  Playwright starts its own stack (client 5174 → server 3002 on `test.db`), apart
-  from the dev database
+  Playwright starts its own stack per worker slot, apart from the dev database: slot N
+  is client `5180 + N` → server `3010 + N` on `server/data/test-N.db`. `E2E_WORKERS`
+  sets the worker count (1 by default) and starts that many stacks only;
+  `npm run test:e2e:serial` runs one worker. A run never reuses a stack, so two E2E
+  runs can't share the ports at once
 
 ---
 

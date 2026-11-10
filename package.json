@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test:e2e": "playwright test",
+    "test:e2e:serial": "node -e \"process.env.E2E_WORKERS='1';process.argv.splice(1,0,'playwright','test');require('@playwright/test/cli')\" --",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:server": "npm --prefix server run test",
