@@ -135,7 +135,10 @@ its own header.
   `useItemManagement.ts` numbers every write the board sends (`lib/positionedWrite.ts::positionRecord`)
   and hands the fold `newer`, the rows a later-sent write has set: an older answer leaves their
   positions, a pair and its own row alike. A drag's and an inline create's are numbered as they are
-  sent, the Sheet's as its answer lands.
+  sent, the Sheet's as its answer lands. The number also goes into the fold, which holds a row's
+  workphase to the same rule (`itemWriteReconciliation.ts::completeItemWrite`'s `sent`, over the list
+  state's `workphaseSetBy`): an older answer leaves the workphase of a row a later-sent write set, its
+  written row or one the cascade moved, and cascades nothing from it.
 
 ## Where each concern lives
 

@@ -205,6 +205,90 @@ describe('DRAG-6.29: answers for different items preserve positions set by the l
   });
 });
 
+describe('ATT-1.15: an older child answer cannot undo a later parent workphase cascade', () => {
+  // P is Free; C and S are its attached children, in that order, and G is attached under C. The workflow's
+  // workphases are W1 and W2, and the board's columns cover both.
+  const WORKFLOW = ['W1', 'W2'];
+  const family = (workphaseId: string | null) => [
+    makeItem('P', { workphaseId }),
+    makeItem('C', { parentId: 'P', position: 1, workphaseId }),
+    makeItem('S', { parentId: 'P', position: 2, workphaseId }),
+    makeItem('G', { parentId: 'C', workphaseId }),
+  ];
+
+  // C is reordered after S, and then P is moved to W2. C's answer carries the workphase C had when it was sent.
+  function reorderThenMove(from: string | null, landing: 'older-last' | 'in-order') {
+    const { board, sendMove } = openBoard(family(from));
+    const answerC = sendMove('C');
+    const answerP = sendMove('P');
+    const cAnswer = () => makeItem('C', { parentId: 'P', position: 3, workphaseId: from });
+    const pAnswer = () => makeItem('P', { workphaseId: 'W2' });
+
+    if (landing === 'older-last') {
+      answerP(pAnswer());
+      answerC(cAnswer());
+    } else {
+      answerC(cAnswer());
+      answerP(pAnswer());
+    }
+    const ids = (items: Item[]) => items.map(item => item.id);
+    return {
+      workphases: () => Object.fromEntries(board().items.map(item => [item.id, item.workphaseId])),
+      cards: (workphaseId: string) => ids(board().getWorkphaseItems(workphaseId)),
+      stubsOf: (parentId: string) => ids(board().getAttachedChildren(parentId)),
+      unknown: () => ({
+        badge: hasUnknownStatusItem(board().items, WORKFLOW),
+        items: ids(board().getUnknownStatusItems(WORKFLOW)),
+      }),
+    };
+  }
+
+  describe.each(['older-last', 'in-order'] as const)(
+    'given P, C, S and G in W1, with C’s answer landing %s',
+    landing => {
+      it('leaves P, C, S and G in W2, with P’s Card in W2’s column holding C and G as Stubs', () => {
+        const { workphases, cards, stubsOf } = reorderThenMove('W1', landing);
+
+        expect(workphases()).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
+        expect(cards('W2')).toEqual(['P']);
+        expect(cards('W1')).toEqual([]);
+        expect(stubsOf('P')).toEqual(['S', 'C']);
+        expect(stubsOf('C')).toEqual(['G']);
+      });
+    },
+  );
+
+  describe.each(['older-last', 'in-order'] as const)(
+    'given a hierarchy with no workphase, with the reorder’s answer landing %s',
+    landing => {
+      it('gives every item W2, with no item in Unknown status and no attention raised again', () => {
+        const { workphases, unknown } = reorderThenMove(null, landing);
+
+        expect(workphases()).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
+        expect(unknown()).toEqual({ badge: false, items: [] });
+      });
+    },
+  );
+});
+
+// The Sheet numbers its answers as they land, so a write the board sent before one is the older.
+describe('an answer the Sheet passes up, for a row’s workphase', () => {
+  const family = () => [makeItem('P', { workphaseId: 'W1' }), makeItem('C', { parentId: 'P', workphaseId: 'W1' })];
+
+  it('is the latest write: a move sent before it, answered after, leaves the workphases it set', () => {
+    const { board, sendMove } = openBoard(family());
+    const answerP = sendMove('P');
+
+    // The Sheet's move of P to W2 lands first, cascading to its attached child.
+    act(() => board().handleItemUpdated(makeItem('P', { workphaseId: 'W2' })));
+    // P's older answer carries the workphase P held when it was sent.
+    answerP(makeItem('P', { workphaseId: 'W1', position: 3 }));
+
+    const workphases = Object.fromEntries(board().items.map(item => [item.id, item.workphaseId]));
+    expect(workphases).toEqual({ P: 'W2', C: 'W2' });
+  });
+});
+
 // The Unsorted bucket's "needs attention" badge counts an Attached item whose own workphase is unknown, as
 // the API's `needsAttention` does (wiki boards-columns-unsorted §10). The server gives an Attached item its
 // parent's workphase, so filing a parent files them too, and the badge goes with the answer.

@@ -681,17 +681,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (renderedIsStub(stored, placements)) {
       const containingCardId = containingCardIdOf(activeId, tree, placements);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
-      // A Stub's own stored `workphaseId` is a cache of its containing
-      // Card's: it follows the Card's once the Card's write has landed
-      // (`itemWriteReconciliation.ts::completeItemWrite`), not before. An
-      // attached item's `workphaseId` always equals its nearest Free
-      // ancestor's, so the containing Card's row, read as drawn, is the
-      // fresh one. Snapshotted onto `activeItem` itself, once, here —
-      // every downstream `placementFor`/`toRequest` call in this drag
-      // (mid-drag and at release alike) reads `session.activeItem.workphaseId`
-      // and gets the fresh value for free, rather than the Stub's own copy.
-      // The Card's own move can be the write still in flight, so it's read
-      // as drawn too, as above.
+      // The drag takes the containing Card's drawn workphase, never the
+      // Stub's own stored one. That one can lag the Card's: it follows the
+      // Card's once the Card's write has landed
+      // (`itemWriteReconciliation.ts::completeItemWrite`), not before. It can
+      // also differ from the Card's by design, since an attached item may
+      // hold a workphase of its own that a write leaving the Card's as it
+      // was doesn't move. The Card's own move can be the write still in
+      // flight, so the Card is read as drawn too. Snapshotted onto
+      // `activeItem` itself, once, here — every downstream
+      // `placementFor`/`toRequest` call in this drag (mid-drag and at release
+      // alike) reads `session.activeItem.workphaseId` and gets that value
+      // for free.
       const containingCard = deps.items.find(i => i.id === containingCardId);
       beginDragAt({
         activeItem: containingCard

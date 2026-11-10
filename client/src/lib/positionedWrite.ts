@@ -1,6 +1,7 @@
 // Folding a position write's response into a list of positioned rows, for items
 // and projects alike (wiki positioning §8), and the record that says which rows an older answer must
-// leave alone (`positionRecord`).
+// leave alone: which write last set a row's value (`setLater`, `recordSet`), and the position's own
+// (`positionRecord`).
 
 import type { PositionedWriteResponse, ReindexedPosition } from '../api/shared';
 
@@ -35,12 +36,24 @@ function upsert<Row extends { id: string }>(rows: readonly Row[], written: Row):
   return rows.some(r => r.id === written.id) ? rows.map(r => (r.id === written.id ? written : r)) : [...rows, written];
 }
 
-// Which write last set each row's position. Writes of different rows aren't ordered, so an answer can land
-// after a later-sent write's, and a position it carries, its own or a disclosed pair, would undo that
-// write's. The caller numbers each write as it is sent (`send`) and, when the answer lands, asks which rows
-// a later-sent write has set (`answer`): that is the `newer` that `applyWriteResponse` takes. The rest are
-// recorded as this write's. A row keeps the number of the latest-sent write that set it, so a still older
-// answer doesn't lower it.
+// Which write last set each row's value of one field, as the number of the latest-sent write that set it.
+// Writes of different rows aren't ordered, so an answer can land after a later-sent write's, and a value it
+// carries would undo that write's. `setLater` names the rows an answer must leave, and `recordSet` records
+// the rest as the answer's. A row keeps the number of the latest-sent write that set it, so a still older
+// answer doesn't lower it. A field's record is a map the caller keeps: `positionRecord` below keeps the
+// position's, and an item list keeps the workphase's in its state (`itemWriteReconciliation.ts`).
+export function setLater(setBy: ReadonlyMap<string, number>, number: number, rows: Iterable<string>): Set<string> {
+  return new Set([...rows].filter(id => (setBy.get(id) ?? 0) > number));
+}
+
+export function recordSet(setBy: Map<string, number>, number: number, rows: Iterable<string>): void {
+  for (const id of rows) if ((setBy.get(id) ?? 0) <= number) setBy.set(id, number);
+}
+
+// Which write last set each row's position. The caller numbers each write as it is sent (`send`) and, when
+// the answer lands, asks which rows a later-sent write has set (`answer`): that is the `newer` that
+// `applyWriteResponse` takes. A position it carries, its own or a disclosed pair, is what such a write's
+// would lose.
 export function positionRecord() {
   let sent = 0;
   const setBy = new Map<string, number>();
@@ -50,8 +63,8 @@ export function positionRecord() {
     },
     answer(number: number, response: { id: string; reindexed?: readonly ReindexedPosition[] }): Set<string> {
       const touched = [response.id, ...(response.reindexed ?? []).map(pair => pair.id)];
-      const newer = new Set(touched.filter(id => (setBy.get(id) ?? 0) > number));
-      for (const id of touched) if (!newer.has(id)) setBy.set(id, number);
+      const newer = setLater(setBy, number, touched);
+      recordSet(setBy, number, touched);
       return newer;
     },
   };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyWriteResponse, positionRecord } from './positionedWrite';
+import { applyWriteResponse, positionRecord, recordSet, setLater } from './positionedWrite';
 import type { Project } from '../types';
 import type { ReindexedPosition } from '../api/shared';
 import { makeItem } from '../test/itemFixture';
@@ -117,6 +117,27 @@ describe('applyWriteResponse, when a later write has already set some rows', () 
     const x = result.find(p => p.id === 'X')!;
     expect([x.position, x.name]).toEqual([998, 'After']);
     expect(result.find(p => p.id === 'Y')!.position).toBe(1);
+  });
+});
+
+describe('setLater and recordSet', () => {
+  it('names the rows a write sent after the answer’s has set, and no other', () => {
+    const setBy = new Map([
+      ['A', 3],
+      ['B', 1],
+    ]);
+
+    expect(setLater(setBy, 2, ['A', 'B', 'C'])).toEqual(new Set(['A']));
+    expect(setLater(setBy, 3, ['A'])).toEqual(new Set());
+  });
+
+  it('records the number for each row no later-sent write set, and keeps the latest-sent write’s', () => {
+    const setBy = new Map([['A', 3]]);
+
+    recordSet(setBy, 2, ['A', 'B']);
+    recordSet(setBy, 1, ['B', 'C']);
+
+    expect(Object.fromEntries(setBy)).toEqual({ A: 3, B: 2, C: 1 });
   });
 });
 

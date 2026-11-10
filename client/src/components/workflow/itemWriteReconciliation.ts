@@ -1,6 +1,7 @@
 // Folding an item write's response into the board's item state
 // (wiki positioning §8): apply the reindexed pairs, upsert the written row, carry its workphase
-// to its attached descendants as the server does, clear its pending placement, and run the inversion tripwire
+// to its attached descendants as the server does (unless a later-sent write has set that row's workphase),
+// clear its pending placement, and run the inversion tripwire
 // (wiki board-drag-interaction §10). Every item-write path goes through
 // `completeItemWrite`. The state it folds into, `ItemListState` (items,
 // placements, inversions), is defined here too, with `EMPTY_ITEM_LIST_STATE`
@@ -12,7 +13,7 @@ import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
 import { byPositionThenCreatedAt } from '../../lib/hierarchy';
 import { flattenHierarchy } from '../../lib/hierarchyPlacement';
-import { applyWriteResponse } from '../../lib/positionedWrite';
+import { applyWriteResponse, recordSet, setLater } from '../../lib/positionedWrite';
 import {
   NO_PLACEMENTS,
   applyPlacements,
@@ -60,9 +61,20 @@ export interface ItemListState {
   placements: Placements;
   /** Every inversion the tripwire has caught this session; surfaced by the dev/test panel. */
   inversions: readonly Inversion[];
+  /**
+   * Which write last set each row's workphase, by the number it was sent with: the written row's, and its
+   * attached descendants' through the cascade (`withWorkphases`). It lives here, not in a ref beside the
+   * position record, because the rows a cascade moves are known only over the loaded rows.
+   */
+  workphaseSetBy: ReadonlyMap<string, number>;
 }
 
-export const EMPTY_ITEM_LIST_STATE: ItemListState = { items: [], placements: NO_PLACEMENTS, inversions: [] };
+export const EMPTY_ITEM_LIST_STATE: ItemListState = {
+  items: [],
+  placements: NO_PLACEMENTS,
+  inversions: [],
+  workphaseSetBy: new Map(),
+};
 
 export function withPlacement(state: ItemListState, itemId: string, placement: Placement | null): ItemListState {
   const placements = new Map(state.placements);
@@ -77,16 +89,50 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // attention" badge counts them (`itemListOps.ts::hasUnknownStatusItem`). It stops at a detached child, as
 // the server's walk does. When the write left the workphase as it was, nothing moves, as on the server,
 // so an Attached item holding a workphase of its own stays there for the badge to count.
-function withWorkphaseCascaded(before: readonly Item[], after: Item[], id: string): Item[] {
-  const was = before.find(i => i.id === id);
+//
+// Workphase currency follows position currency (wiki positioning §8). `workphaseSetBy` says which write
+// last set each row's workphase, and an answer for write `sent` that lands after a later-sent write set one
+// of its rows' leaves that row's workphase as it is and cascades nothing from it. That is a written row an
+// older answer carries a stale workphase for, and a row the cascade would otherwise move back. Only a write
+// that changes a row's workphase sets it: the written row, when its answer's differs from the loaded one, and
+// the attached descendants its cascade moves are recorded as `sent`'s. An answer that carries the workphase
+// the row already holds sets nothing, so it claims no row, and an older write's cascade landing after it
+// still reaches the row. An answer with no `sent` is the latest write there is, and records nothing.
+function withWorkphases(
+  state: ItemListState,
+  after: Item[],
+  id: string,
+  sent: number | undefined,
+): Pick<ItemListState, 'items' | 'workphaseSetBy'> {
+  const unchanged = { items: after, workphaseSetBy: state.workphaseSetBy };
+  const was = state.items.find(i => i.id === id);
   const written = after.find(i => i.id === id);
-  if (!was || !written || was.workphaseId === written.workphaseId) return after;
-  const attached = flattenHierarchy(id, parentId =>
-    parentId === null ? [] : getAttachedChildrenFrom(after, parentId).map(child => child.id),
-  );
-  if (attached.length === 0) return after;
-  const moved = new Set(attached.map(row => row.id));
-  return after.map(i => (moved.has(i.id) ? { ...i, workphaseId: written.workphaseId } : i));
+  if (!written) return unchanged;
+  const later =
+    sent === undefined ? new Set<string>() : setLater(state.workphaseSetBy, sent, state.workphaseSetBy.keys());
+  if (later.has(id)) {
+    const kept = was ? after.map(i => (i.id === id ? { ...i, workphaseId: was.workphaseId } : i)) : after;
+    return { items: kept, workphaseSetBy: state.workphaseSetBy };
+  }
+  if (was && was.workphaseId === written.workphaseId) return unchanged;
+
+  const moved = new Set<string>();
+  if (was) {
+    const attached = flattenHierarchy(id, parentId =>
+      parentId === null
+        ? []
+        : getAttachedChildrenFrom(after, parentId)
+            .map(child => child.id)
+            .filter(childId => !later.has(childId)),
+    );
+    for (const row of attached) moved.add(row.id);
+  }
+  const items =
+    moved.size > 0 ? after.map(i => (moved.has(i.id) ? { ...i, workphaseId: written.workphaseId } : i)) : after;
+  if (sent === undefined) return { items, workphaseSetBy: state.workphaseSetBy };
+  const workphaseSetBy = new Map(state.workphaseSetBy);
+  recordSet(workphaseSetBy, sent, [id, ...moved]);
+  return { items, workphaseSetBy };
 }
 
 // A write's response, in reconciliation order: apply the reindex
@@ -99,10 +145,12 @@ function withWorkphaseCascaded(before: readonly Item[], after: Item[], id: strin
 // position made no ordinal claim.
 //
 // `newer` names the rows whose position a later-sent write has already set, which this response, an older
-// one, must leave as they are (`lib/positionedWrite.ts::positionRecord`, which the caller asks).
+// one, must leave as they are (`lib/positionedWrite.ts::positionRecord`, which the caller asks). `sent` is
+// the number the write was sent with, which a row's workphase is held to the same way
+// (`withWorkphases`, over `state.workphaseSetBy`).
 //
 // Only the written row is upserted (`lib/positionedWrite.ts::applyWriteResponse`); the server's
-// `workphaseId` cascade to its attached descendants is mirrored over it (`withWorkphaseCascaded`).
+// `workphaseId` cascade to its attached descendants is mirrored over it (`withWorkphases`).
 //
 // `recorded` is the exact placement object `writes.begin` stashed when this
 // write started (undefined for a write that was never placement-tracked —
@@ -119,12 +167,20 @@ export function completeItemWrite(
   response: ItemWriteResponse,
   recorded?: Placement | null,
   newer?: ReadonlySet<string>,
+  sent?: number,
 ): ItemListState {
-  const items = withWorkphaseCascaded(state.items, applyWriteResponse(state.items, response, newer), response.id);
-  if (recorded === undefined || state.placements.get(response.id) !== recorded) return { ...state, items };
+  const { items, workphaseSetBy } = withWorkphases(
+    state,
+    applyWriteResponse(state.items, response, newer),
+    response.id,
+    sent,
+  );
+  if (recorded === undefined || state.placements.get(response.id) !== recorded) {
+    return { ...state, items, workphaseSetBy };
+  }
 
   const before = freeItemOrder(state.items, state.placements);
-  const next = withPlacement({ ...state, items }, response.id, null);
+  const next = withPlacement({ ...state, items, workphaseSetBy }, response.id, null);
   const inversion = findInversion(before, freeItemOrder(next.items, next.placements));
   if (!inversion) return next;
   return { ...next, inversions: [...state.inversions, { itemId: response.id, ...inversion }] };

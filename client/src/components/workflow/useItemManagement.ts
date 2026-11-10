@@ -3,7 +3,8 @@
 // `itemWriteReconciliation.ts::completeItemWrite`. Writes of different items aren't sequenced, so every write
 // the board sends is also numbered across items (`lib/positionedWrite.ts::positionRecord`): an answer that
 // lands after a later-sent write's leaves the positions that write set, whether a disclosed pair or its own
-// row.
+// row, and the workphases it set, its own row's and its attached descendants' through the cascade (the
+// number goes into `completeItemWrite`, which keeps that record in the list state).
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
@@ -103,7 +104,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
         const recorded = recordedPlacement.current.get(itemId) ?? null;
         recordedPlacement.current.delete(itemId);
         const newer = positionWrites.current.answer(latest.sent, response);
-        setList(s => completeItemWrite(s, response, recorded, newer));
+        setList(s => completeItemWrite(s, response, recorded, newer, latest.sent));
         return { applied: true, needsResync: false };
       },
       fail(itemId, seq) {
@@ -143,7 +144,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
       const sent = positionWrites.current.send();
       const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
       const newer = positionWrites.current.answer(sent, newItem);
-      setList(s => completeItemWrite(s, newItem, undefined, newer));
+      setList(s => completeItemWrite(s, newItem, undefined, newer, sent));
     } catch (err) {
       console.error('Failed to create item:', err);
     }
@@ -155,8 +156,9 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   // answer, which the Sheet's covering the board makes so; a drag finished in the moment after the Sheet
   // closes could still be numbered after a write that went out before it.
   function foldSheetAnswer(response: ItemWriteResponse) {
-    positionWrites.current.answer(positionWrites.current.send(), response);
-    setList(s => completeItemWrite(s, response));
+    const sent = positionWrites.current.send();
+    positionWrites.current.answer(sent, response);
+    setList(s => completeItemWrite(s, response, undefined, undefined, sent));
   }
 
   function handleItemUpdated(updated: ItemWriteResponse) {

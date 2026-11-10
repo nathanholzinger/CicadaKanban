@@ -132,6 +132,127 @@ describe('completeItemWrite: the workphase cascade', () => {
   });
 });
 
+// Which write last set each row's workphase, by the number it was sent with. An answer for write `sent` leaves
+// the workphase of a row that a later-sent write set, and cascades nothing from it.
+describe('completeItemWrite: workphase currency', () => {
+  const branch = () => [
+    item('P', { workphaseId: 'todo' }),
+    item('C', { parentId: 'P', workphaseId: 'todo' }),
+    item('G', { parentId: 'C', workphaseId: 'todo' }),
+    item('S', { parentId: 'P', workphaseId: 'todo' }),
+  ];
+  const workphases = (items: readonly { id: string; workphaseId: string | null }[]) =>
+    Object.fromEntries(items.map(i => [i.id, i.workphaseId]));
+  const setBy = (state: { workphaseSetBy: ReadonlyMap<string, number> }) => Object.fromEntries(state.workphaseSetBy);
+
+  it('records the written row and the rows its cascade moved as the write’s', () => {
+    const next = completeItemWrite(
+      { ...EMPTY_ITEM_LIST_STATE, items: branch() },
+      item('P', { workphaseId: 'doing' }),
+      undefined,
+      undefined,
+      2,
+    );
+
+    expect(setBy(next)).toEqual({ P: 2, C: 2, G: 2, S: 2 });
+  });
+
+  it('records nothing for an answer that carries the workphase the row already holds', () => {
+    const next = completeItemWrite(
+      { ...EMPTY_ITEM_LIST_STATE, items: branch() },
+      item('P', { workphaseId: 'todo', position: 3 }),
+      undefined,
+      undefined,
+      2,
+    );
+
+    expect(setBy(next)).toEqual({});
+  });
+
+  it('lets an older write’s cascade reach a row whose later-sent answer carried the workphase it held', () => {
+    // C's reorder, sent second, is answered first with the workphase C holds; P's move, sent first, then lands.
+    const afterReorder = completeItemWrite(
+      { ...EMPTY_ITEM_LIST_STATE, items: branch() },
+      item('C', { parentId: 'P', workphaseId: 'todo', position: 3 }),
+      undefined,
+      undefined,
+      2,
+    );
+
+    const next = completeItemWrite(afterReorder, item('P', { workphaseId: 'doing' }), undefined, undefined, 1);
+
+    expect(workphases(next.items)).toEqual({ P: 'doing', C: 'doing', G: 'doing', S: 'doing' });
+  });
+
+  it('records nothing for an answer with no number', () => {
+    const next = completeItemWrite({ ...EMPTY_ITEM_LIST_STATE, items: branch() }, item('P', { workphaseId: 'doing' }));
+
+    expect(setBy(next)).toEqual({});
+    expect(workphases(next.items)).toMatchObject({ P: 'doing', C: 'doing', G: 'doing' });
+  });
+
+  describe('an older answer for a row a later-sent write set', () => {
+    // P's move, sent second, is answered first: P, C, G and S are in `doing`, all set by write 2.
+    const afterMove = () =>
+      completeItemWrite(
+        { ...EMPTY_ITEM_LIST_STATE, items: branch() },
+        item('P', { workphaseId: 'doing' }),
+        undefined,
+        undefined,
+        2,
+      );
+
+    it('keeps the row’s workphase and cascades nothing from it, taking the rest of the answer', () => {
+      const next = completeItemWrite(
+        afterMove(),
+        item('C', { parentId: 'P', workphaseId: 'todo', title: 'Reordered' }),
+        undefined,
+        undefined,
+        1,
+      );
+
+      expect(workphases(next.items)).toEqual({ P: 'doing', C: 'doing', G: 'doing', S: 'doing' });
+      expect(next.items.find(i => i.id === 'C')!.title).toBe('Reordered');
+      expect(setBy(next)).toEqual({ P: 2, C: 2, G: 2, S: 2 });
+    });
+
+    it('keeps a missing workphase from returning', () => {
+      const next = completeItemWrite(
+        afterMove(),
+        item('C', { parentId: 'P', workphaseId: null }),
+        undefined,
+        undefined,
+        1,
+      );
+
+      expect(next.items.find(i => i.id === 'C')!.workphaseId).toBe('doing');
+    });
+
+    it('is applied in full when no later-sent write set the row', () => {
+      const next = completeItemWrite(
+        afterMove(),
+        item('C', { parentId: 'P', workphaseId: 'review' }),
+        undefined,
+        undefined,
+        3,
+      );
+
+      expect(workphases(next.items)).toEqual({ P: 'doing', C: 'review', G: 'review', S: 'doing' });
+      expect(setBy(next)).toEqual({ P: 2, C: 3, G: 3, S: 2 });
+    });
+  });
+
+  it('leaves a cascaded row that a later-sent write set, and everything under it', () => {
+    // C was set by write 5, a later-sent write than P's 4: P's answer moves S, and neither C nor G under it.
+    const state = { ...EMPTY_ITEM_LIST_STATE, items: branch(), workphaseSetBy: new Map([['C', 5]]) };
+
+    const next = completeItemWrite(state, item('P', { workphaseId: 'doing' }), undefined, undefined, 4);
+
+    expect(workphases(next.items)).toEqual({ P: 'doing', C: 'todo', G: 'todo', S: 'doing' });
+    expect(setBy(next)).toEqual({ C: 5, P: 4, S: 4 });
+  });
+});
+
 // The preview against the responses: what the list reads before a write
 // lands, and after it's folded in.
 describe('the preview through its responses', () => {
