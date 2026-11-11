@@ -127,3 +127,56 @@ export async function holdNextWrite(
     },
   };
 }
+
+// Holds one board or item read after the server has produced its snapshot.
+// Later matching reads pass through, so the page can retry while this answer is held.
+export async function holdNextRead(page: Page, url: string, outcome: 'succeed' | 'refuse' = 'succeed') {
+  let captured = false;
+  let arrived = false;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  const handler = async (route: Route) => {
+    if (captured || route.request().method() !== 'GET') return route.fallback();
+    captured = true;
+    const response = outcome === 'succeed' ? await route.fetch() : null;
+    arrived = true;
+    await gate;
+    if (response) await route.fulfill({ response });
+    else await route.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"refused"}' });
+  };
+  await page.route(url, handler);
+  return {
+    arrived: () => expect.poll(() => arrived, { message: `one GET ${url} answer is held` }).toBe(true),
+    release,
+    async dispose() {
+      release();
+      await page.unroute(url, handler);
+    },
+  };
+}
+
+// Holds one write before it reaches the server, then lets its real answer through.
+// Used when a read must capture the saved state before that write is saved.
+export async function holdNextDeferredWrite(page: Page, method: string, url: string) {
+  let captured = false;
+  let arrived = false;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => (release = resolve));
+  const handler = async (route: Route) => {
+    if (captured || route.request().method() !== method) return route.fallback();
+    captured = true;
+    arrived = true;
+    await gate;
+    const response = await route.fetch();
+    await route.fulfill({ response });
+  };
+  await page.route(url, handler);
+  return {
+    arrived: () => expect.poll(() => arrived, { message: `one ${method} ${url} request is held` }).toBe(true),
+    release,
+    async dispose() {
+      release();
+      await page.unroute(url, handler);
+    },
+  };
+}

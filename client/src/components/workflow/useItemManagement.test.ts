@@ -224,22 +224,35 @@ describe('ATT-1.15: an older child answer cannot undo a later parent workphase c
     const cAnswer = () => makeItem('C', { parentId: 'P', position: 3, workphaseId: from });
     const pAnswer = () => makeItem('P', { workphaseId: 'W2' });
 
-    if (landing === 'older-last') {
-      answerP(pAnswer());
-      answerC(cAnswer());
-    } else {
-      answerC(cAnswer());
-      answerP(pAnswer());
-    }
     const ids = (items: Item[]) => items.map(item => item.id);
+    const workphases = () => Object.fromEntries(board().items.map(item => [item.id, item.workphaseId]));
+    // What Unsorted holds over the live items (wiki boards-columns-unsorted §10): `invalidItems` is every item
+    // with no workphase or one the workflow doesn't have, an Attached one included, and `needsAttention` is
+    // the board's own expression with no uncovered workphase, which this setup has none of. `shown` is the
+    // Free Cards its Unknown status list draws.
+    const unsorted = () => ({
+      invalidItems: ids(board().items.filter(item => !item.workphaseId || !WORKFLOW.includes(item.workphaseId))).sort(),
+      needsAttention: hasUnknownStatusItem(board().items, WORKFLOW),
+      shown: ids(board().getUnknownStatusItems(WORKFLOW)),
+    });
+    // The board as it stands with both writes sent, and again once the first answer has landed.
+    const look = () => ({ workphases: workphases(), unsorted: unsorted() });
+    const sent = look();
+
+    const [first, second] =
+      landing === 'older-last'
+        ? [() => answerP(pAnswer()), () => answerC(cAnswer())]
+        : [() => answerC(cAnswer()), () => answerP(pAnswer())];
+    first();
+    const afterFirst = look();
+    second();
+
     return {
-      workphases: () => Object.fromEntries(board().items.map(item => [item.id, item.workphaseId])),
+      workphases,
       cards: (workphaseId: string) => ids(board().getWorkphaseItems(workphaseId)),
       stubsOf: (parentId: string) => ids(board().getAttachedChildren(parentId)),
-      unknown: () => ({
-        badge: hasUnknownStatusItem(board().items, WORKFLOW),
-        items: ids(board().getUnknownStatusItems(WORKFLOW)),
-      }),
+      unsorted,
+      seen: { sent, afterFirst },
     };
   }
 
@@ -261,14 +274,53 @@ describe('ATT-1.15: an older child answer cannot undo a later parent workphase c
   describe.each(['older-last', 'in-order'] as const)(
     'given a hierarchy with no workphase, with the reorder’s answer landing %s',
     landing => {
-      it('gives every item W2, with no item in Unknown status and no attention raised again', () => {
-        const { workphases, unknown } = reorderThenMove(null, landing);
+      it('gives every item W2', () => {
+        expect(reorderThenMove(null, landing).workphases()).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
+      });
 
-        expect(workphases()).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
-        expect(unknown()).toEqual({ badge: false, items: [] });
+      it('leaves Unsorted with no invalid item and no attention raised again', () => {
+        expect(reorderThenMove(null, landing).unsorted()).toEqual({
+          invalidItems: [],
+          needsAttention: false,
+          shown: [],
+        });
       });
     },
   );
+
+  // The steps between: where the family stands once P's answer has landed and before C's older one does.
+  // Only this order has them; in the other, C's answer is the first and carries what C held.
+  describe('given C’s older answer landing after P’s', () => {
+    describe('given P, C, S and G in W1', () => {
+      const seen = () => reorderThenMove('W1', 'older-last').seen;
+
+      it('has all four in W1 with both writes sent', () => {
+        expect(seen().sent.workphases).toEqual({ P: 'W1', C: 'W1', S: 'W1', G: 'W1' });
+      });
+
+      it('has all four in W2 as P’s answer lands, before C’s older one', () => {
+        expect(seen().afterFirst.workphases).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
+      });
+    });
+
+    describe('given P, C, S and G with no workphase', () => {
+      const seen = () => reorderThenMove(null, 'older-last').seen;
+
+      it('has all four invalid and attention raised with both writes sent, only P’s Card shown in Unsorted', () => {
+        const { sent } = seen();
+
+        expect(sent.workphases).toEqual({ P: null, C: null, S: null, G: null });
+        expect(sent.unsorted).toEqual({ invalidItems: ['C', 'G', 'P', 'S'], needsAttention: true, shown: ['P'] });
+      });
+
+      it('has all four in W2, none invalid and no attention as P’s answer lands, before C’s older one', () => {
+        const { afterFirst } = seen();
+
+        expect(afterFirst.workphases).toEqual({ P: 'W2', C: 'W2', S: 'W2', G: 'W2' });
+        expect(afterFirst.unsorted).toEqual({ invalidItems: [], needsAttention: false, shown: [] });
+      });
+    });
+  });
 });
 
 // The board's load asks how many item answers have been applied, to read again when one landed during a read.

@@ -381,4 +381,6 @@ the carried copy's second line and its wording).
   carve-out's zones and dividers `data-carve-zone` and `data-carve-divider`. A Card's root
   is its Descendants region, so it carries `data-drag-region` and, always, `data-drag-card`
   (its id); while its hierarchy modal is open the modal's list carries the region key, and the
-  root has `data-drag-card` alone.
+  root has `data-drag-card` alone. The no-board state, which draws no toolbar and so no selector,
+  carries `data-selected-board-id`, the selected board's id, so a test can tell which board a failed
+  load left selected; absent when the workflow has no board to select.

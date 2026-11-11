@@ -10,12 +10,147 @@ import {
   fetchItem,
   fetchDefaultBoard,
 } from '../helpers/seed';
-import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
+import {
+  center,
+  pickUp,
+  hoverTo,
+  release,
+  seedDragTuning,
+  awaitPoppedOut,
+  POP_OUT_ONLY,
+  bottomQuarter,
+  gapBetween,
+  awaitProjection,
+} from '../helpers/dragGesture';
+import { setSectionExpanded } from '../helpers/boardDragSurface';
+import { holdNextWrite, successfulWrite, watchWrites } from '../helpers/requestHarness';
 import { article, column, itemPanel, itemRow, titlesIn, dragRegion } from '../helpers/boardLocators';
 
 test.describe('attached children on the board', () => {
   test.beforeAll(async () => {
     await resetAndSeedDb();
+  });
+
+  test('ATT-1.15: an older child reorder answer leaves the later parent cascade in its new workphase', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Cascade Answer Order Project');
+    const [w1, w2] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: w1.id });
+    const c = await seedItem(request, { title: 'C', parentId: p.id });
+    const s = await seedItem(request, { title: 'S', parentId: p.id });
+    const g = await seedItem(request, { title: 'G', parentId: c.id });
+    expect(c.position).toBeLessThan(s.position!);
+    expect([p, c, s, g].map(item => item.workphaseId)).toEqual([w1.id, w1.id, w1.id, w1.id]);
+    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await projectSidebar.openBoard(project.name);
+    const first = column(page, 'Todo');
+    const second = column(page, 'In Progress');
+    await expect(article(first, 'P')).toBeVisible();
+    await setSectionExpanded(itemRow(page, p.id), true);
+    await expect(itemRow(page, c.id)).toBeVisible();
+    await expect(itemRow(page, s.id)).toBeVisible();
+
+    const older = await holdNextWrite(page, {
+      method: 'PATCH',
+      url: '**/api/items/*/move',
+      outcome: 'succeed',
+    });
+    const from = await pickUp(page, itemRow(page, c.id).getByRole('button', { name: 'C' }));
+    let point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
+    await hoverTo(page, point);
+    point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
+    await hoverTo(page, point);
+    await awaitProjection(page, '1:0:true');
+    await release(page);
+    expect((await older.arrived()).status).toBe(200);
+    await expect.poll(async () => (await fetchItem(request, c.id)).position).toBeGreaterThan(s.position!);
+    expect((await fetchItem(request, c.id)).workphaseId).toBe(w1.id);
+
+    const newer = await holdNextWrite(page, {
+      method: 'PATCH',
+      url: '**/api/items/*/move',
+      outcome: 'succeed',
+    });
+    const writes = watchWrites(page);
+    await pickUp(page, article(first, 'P').getByText('P', { exact: true }));
+    await hoverTo(page, await gapBetween(first, second));
+    await awaitPoppedOut(page, tuning);
+    await hoverTo(page, await center(dragRegion(second)));
+    await release(page);
+    expect(await newer.arrived()).toMatchObject({ status: 200, body: { workphaseId: w2.id } });
+    expect(writes).toEqual([
+      expect.objectContaining({
+        url: expect.stringContaining(`/api/items/${p.id}/move`),
+        body: expect.objectContaining({ workphaseId: w2.id }),
+      }),
+    ]);
+    newer.release();
+    await expect(article(second, 'P')).toBeVisible();
+    const olderAnswered = successfulWrite(page, 'PATCH', `/api/items/${c.id}/move`);
+    older.release();
+    await olderAnswered;
+    await expect(article(second, 'P').getByText('C', { exact: true })).toBeVisible();
+    await expect(article(second, 'P').getByText('G', { exact: true })).toBeVisible();
+    await expect(article(first, 'P')).toHaveCount(0);
+    for (const item of [p, c, s, g]) {
+      await expect.poll(async () => (await fetchItem(request, item.id)).workphaseId).toBe(w2.id);
+    }
+  });
+
+  test('ATT-1.15: child then parent answers reach the same cascaded workphase', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Cascade Answer Order Forward Project');
+    const [w1, w2] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: w1.id });
+    const c = await seedItem(request, { title: 'C', parentId: p.id });
+    const s = await seedItem(request, { title: 'S', parentId: p.id });
+    const g = await seedItem(request, { title: 'G', parentId: c.id });
+    expect(c.position).toBeLessThan(s.position!);
+    expect([p, c, s, g].map(item => item.workphaseId)).toEqual([w1.id, w1.id, w1.id, w1.id]);
+    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await projectSidebar.openBoard(project.name);
+    const first = column(page, 'Todo');
+    const second = column(page, 'In Progress');
+    await expect(article(first, 'P')).toBeVisible();
+    await setSectionExpanded(itemRow(page, p.id), true);
+
+    const older = await holdNextWrite(page, { method: 'PATCH', url: '**/api/items/*/move', outcome: 'succeed' });
+    const from = await pickUp(page, itemRow(page, c.id).getByRole('button', { name: 'C' }));
+    let point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
+    await hoverTo(page, point);
+    point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
+    await hoverTo(page, point);
+    await awaitProjection(page, '1:0:true');
+    await release(page);
+    expect((await older.arrived()).request.url).toContain(`/api/items/${c.id}/move`);
+
+    const newer = await holdNextWrite(page, { method: 'PATCH', url: '**/api/items/*/move', outcome: 'succeed' });
+    await pickUp(page, article(first, 'P').getByText('P', { exact: true }));
+    await hoverTo(page, await gapBetween(first, second));
+    await awaitPoppedOut(page, tuning);
+    await hoverTo(page, await center(dragRegion(second)));
+    await release(page);
+    expect((await newer.arrived()).request.url).toContain(`/api/items/${p.id}/move`);
+    const olderAnswered = successfulWrite(page, 'PATCH', `/api/items/${c.id}/move`);
+    older.release();
+    await olderAnswered;
+    const newerAnswered = successfulWrite(page, 'PATCH', `/api/items/${p.id}/move`);
+    newer.release();
+    await newerAnswered;
+    await expect(article(second, 'P')).toBeVisible();
+    await expect(article(second, 'P').getByText('C', { exact: true })).toBeVisible();
+    await expect(article(second, 'P').getByText('G', { exact: true })).toBeVisible();
+    for (const item of [p, c, s, g]) {
+      await expect.poll(async () => (await fetchItem(request, item.id)).workphaseId).toBe(w2.id);
+    }
+    await older.dispose();
+    await newer.dispose();
   });
 
   test('ATT-1.1, ATT-1.9: shows attached children nested under the parent card, and the toggle collapses them', async ({

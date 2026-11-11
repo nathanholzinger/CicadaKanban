@@ -260,10 +260,12 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   }
 
   if (!board) {
+    // This state draws no toolbar, so a failed switch shows nothing of which board is selected: the id is
+    // here for a test to read (absent when the workflow has no board to select).
     return (
       <>
         {cue}
-        <div className="flex h-64 items-center justify-center">
+        <div className="flex h-64 items-center justify-center" data-selected-board-id={activeBoardId ?? undefined}>
           <p className="text-zinc-400">No board found for this workflow</p>
         </div>
       </>

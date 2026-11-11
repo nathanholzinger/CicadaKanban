@@ -30,8 +30,8 @@ export function itemPanel(page: Page): Locator {
   return page.getByRole('complementary', { name: 'Item details', exact: true });
 }
 
-// Every Card/Stub row's own identifying attribute, set on every row but the
-// carried overlay copy by `dragChrome.tsx::useItemRow`. `scope` is the whole page, or a
+// The live sortable Card and Stub rows' identifying attribute. It excludes the
+// carried overlay copy and a Card's static Stub rows. `scope` is the whole page, or a
 // `Locator` such as the hierarchy modal, to find the row only there.
 export function itemRow(scope: Page | Locator, id: string): Locator {
   return scope.locator(`[data-item-id="${id}"]`);

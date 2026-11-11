@@ -3,7 +3,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { dragOverlay } from '../helpers/boardLocators';
-import { cancel, hoverTo, paintedBoxOf, pickUp, release } from '../helpers/dragGesture';
+import { cancel, hoverTo, moveOnce, paintedBoxOf, pickUp, release } from '../helpers/dragGesture';
 import { aim, aimAtOwnRow, ghostSlot } from '../helpers/projectTreeDrag';
 import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
@@ -86,7 +86,7 @@ test('TREE-1.1: a release with no movement after the last row was crossed saves 
   // One movement, the last, takes the copy past the point where B is the nearest row. dnd-kit names the
   // new row to the sidebar after that move, so there is no further movement to catch up with.
   const from = await pickUp(page, projectSidebar.dragHandle('A'));
-  await page.mouse.move(from.x, from.y + pitch * 0.75);
+  await moveOnce(page, { x: from.x, y: from.y + pitch * 0.75 });
   await expect.poll(() => ghostSlot(projectSidebar, ['B', 'C'])).toEqual(['B', 'C']);
 
   await release(page);

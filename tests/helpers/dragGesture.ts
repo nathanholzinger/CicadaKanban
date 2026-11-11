@@ -72,6 +72,11 @@ export async function hoverTo(page: Page, target: Point) {
   await page.mouse.move(target.x, target.y, { steps: 2 }); // let the re-bucket preview/reflow settle
 }
 
+// One pointer sample at the target, for a drop immediately after the last crossed row.
+export async function moveOnce(page: Page, target: Point) {
+  await page.mouse.move(target.x, target.y, { steps: 1 });
+}
+
 // Drop wherever the pointer is, and wait for dnd-kit to be idle again: a
 // pointerdown that lands while its drop animation is still winding down can
 // fail to activate the next drag, and a spec that then hovers and releases

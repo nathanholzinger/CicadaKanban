@@ -1,4 +1,4 @@
-import { settledWrites, watchWrites } from '../helpers/requestHarness';
+import { holdNextRead, settledWrites, watchWrites } from '../helpers/requestHarness';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
@@ -126,4 +126,50 @@ test('ATT-10.7: past the item cap, in data the API did not create, the control b
   // The reason names the item cap, not the item's depth or the project cap.
   await expect(add).toHaveAttribute('title', reasonAt(3));
   await expect(sheet.getByRole('heading', { name: deepest.title, exact: true })).toBeVisible();
+});
+
+test('ATT-10.9: a late shallow depth read cannot enable child creation after reparenting back to the cap', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const { project, deepest: x, cap } = await seedChain(request, 'Reversed Depth Reads Project', cap => cap);
+  expect(cap).toBeGreaterThanOrEqual(3);
+  const initialX = await fetchItem(request, x.id);
+  const t = await fetchItem(request, x.parentId!);
+  const s = await fetchItem(request, t.parentId!);
+  expect([initialX.depth + 1, t.depth + 1, s.depth + 1]).toEqual([cap, cap - 1, cap - 2]);
+  await projectSidebar.openBoard(project.name);
+  const { sheet, add } = await openSheetOf(page, x.title);
+  await expect(add).toBeDisabled();
+  await expect(add).toHaveAttribute('title', reasonAt(cap));
+
+  const shallow = await holdNextRead(page, `**/api/items/${x.id}`);
+  await sheet.getByLabel('Parent item').selectOption(s.id);
+  await shallow.arrived();
+  expect((await fetchItem(request, x.id)).parentId).toBe(s.id);
+  const currentRead = page.waitForResponse(
+    response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/items/${x.id}`,
+  );
+  await sheet.getByLabel('Parent item').selectOption(t.id);
+  expect((await currentRead).ok()).toBe(true);
+  await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(t.id);
+  await expect(add).toBeDisabled();
+  await expect(add).toHaveAttribute('title', reasonAt(cap));
+
+  const staleRead = page.waitForResponse(
+    response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/items/${x.id}`,
+  );
+  shallow.release();
+  expect((await staleRead).ok()).toBe(true);
+  await expect(add).toBeDisabled();
+  await expect(add).toHaveAttribute('title', reasonAt(cap));
+  const writes = watchWrites(page);
+  await add.hover();
+  await add.click({ force: true });
+  await page.keyboard.press('Enter');
+  await expect(sheet.getByPlaceholder('Child title...')).toHaveCount(0);
+  expect(await settledWrites(page, writes)).toEqual([]);
+  expect((await fetchItem(request, x.id)).children).toHaveLength(0);
+  await shallow.dispose();
 });

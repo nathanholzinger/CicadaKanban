@@ -15,16 +15,18 @@ const RETRIES = 10;
 const RETRY_DELAY_MS = 200;
 
 async function remove(filePath: string): Promise<void> {
+  let lastError: unknown;
   for (let attempt = 0; attempt < RETRIES; attempt++) {
     try {
       fs.rmSync(filePath, { force: true });
       return;
-    } catch {
+    } catch (error) {
+      lastError = error;
       // A just-stopped server can take a moment to let go of the file.
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
     }
   }
-  console.warn(`Could not remove ${filePath}`);
+  console.warn(`Could not remove ${filePath}:`, lastError);
 }
 
 export default class RemoveDatabasesReporter implements Reporter {
