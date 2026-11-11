@@ -107,9 +107,15 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   sidebar's project writes by way of
   `client/src/components/sidebar/useProjectCollection.ts::foldWrite`. Answers for
   different rows can land out of order, so the board and the sidebar both number each
-  write as it's sent and ask the same file's `positionRecord` which rows a later-sent
-  write has already set. That's `applyWriteResponse`'s `newer`, the rows an older answer
-  leaves as they are.
+  write and ask the same file's `positionRecord` which rows a later-sent write has
+  already set. That's `applyWriteResponse`'s `newer`, the rows an older answer leaves as
+  they are. A write is numbered as it's sent, except the Sheet's: the board numbers its
+  answers as they land, for the reason at
+  `client/src/components/workflow/useItemManagement.ts::foldSheetAnswer`. The board
+  holds an item's workphase to the same rule, with the same file's `setLater` and
+  `recordSet` over its own record (`itemWriteReconciliation.ts`'s `workphaseSetBy`): an
+  older answer leaves the workphase of a row a later-sent write set, the written row or
+  one the cascade moved, and cascades nothing from it.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **A reference in a request is checked in one order: present, a string, names a row**
