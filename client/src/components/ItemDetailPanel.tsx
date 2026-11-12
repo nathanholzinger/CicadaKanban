@@ -18,6 +18,7 @@ import { ParentSection } from './item-detail/ParentSection';
 import { ChildrenSection } from './item-detail/ChildrenSection';
 import { ActivityLog } from './item-detail/ActivityLog';
 import { XIcon } from './icons';
+import { useEscapeKey } from './useEscapeKey';
 
 // The Sheet draws above every modal (`ModalShell` is z-50), so one opened from the hierarchy modal
 // sits over it, its backdrop included.
@@ -146,29 +147,24 @@ function ItemDetailPanelContent({
     if (editingDesc) descTextareaRef.current?.focus();
   }, [editingDesc]);
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        if (editingTitle) {
-          setEditingTitle(false);
-          setTitleDraft(detail?.title ?? '');
-          return;
-        }
-        if (editingDesc) {
-          setEditingDesc(false);
-          setDescDraft(detail?.description ?? '');
-          return;
-        }
-        if (confirmDelete) {
-          setConfirmDelete(false);
-          return;
-        }
-        onClose();
-      }
+  // Escape backs out of the innermost thing open: an edit, the delete confirmation, then the Sheet.
+  useEscapeKey(() => {
+    if (editingTitle) {
+      setEditingTitle(false);
+      setTitleDraft(detail?.title ?? '');
+      return;
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [editingTitle, editingDesc, confirmDelete, detail, onClose]);
+    if (editingDesc) {
+      setEditingDesc(false);
+      setDescDraft(detail?.description ?? '');
+      return;
+    }
+    if (confirmDelete) {
+      setConfirmDelete(false);
+      return;
+    }
+    onClose();
+  });
 
   async function saveTitle() {
     if (!detail || titleDraft.trim() === detail.title) {

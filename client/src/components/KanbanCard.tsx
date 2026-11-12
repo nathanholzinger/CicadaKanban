@@ -2,7 +2,7 @@
 // the DragOverlay copy too) as shortCard for the drag's duration. While
 // locked at a Card's Descendants layer, the DragOverlay copy is a Stub row
 // instead (`overlayForm`/`overlayWidthPx`, from
-// `placement.ts::overlayFormFor`, `dragOverlayGeometry.ts::overlayWidthFor`
+// `placement.ts::overlayFormFor`, `dragOverlayGeometry.ts::overlayShapeFor`
 // via `useBoardDnd.ts`) — rendered by *this
 // same component instance*, not a separate one `BoardView.tsx` swaps in:
 // dnd-kit measures the DragOverlay's child once, on its own mount, and
@@ -119,7 +119,7 @@ interface KanbanCardProps {
   isOverlay?: boolean;
   /** isOverlay only — which drag copy to draw (placement.ts::overlayFormFor). Ignored (shortCard) when isOverlay is false. */
   overlayForm?: OverlayForm;
-  /** isOverlay + overlayForm 'stub' only — a row's width in the context Card's section (dragOverlayGeometry.ts::overlayWidthFor). */
+  /** isOverlay only — the copy's width where it isn't the picked-up row's: a row's in the context Card's section for the Stub form, a Card's for a Stub's drag drawn as a shortCard (dragOverlayGeometry.ts::overlayShapeFor). */
   overlayWidthPx?: number | null;
   /** isOverlay + overlayForm 'stub' only — the Descendants layer's live projection (null elsewhere), which indents the carried Stub to the depth it would land at. */
   overlayProjection?: DescendantsProjection | null;
@@ -207,7 +207,7 @@ export default function KanbanCard({
     // Card that holds the drag doesn't slide.
     ...(lockedHere ? { transition: 'none' } : {}),
     ...(isGhostLike && !overlayIsStub ? { height: SHORT_CARD_HEIGHT_PX } : {}),
-    ...(overlayIsStub ? { width: overlayWidthPx ?? undefined } : {}),
+    ...(isOverlay && overlayWidthPx !== null ? { width: overlayWidthPx } : {}),
   };
 
   let avatarBadgeClass = 'bg-cyan-500/20 text-cyan-300';

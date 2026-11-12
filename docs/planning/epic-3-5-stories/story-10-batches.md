@@ -4,7 +4,7 @@
 
 [Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D13), Phases 1–3 and Phase 5. This doc holds the part that grows while the work runs: each Open case's batch and how it closes, each skip's fate, the checkpoint after 4a, and each batch's results. A change to a decision is amended in the plan. A change to a case's route is amended here.
 
-**Execution boundary for 4c–4h:** Nathan opens a QA Engineer session for each stop and names its file list. The QA Engineer owns automation, its Results and the Review log; it may spawn the Planner desk, Test Reviewer and end-of-batch Reconciler. The Planner owns case decisions, remains code-blind and spawns none of them. Hooks and test routes are bundled into one separate Coder session per stop, with Nathan's check-in at its return; a behavior change still gets its own handoff. The QA Engineer shares Vitest work under D12's limits and never edits app source. D7/D12 in the main plan govern this boundary. D2's twenty-repeat bar, case assignments and batch order are unchanged. Once the parallel runner lands, D2's repeats and each batch's final full run use its adopted worker count (D2, amended 2026-11-09).
+**Execution boundary for 4c–4h:** Nathan opens a QA Engineer session for each stop and names its file list. The QA Engineer owns automation, its Results and the Review log; it may spawn the Planner desk, Test Reviewer and end-of-batch Reconciler. The Planner owns case decisions, remains code-blind and spawns none of them. Hooks and test routes are bundled into one separate Coder session per stop, with Nathan's check-in at its return; a behavior change still gets its own handoff. The QA Engineer shares Vitest work under D12's limits and never edits app source. D7/D12 in the main plan govern this boundary. Case assignments and batch order are unchanged. D2's bar is ten repeats from 4c on (D2, amended 2026-11-11); 4a and 4b ran twenty. Once the parallel runner lands, D2's repeats and each batch's final full run use its adopted worker count (D2, amended 2026-11-09).
 
 ## How to read it
 
@@ -34,17 +34,19 @@ The QA Engineer establishes what the batch must prove before broad test authorin
 - list the assigned case IDs and the exact missing clauses from the current cases and Reconciler report;
 - describe the observable proof from the case/wiki, including requests, saved results, state and geometry where required;
 - list the scenario matrix and expected expanded runnable-variant count, distinguishing catalog cases, authored tests and parameterized variants;
+- name what proves each clause: a surface gesture, a surface test with no gesture, an internal test or a check by hand. Flag each clause that shows a cost signal, with the three questions answered and an option recommended (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves"; the QA Engineer persona's "Weighing a Surface Test");
+- for a case whose matrix would expand past six gesture variants, propose a split: the gestures that stay at the surface, and the variants an internal test would carry. Six is a starting number, and Nathan may keep the full matrix;
 - identify helper/fixture needs, representative observations to check, known Coder dependencies and questions for the Planner or PO.
 
 Use the read-only Planner desk for reading questions, asked from the case rather than the app. Record the questions and replies word for word in the Review log, with the quoted Then. Continue the same desk agent for a follow-up within the task. Rewording, a Split, a Pending PO question or a Manual call requires a Planner session Nathan opens; a rule gap goes to the PO through Open questions.
 
-**Deliverable:** a proof/variant plan and Nathan's explicit implementation file list for Stop 2. A new helper or observation is checked on a representative scenario before its matrix is expanded. New case scope or a rule ambiguity goes to its owner rather than silently joining the batch. Run the gate before the check-in.
+**Deliverable:** a proof/variant plan, Nathan's decision on each flagged clause and proposed split, and his explicit implementation file list for Stop 2. A new helper or observation is checked on a representative scenario before its matrix is expanded. New case scope or a rule ambiguity goes to its owner rather than silently joining the batch. Run the gate before the check-in.
 
 ### Stop 2 — Tests and discovery
 
-The QA Engineer writes or extends tests and support against a named app tree. It works one matrix family at a time, rewrites the current Results packet after each family, and runs focused checks to establish the scenarios. Every test asserts its Given before its When, and each observation helper's header says whether it reads the screen or an app-provided attribute. Each added/changed test passes alone and in its file's full run.
+The QA Engineer writes or extends tests and support against a named app tree. It works one matrix family at a time, rewrites the current Results packet after each family, and runs focused checks to establish the scenarios. Every test asserts its Given before its When, and each observation helper's header says whether it reads the screen or an app-provided attribute. Each added/changed test passes alone and in its file's full run. A second correction to one test's aim or timing stops work on that test and reopens its layer question in Results; a third waits for Nathan (the persona's "Weighing a Surface Test").
 
-Before the check-in, it spawns the Test Reviewer for its tests and the Coder's listed ID-bearing Vitest assertion/setup changes. The brief names the cases, tests and changed files since the last pass; every correction after a red run is shown before-and-after, without justification. The reviewer widens to every ID in changed files. Record every verdict word for word in the Review log. Test gaps go to the QA Engineer, case gaps to a Planner session and rule gaps to the PO. A Reconciler run is not part of this stop.
+Before the check-in, it spawns the Test Reviewer for its tests and the Coder's listed ID-bearing Vitest assertion/setup changes. The brief names the cases, tests and changed files since the last pass; every correction after a red run is shown before-and-after, without justification. The reviewer widens to every ID in changed files. Record every verdict word for word in the Review log. Test gaps go to the QA Engineer, case gaps to a Planner session and rule gaps to the PO. The reviewer's cost notes go to Nathan in Results, with the QA Engineer's recommendation, and change no test until he decides. A Reconciler run is not part of this stop.
 
 **Deliverable:** tests/helpers, focused results, actual variant count, reviewer verdicts and a consolidated defect/hook/question handoff. Each failing case states its expected wiki-backed clause, actual surface result, reproducer and saved evidence; it may name where diagnosis looked, never prescribe the fix. Preserve failing assertions; never edit a test to make it pass. No app source changes here. A new Vitest test is only for a held-off case after the reviewer's internal-coverage verdict and Nathan's approval, from the Then. The full D2 sweep waits for Stop 4. Run the gate, and `/code-review` at `medium` on changed shared test infrastructure, recording findings and actions in Results; correctness fixes stay in the batch, cleanup suggestions are notes.
 
@@ -60,7 +62,7 @@ Nathan routes one separate Coder session per stop, carrying that stop's hooks an
 
 The QA Engineer freezes the accepted tree ID, exact runnable selection and expanded variant count. Use the temporary-index method in `.claude/guides/testing-strategy.md`, "A snapshot of the tree": untracked files count and the real index stays untouched. Tree IDs replace per-file fingerprints. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze, checks title-only diffs and runs `check:docs`.
 
-- apply D2's twenty repeats to every added/changed drag test, with retries and every failed attempt disclosed;
+- apply D2's ten repeats to every added/changed drag test, with retries and every failed attempt disclosed;
 - run the final full E2E suite and root gate sequentially after the repeat requirement is met;
 - run long commands in the background with a named JSON report per repeat batch as the ledger; recover completed records before restarting anything after an interruption;
 - retain exact selections, per-variant results, tree IDs, command exits and interruption/continuation accounting so another session can inspect completion without reconstructing the chat;
@@ -161,8 +163,8 @@ A zero in that historical Coder column does not mean a batch will find no produc
 | Split  | DRAG-7.12, its skip reworked to the tier attributes     |
 
 - **DRAG-7.28:** add its ID to DRAG-7.9's first-child test, which saves `R2` before `R1a` (the report's Proposed Stamps).
-- **DRAG-7.10 (8.13 audit #8):** the Coder moves the two excursions' reset into a `popSession.test.ts` clock test. The spec keeps reachability and the write, with thresholds from `seedDragTuning`.
-- **DRAG-7.15 and 7.27's aims:** see the roadmap entry's item 10, "From Story 8.3". The gap below `R`'s overflow row is drawn for an aim in the overflow row's band. The one-step spec aims at `R`'s row center and at the overflow row.
+- **DRAG-7.10 (8.13 audit #8):** the Coder moves the two excursions' reset into a `popSession.test.ts` clock test. The Planner's 2026-11-12 answer below adds the reset to DRAG-7.10's Then, so the clock test carries DRAG-7.10. The spec keeps reachability and the write, with thresholds from `seedDragTuning`.
+- **DRAG-7.15 and 7.27's aims:** see the roadmap entry's item 10, "From Story 8.3". The gap below `R`'s overflow row is drawn for an aim in the overflow row's band. The one-step spec aims at `R`'s row center. The overflow-row top-quarter aim's "no hold runs" expectation is dropped by the Planner's 2026-11-12 answer below: the hold runs when the ghost is beside the overflow row at its level.
 - **DRAG-7.32** gets its screen-place check when it's reworked (Inbound deferrals).
 - **DRAG-3.25** is here for the modal's and the backdrop's rows. Its heights are measured with `boxOf`.
 - **#10, the Sheet tests' own spec,** is optional. This batch decides.
@@ -313,18 +315,42 @@ The decision is recorded here, and a change to a decision is amended in the plan
 
 ## Results
 
-**Current packet: between 4b and 4c.** Batch 4b closed and is committed in `857720b9`; its commit tree is `631241f916defe6e8f696dd4c3537fb1a4f62f8f`. That identifies the committed close, not a newly frozen certification run. The Testing Roles Refactor's batch 4 updates this workflow before 4c. Historical packets remain in Git and the named reports; each future stop replaces this packet.
+**Current packet: batch 4c, Stop 3 returned, ready for Stop 4 (2026-11-12).** All 15 cases have tests, all green, and the Test Reviewer's third pass leaves no gap. It replaces the Stop 2 packet; Git holds that one. Plan: [story-10-batch-4c-proof-plan.md](story-10-batch-4c-proof-plan.md).
 
-- **Completed cases:** all 26 in 4b are Automated: four Extend, twenty New and two Rework. The [confirming report](../../audits/test-reconciliation-story-10-batch-4b.md) holds final whole-Then mappings and associated DRAG-3.3 pointer maintenance. No new Manual or internal-mapping approval is pending from that close.
-- **Accepted execution:** 26 authored/changed expressions, 70 scoped variants, 1,400 distinct repeat passes with zero failures/retries/scoped skips. The five-file union includes unchanged DRAG-1.14 and has 71 variants. Final E2E: 394 passed / 21 existing skips / zero failed. Root gate: 444 server / 1,040 client / 258 script tests; docs 433 / zero hits. Measured command time: 122.96 minutes. The background run completed during a delivery interruption; recovery repeated no command. These are 4b's results, not a new run under the refactored roles.
-- **Evidence:** `tests/output/batch4b-stop4-completion-verified.json`, `batch4b-stop4-ledger.json`, `batch4b-stop4-freeze.json`, the 26 `batch4b-stop4-b*.json` cohorts (B14 retired), `batch4b-stop4-final-e2e.json` and `batch4b-stop4-root-check.log`. The final report and the [proof plan](story-10-batch-4b-proof-plan.md) retain the case/variant mapping. Earlier defects and Coder returns are in the 4b proposing, coder-return, post-coder, append-return and null-return reports under `docs/audits/`; no old report is rewritten.
-- **Inventory at the refactor checkpoint:** 484 catalog cases: 378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO. Of 151 active Story 10 assignments, 60 were closed and 91 remained Open. The later runner-adoption decision temporarily suspends DRAG-3.16's automated proof and routes its two skipped variants to 4h; these counts are the pre-deferral snapshot, not a freshly reconciled catalog. No case/status is edited in this QA session.
-- **Next batch's state:** no 4c work is authored or reviewed under the new workflow. Its assigned IDs are DRAG-7.28, DRAG-1.14, DRAG-7.13, DRAG-7.31, DRAG-3.25, DRAG-7.6, DRAG-7.9, DRAG-7.10, DRAG-7.14, DRAG-7.15, DRAG-7.17, DRAG-7.18, DRAG-7.27, DRAG-7.32 and DRAG-7.12. Existing tests/skips and missing clauses remain the inventory's starting inputs; no 4c variant count or frozen tree is claimed.
-- **Runner adoption and follow-ups:** Nathan adopts five workers by default after the extended worker-count trial: five's median is 3m 25.1s, 38.2s faster than four, with no newly observed failure identity or mode. Re-evaluate with the smoke suite, when E2E runs should be less frequent relative to other story work and capacity for simultaneous work may matter more; revisit sooner if failures or contention change. DRAG-7.10 stays active and is fixed in 4c; both DRAG-3.16 variants are skipped until 4h alongside the six legacy skips. D2's twenty-repeat bar remains unchanged and runs at five workers. This does not start 4c or certify the deferred cases.
-- **Open questions:** conditional DRAG-3.12 remains separately recorded and nonblocking, with real-board reachability unproved; it triggers no new reconciliation/Coder loop here. The runner's default/failure-routing decision is settled. The catalog report and remaining parallel-runner documentation handoff must land before 4c starts. The catalog owner must reflect DRAG-3.16's temporary proof gap. Other role-addressed questions remain below.
-- **Files in scope:** none authorized for 4c yet. Nathan names its Stop 1 file list when opening the QA Engineer session. No app/test/catalog-case edit is part of this refactor amendment.
-- **Last reviewer tree:** none under the new roles. The completed 4b reconciliation is prior evidence, not a Test Reviewer pass invented after the fact. Declined mappings are carried into the Review log below.
-- **Next owner/action and command:** Architect completes the parallel story's batch 4 documentation/default handoff; the catalog-report prerequisite and DRAG-3.16 catalog handoff remain. After the prerequisites land, Nathan opens the QA Engineer's 4c Stop 1 session, including the DRAG-7.10 runner-trial evidence above. Its first inventory command is `npm run report:catalog`, which the prerequisite story adds; it is not run or assumed present here. No 4c tests, D2 repeats or reconciliation have run.
+- **Trees:** baseline `16fe9e07637a66f797a82fb3c2d5c8b01c9e5aed` (HEAD's). End of Stop 2: `5b0f5c79bc84b1098bd5b2b94468eead5b20972f`. The Coder's return as found: `bf09a5a757da1b2622b227151cada89f1780e9c5`. Now, and at the reviewer's third pass: `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`. These are the QA Engineer's snapshots. This doc holds no Coder return with its own start and end trees.
+- **The Coder's return, as seen in the tree** (`git diff 5b0f5c79 bf09a5a7`): app files `ItemDetailPanel.tsx`, `KanbanCard.tsx`, `ModalShell.tsx`, `dragChrome.tsx`, `dragOverlayGeometry.ts`, `dragStructure.ts`, `useBoardDnd.ts`, new `useEscapeKey.ts`, and `workflow/AGENTS.md`. Vitest: `ItemDetailPanel.test.tsx`, `KanbanCard.test.tsx`, new `ModalShell.test.tsx`, `dragChrome.test.tsx`, `dragOverlayGeometry.test.ts`, `dragStructure.test.ts`, `popSession.test.ts`. No test file of this batch changed.
+  - **The original failing surface tests, rerun unchanged first:** `batch4c-coder-return-full.json`, the five files at five workers on `bf09a5a7`, **134 passed, 0 failed**. That includes the five DRAG-7.10 tests that were red at "bounded by `K`".
+- **Each case's state:**
+
+  | Case | State |
+  | --- | --- |
+  | DRAG-7.6, 7.9, 7.10, 7.12, 7.13, 7.14, 7.15, 7.17, 7.18, 7.27, 7.28, 7.31, 7.32, DRAG-1.14, DRAG-3.25 | Authored, green. The reviewer's third pass: Proves the case (DRAG-7.14 with the Coder's clock test, in the approved category) |
+
+  None held off, none unauthored. The two Open cases outside the batch that the reviewer widened to, DRAG-2.22 and DRAG-6.15, keep their gaps.
+- **Changes after the Coder's return** (Nathan's decisions, 2026-11-12):
+  - the DRAG-7.10 matrix cut from twelve variants to eight: every arrival leaves on the clock, and P's own Stub also on one sample of the distance;
+  - `cueOn` in `drag-7-modal-hold.spec.ts` reads the new `data-drag-cue`;
+  - `tests/helpers/dragGesture.ts::awaitProjection`'s header: the gap counts every row of the Card's hierarchy, those behind an overflow row included.
+
+  `batch4c-prefreeze-full.json`, the five files at five workers on `77c65790`: **130 passed, 0 failed**, 149 s.
+- **Counts:** the five files hold 130 runnable tests (hierarchy-modal 43, modal-hold 31, overflow-row 17, stub-detach 29, stub-row-height 10). 69 are added or changed against the baseline (28, 24, 5, 2 and 10), by a diff of each test's own source block. The proof plan expected 61.
+- **Reviewer passes:** three, each word for word in the Review log. The third was on `77c65790`, and nothing has changed since. Its record: it read part of an app file's body (`dragOverlayGeometry.ts`, lines 33 to 60) past the header it meant to read, and says no verdict rests on it.
+- **Cost notes:** decided. The reviewer repeats notes 2 and 3 (DRAG-7.17's gap-above test, DRAG-7.18's zoom hold) as open; Nathan decided both stay as they are.
+- **`/code-review` at `medium`,** Stop 2, on `tests/helpers/overflowTree.ts` and `boardDragSurface.ts`: seven findings. Fixed, three: `holdFreeAt` hard-coded Card `P`'s title; two comments that said the wrong thing. Added for a fourth: `seedTree` fails if the section's levels aren't the three its depths assume. Noted, not acted on: the cast on `x`, the nine-point grid in `pointOutsideModal`, an import cycle between the two helpers. One, a mix of coordinate spaces, judged not a real problem. Since then the one shared-infrastructure change is `dragGesture.ts`'s header comment, which `/code-review` doesn't need.
+- **Checks:** root gate `npm run check` on `77c65790`: exit 0, 444 server, 1,105 client and 327 script tests, `check:docs` 454 files and 0 hits. Log: `tests/output/batch4c-postcoder-gate.log`.
+- **Living-docs handoff** (for the story plan's list; that file isn't on this stop's list):
+  - the skipped test "DRAG-7.2: R's only attached child dragged…" is deleted; `descendantsSection.test.ts` holds that rule;
+  - DRAG-7.11 is dropped from the old pop-out test's title, and DRAG-7.10 from the old DRAG-7.18 test's, as those tests were replaced;
+  - four DRAG-7.10 matrix variants are deleted, by Nathan's decision on the cost note: the click-opened and hold-free arrivals on one sample of the distance, each to the column and to the expanded sub-row. Two of them carried DRAG-1.14;
+  - DRAG-1.14 is stamped on the two B25 tests in `drag-5-stub-detach.spec.ts`, title only;
+  - for the Reconciler: the reviewer's two DRAG-2.22 mappings onto DRAG-7.27's and DRAG-7.13's tests (DRAG-2.22 isn't a 4c case, so they aren't stamped); and the Coder's two-excursion clock test in `popSession.test.ts`, which takes an ID once a Planner session answers Stop 1 question 1.
+- **Open questions:** the six Stop 1 questions and three Stop 2 questions for a Planner session. None blocks Stop 4.
+- **Files in scope:** Stop 2's list (Nathan, 2026-11-11), with `tests/helpers/dragGesture.ts` added for its header (Nathan, 2026-11-12).
+- **Stop 4, the frozen selection** (next session): the five files whole, 130 tests, ten repeats at five workers (D2), 1,300 passes, about 25 minutes; then the full E2E suite and the root gate, sequentially. Freeze on the tree at the session's start. Its tests and app source should be as on `77c65790`: since then only this doc has changed (`c21c95dac4338a2d9afa1da72d84f4b75af99dbb` with this packet). Repeats: `npm run test:e2e -- tests/ui/drag-7-hierarchy-modal.spec.ts tests/ui/drag-7-modal-hold.spec.ts tests/ui/drag-7-overflow-row.spec.ts tests/ui/drag-5-stub-detach.spec.ts tests/ui/drag-stub-row-height.spec.ts --repeat-each=10 --retries=0`, from PowerShell, in the background, with `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a named report.
+- **Next owner and action:** Nathan, the check-in after Stop 3; then a QA Engineer session for Stop 4.
+- **JSON report paths** (`tests/output/`): traces `batch4c-trace-alone.json`, `batch4c-trace-contention.json`, `batch4c-trace-t3-diag.json`; five-file runs `batch4c-files-full.json`, `-full2` (interrupted by a machine suspend), `-full3`, `-full4`, `-full5` (each 129 passed, 5 failed at "bounded by `K`"), `batch4c-coder-return-full.json`, `batch4c-prefreeze-full.json`; per family `batch4c-c01-focus.json`, `batch4c-c02-all1.json`, `batch4c-c02-free.json`, `batch4c-c02-rest.json`, `batch4c-c02-flaky.json`, `batch4c-c02-rep1.json`, `batch4c-c03.json`, `batch4c-c04.json`, `batch4c-c05c06.json`, `batch4c-c05b.json`, `batch4c-c07.json`, `batch4c-c08c09c14.json`, `batch4c-c08-rework.json`, `batch4c-c10.json`, `batch4c-c10d.json`, `batch4c-c11.json`, `batch4c-c11c12.json`, `batch4c-c13.json`, `batch4c-c728.json`, `batch4c-pass2-fixes.json`.
+- **Last reviewer tree:** `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`.
+- **Not run:** the trace's early-Escape sequence on the Coder's return; D2's repeats, the full E2E suite and the Reconciler (Stops 4 and 5).
 
 ## Review log
 
@@ -348,9 +374,1034 @@ Nathan approved these on 2026-11-06.
 
 D13's shared cases are `Manual` by the Planner's judgment (README), since whether a look is right can't be reduced to precise assertions. Nathan approved D13 itself.
 
-No desk answer or Test Reviewer verdict has been issued under the new workflow yet.
+### Batch 4c, Stop 1 — the desk's questions and replies (2026-11-11)
+
+Asked by the QA Engineer, from the cases, one desk agent for all fourteen. The baseline tree was `16fe9e07637a66f797a82fb3c2d5c8b01c9e5aed`; the catalog was unchanged since. The harness indented the reply; that indent is the only thing removed. The Then quotes inside it are the desk's, as it read each case. The proof plan routes each verdict ([story-10-batch-4c-proof-plan.md](story-10-batch-4c-proof-plan.md)).
+
+**The questions, as sent:**
+
+```text
+QA Engineer's reading questions for Story 10 batch 4c (DRAG-7 and two neighbours). Answer in your fixed form: for each case quote its Then whole, then one line per row in exactly one of the four forms. Rows are outcomes I mean to assert (or to leave unasserted) in the stated variant. Cases are in docs/test-plans/board-drag-interaction/ (drag-7-overflow-and-hierarchy-modal.md, drag-1-contexts-and-popping.md, drag-3-card-column-bands.md). Notation: P is the Card, K is P's column or expanded sub-row, R/R1/R1a/R2/Q/T/B as the DRAG-7 file's Terms define them; X is any carried item.
+
+DRAG-7.10
+ r1. A modal opened by a hold (not a click) while a Free Card, zoomed into P from outside, is carried: leaving the modal pops once to K, and a release after Card Q leaves that Card Free with its original parentId, request {anchorId: Q, side: after}.
+ r2. The cursor rests inside P's own box but outside the modal's box: one pop takes the drag to K (not to P's section), no second exit needed.
+ r3. In an expanded sub-row K, after the one pop, the drag is locked in K; resting the cursor in a sibling sub-row, or in Board, changes nothing until another pop out of K fires.
+ r4. With popDelayMs never satisfied and popDistancePx > 0, a single pointer sample at least popDistancePx outside the modal's box (inside K) produces the same single pop.
+ r5. Both the in-list ghost and the carried copy are shortCard after the pop.
+ r6. Two excursions out of the modal, each too short to satisfy popDelayMs but together longer than it, with a return between them: the modal stays open (the clock restarting on return). Is this reset stated by DRAG-7.10's Then, or is it only DRAG-1.30's?
+ r7. The same excursion test but for distance: moving outside the modal's box by less than popDistancePx and coming back leaves the modal open.
+
+DRAG-1.14
+ r1. While the modal holds the Descendants layer, one pointer sample at least popDistancePx outside the modal's box pops the item to K at once (before popDelayMs).
+ r2. In an expanded sub-row K (Free Card locked in it), one pointer sample at least popDistancePx outside the sub-row's box pops it to Board at once.
+ r3. With popDistancePx at 0 and the modal open, the cursor outside the modal's box for less than popDelayMs pops nothing.
+
+DRAG-7.12
+ r1. In a modal opened by a hold during the drag, R and R1 are Full, R1a is Mid, Y is Low.
+ r2. R, which is also drawn in the section before the modal opens, keeps the tier it had before the modal opened.
+ r3. R1, R1a and Y are not drawn before the modal opens, so their "drag-start classification" can only be asserted against the Then's stated Full/Mid/Low after it opens; nothing more is asserted about their tier before it.
+ r4. The section's rows still drawn under the backdrop carry no target tier while the modal is open.
+
+DRAG-7.14
+ r1. With the cursor leaving the whole Card's box (nothing pops) and the ghost still in its gap: any cue disappears at once, the modal does not open, and no dwell runs while the cursor stays outside the Card's box.
+ r2. When the cursor comes back inside the Card's box with the ghost unchanged, a fresh dwell starts.
+ r3. Moving into the Card's title or padding during the dwell: the dwell runs on and completes into the cue, and the cue completes into the modal opening, with the cursor still there.
+ r4. Same, but moved into the padding during the cue.
+ r5. After the modal opens from the padding, the ghost is still at R's first child.
+
+DRAG-7.15
+ r1. An item with a subtree, held from below and moved UP to the gap below R's overflow row, opens the modal with the item's spot under the cursor, and a release commits it last among R's children with its child still attached.
+ r2. The same for the gap above R's overflow row, held from below, with a subtree.
+ r3. The item's attached child is absent from the section and the modal for the whole drag, from pickup to release.
+ r4. After the release, the child is drawn directly under the item in the modal.
+ r5. The cursor reaching the aim in a single approach (one pointer sample, not a hover pass) at R's own row: the modal opens, and a release writes what the modal draws.
+ r6. The cursor reaching the overflow row's top quarter in a single approach: no modal hold runs, the ghost is after the overflow row, and a release writes the same as the modal-hold release at that gap.
+
+DRAG-7.17
+ r1. From the gap above R's overflow row, with a sibling of R before it carrying many attached children (so R's first-child spot lies far down the list), the modal's list is scrolled so the spot is under the cursor and a release commits the item first among R's attached children.
+
+DRAG-7.18
+ r1. The modal opens a second time after a pop out and a hold again; the case is also satisfied by asserting a third opening (two exits, two reopens)? I mean to assert only one reopen. Is one reopen enough for "as often as the drag needs", or does the Then require more?
+ r2. No request of any kind is sent between pickup and the final release, other than that final write.
+ r3. Re-entry into P's Descendants is by the full zoom-in hold with the side highlight naming P, for an item that was P's own Stub and, separately, for a Free Card that came into P from outside.
+
+DRAG-7.27
+ r1. With R carried, an unrelated overflow row (T given an attached child) stays drawn with its ordinary count.
+ r2. With R carried, the drop line is never on R's overflow row, and the gap after Q runs to T.
+ r3. With Q carried, R's row, R's overflow row, and T's row (T is also in Q's attached branch) are absent.
+ r4. With P carried and zoomed into another Card's section, no overflow row of P or of P's attached branch is drawn in that section.
+ r5. After R is released as B's next sibling at level 1, R.parentId = P after B, R1 and R2 remain R's attached children, R has no overflow row, and R1 and R2 show in the section at level 2.
+ r6. On cancel, the original section returns and R's overflow row reads "2 children".
+
+DRAG-7.31
+ r1. No request is sent at any point from pickup through the final release (including the pop out, the zoom back and the reopening), not only on the release itself.
+ r2. After the release the modal is still open and shows R2 in its original slot after R1a and before T at level L + 1.
+
+DRAG-7.32
+ r1. A click on the Sheet's backdrop at the screen point where the modal's own X button lies (under the backdrop) closes only the Sheet and does not activate the modal's X.
+ r2. The modal's box (its place on screen) is the same before the Sheet opens and after each of the three ways of closing the Sheet.
+ r3. The modal's list is scrolled (non-zero) before the Sheet opens, and its scroll offset is unchanged after each way of closing.
+ r4. After each of the three ways of closing, one further Escape closes the modal.
+
+DRAG-7.9
+ r1. After each of the four releases (first child, after R1a, own-gap no-write, over-cap no-write) R2 is attached with P's workphase, asserted on the saved item.
+ r2. "Throughout" also requires asserting R2's attached state during the drag, before release.
+ r3. The closing sentence ("The modal offers every placement the section does, and those among hidden rows that the section doesn't") needs its own assertion, apart from the four bullets.
+
+DRAG-7.6
+ r1. In a tree where P also has an attached Stub X after B (a Stub of P's outside the tree, per the Terms), the last gap is below X, and a release commits R1 last among P's attached children, after X.
+ r2. Released in the column before zooming back in, R1 becomes Free (isAttached 0) with parentId R, placed by the column's within-action with the request {anchorId, side} the ghost names.
+ r3. R1a is still R1's attached child after the release in P's section.
+
+DRAG-3.25
+ r1. Heights are compared with each other (all equal to one s) and not against a pixel value.
+ r2. The pill's box is no taller than the title's text line.
+ r3. A row with a long title has height s.
+ r4. The section's rows still drawn under the modal's backdrop have height s while the modal is open.
+ r5. The carried copy of a Stub with a branch has box height s, and its second line lies outside (below) that box.
+ r6. The in-list ghost of that Stub has no second line.
+ r7. The carried copy's box height s is the same when the Stub is picked up from the modal as from the section.
+```
+
+**The replies, as received:**
+
+```text
+Test Planner desk: replies for Story 10 batch 4c
+
+I read each case against its Then and against the wiki sections its Rule field cites. Link targets are left out of the quotes; the link text is kept.
+
+======================================================================
+DRAG-7.10: Leaving the modal closes it and pops directly to the Card's column or sub-row
+
+Then, as I read it:
+> *then* exactly one pop closes the modal and takes the drag directly to `K`, Free, bounded by `K` and shown as shortCard. No further exit from `P`'s box is required. A release with the ghost after Card `Q` commits `K`'s placement, `{anchorId: Q, side: after}`: a Stub picked up attached has `isAttached: false` with its original `parentId` preserved; an item brought in Free stays Free with its original `parentId`. No attach into `P` is committed. From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of `K`.
+>
+> *When* the cursor instead leaves the modal's box without satisfying either pop-out threshold and comes back, *then* the modal stays open, and the drag stays at its Descendants layer. The modal's box includes its header: *when* the cursor rests over the header for well past `popDelayMs`, *then* no pop happens, and the modal stays open.
+
+Reading note: "Card `Q`" in this Then is a Card in `K`, beside the ghost. It can't be the Terms' `Q`, an attached Stub at level `L − 1`, which `K` doesn't draw as a Card.
+
+- DRAG-7.10 r1 (modal opened by a hold, Free Card zoomed in from outside, one pop to K, release after Card Q keeps it Free with its original parentId, {anchorId: Q, side: after}): **Follows the Then.** "exactly one pop closes the modal and takes the drag directly to `K`" and "A release with the ghost after Card `Q` commits `K`'s placement, `{anchorId: Q, side: after}` … an item brought in Free stays Free with its original `parentId`". The Given's "opened by a click or by a hold" covers the hold. Q here is a Card in K, not the Terms' Q.
+- DRAG-7.10 r2 (cursor inside P's box but outside the modal's box: one pop to K, not to P's section, no second exit): **Follows the Then.** "exactly one pop closes the modal and takes the drag directly to `K`" and "No further exit from `P`'s box is required." P's box lies inside K, so a cursor there and outside the modal's box is within the When's "outside the modal's box while remaining inside `K`".
+- DRAG-7.10 r3 (expanded sub-row K: after the one pop the drag is locked in K, and resting in a sibling sub-row or in Board changes nothing until another pop out of K fires): **Follows the Then.** "bounded by `K`" and "From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of `K`." Read "changes nothing" as applying to the drag's layer and bound. The clock for the pop out of K runs meanwhile (wiki board-drag-interaction §3.1), and the row's "until another pop out of K fires" already allows for that.
+- DRAG-7.10 r4 (popDelayMs never satisfied, popDistancePx > 0, one sample at least popDistancePx outside the modal's box, inside K, gives the same single pop): **Follows the Then.** "*when* the cursor satisfies `popDelayMs` or the enabled `popDistancePx` outside the modal's box while remaining inside `K`, *then* exactly one pop closes the modal and takes the drag directly to `K`". Wiki board-drag-interaction §3.1 defines the distance term, and §8 names it as "the shared pop-out threshold". The term is satisfied "once the cursor is at least that far outside the context's box", so one sample at that distance is enough.
+- DRAG-7.10 r5 (both the in-list ghost and the carried copy are shortCard after the pop): **Follows the Then.** "shown as shortCard" is said of the drag, not of one copy, so it covers both of the drag's copies. Wiki board-drag-interaction §5a, which defines shortCard, has "both visible copies … the floating DragOverlay copy and the in-list ghost row — render as shortCard" at the Column/sub-row layer.
+- DRAG-7.10 r6 (two excursions, each shorter than popDelayMs but longer together, with a return between: the modal stays open because the clock restarts on return; is the reset DRAG-7.10's or only DRAG-1.30's?): **The case is silent, so it needs a session.** The wiki states the outcome and the Then doesn't carry it.
+  - DRAG-7.10's Then states one excursion: "leaves the modal's box without satisfying either pop-out threshold and comes back, *then* the modal stays open". It says nothing about a second excursion, or about the clock starting from zero on return.
+  - The wiki states that reset for every layer: §3.1 says the pop-out clock "resets when it comes back" and "One clock serves every layer's pop-out". §7.3 says the modal's box is "the box the pop-out clock measures against".
+  - DRAG-1.30's Then does state the reset ("the clock resets: a second excursion starts it from zero"), but only in its own Given, a Card locked in its column, not a drag in the modal.
+  - So no Then carries the reset for the modal.
+- DRAG-7.10 r7 (moving outside the modal's box by less than popDistancePx and coming back leaves it open): **Follows the Then.** "*When* the cursor instead leaves the modal's box without satisfying either pop-out threshold and comes back, *then* the modal stays open, and the drag stays at its Descendants layer". This holds with popDistancePx above 0 and the excursion also shorter than popDelayMs, since "either" includes the clock.
+
+======================================================================
+DRAG-1.14: Pop-out by distance: when enabled, either the clock or the distance satisfies
+
+Then, as I read it:
+> *then* the item pops out one layer at once. This holds for a column or sub-row (out to Board) and Descendants (out to the column/sub-row containing its Card) alike: one pop-out rule serves every layer. Descendants uses the whole Card's box on the board and the modal's box while the modal holds it. *And given* `popDistancePx` is 0, *when* the cursor moves any distance outside the context for less than `popDelayMs`, *then* no pop happens; only the clock decides.
+>
+> A single cursor sample decides the distance term, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
+
+- DRAG-1.14 r1 (modal holds Descendants: one sample at least popDistancePx outside the modal's box pops to K at once, before popDelayMs): **Follows the Then.** "the item pops out one layer at once. This holds for … Descendants (out to the column/sub-row containing its Card)", "Descendants uses … the modal's box while the modal holds it", and "A single cursor sample decides the distance term".
+- DRAG-1.14 r2 (Free Card locked in expanded sub-row K: one sample at least popDistancePx outside the sub-row's box pops to Board at once): **Follows the Then.** "This holds for a column or sub-row (out to Board)" and "A single cursor sample decides the distance term."
+- DRAG-1.14 r3 (popDistancePx 0, modal open, cursor outside the modal's box for less than popDelayMs: no pop): **Follows the Then.** "*And given* `popDistancePx` is 0, *when* the cursor moves any distance outside the context for less than `popDelayMs`, *then* no pop happens". The context's box is "the modal's box while the modal holds it".
+
+======================================================================
+DRAG-7.12: The modal's rows keep the drag's classification and Full, Mid or Low tier
+
+Then, as I read it:
+> *then* `R` and `R1` are assigned Full. `R1a` is assigned Mid, since its parent `R1` is Valid, while `Y` is assigned Low, since its parent `R1a` is not. The rows keep their drag-start classification and tiers; opening the modal does not recompute them or copy an ancestor's tier onto a descendant. The static section rows under the backdrop take no target tier (DRAG-2.20).
+>
+> The painted strengths and absence of compounded dimming are DRAG-2.24's.
+
+- DRAG-7.12 r1 (modal opened by a hold during the drag: R and R1 Full, R1a Mid, Y Low): **Follows the Then.** "`R` and `R1` are assigned Full. `R1a` is assigned Mid … while `Y` is assigned Low". The When is "the modal opens during the drag", and during a drag only a hold opens it (wiki board-drag-interaction §9).
+- DRAG-7.12 r2 (R, drawn in the section before the modal opens, keeps the tier it had then): **Follows the Then.** "The rows keep their drag-start classification and tiers; opening the modal does not recompute them". R's row in the modal has the Full its section row had before. Its section row under the backdrop then takes no tier (r4).
+- DRAG-7.12 r3 (R1, R1a and Y aren't drawn before the modal opens, so only the stated Full/Mid/Low after it opens is asserted, and nothing about their tier before): **Follows the Then.** The stated "Full", "Mid" and "Low" are the drag-start tiers ("The rows keep their drag-start classification and tiers"). The Then gives no tier for a row before it's drawn.
+- DRAG-7.12 r4 (section rows under the backdrop carry no target tier while the modal is open): **Follows the Then.** "The static section rows under the backdrop take no target tier". Wiki board-drag-interaction §4.1 agrees: "No tier … for the rows a section draws under the hierarchy modal's backdrop."
+
+======================================================================
+DRAG-7.14: The modal hold resets on a gap or level change or leaving the Card, and runs on in its padding
+
+Then, as I read it:
+> - *when* the ghost moves to another gap, such as the one below `T`, *then* the hold resets: any cue showing disappears at once, and the modal doesn't open;
+> - *when* the ghost, in the gap below the overflow row, is tabbed from level `L + 1` to level `L`, *then* the hold resets the same way, and tabbing back starts a fresh dwell;
+> - *when* the cursor leaves the whole Card's box while the ghost stays in its gap, *then* the hold resets the same way, and no dwell runs until the cursor is back inside it;
+> - *when* the cursor moves into the Card's title or padding, outside the section's smaller box, while the ghost stays in the same gap and level, *then* the dwell or cue runs on without restarting; completing the hold there opens the modal;
+> - *when* the carried copy moves within the gap without the ghost changing gap or level, such as crossing the ghost's middle, *then* the hold runs on. It holds the gap and the level steady, where a Card's zoom-in resets when the named relation changes (DRAG-4.22).
+>
+> This case asserts the clock's logic, with its thresholds as parameters; its pass never depends on the tuned values. Whether they feel right is DRAG-7.20.
+
+- DRAG-7.14 r1 (cursor leaves the whole Card's box, nothing pops, ghost in its gap: any cue disappears at once, the modal doesn't open, no dwell runs while the cursor is outside): **Follows the Then.** "*when* the cursor leaves the whole Card's box while the ghost stays in its gap, *then* the hold resets the same way, and no dwell runs until the cursor is back inside it". "The same way" is "any cue showing disappears at once, and the modal doesn't open". "Nothing pops" is a condition of the variant (the excursion stays short of the pop-out thresholds), not an outcome this Then states.
+- DRAG-7.14 r2 (cursor back inside the Card's box, ghost unchanged: a fresh dwell starts): **Follows the Then.** "the hold resets the same way, and no dwell runs until the cursor is back inside it". Wiki board-drag-interaction §7.3 settles what follows: the hold "runs while the ghost sits directly above or below an overflow row, at that row's level … with the cursor inside the Card's box". So once the cursor is back inside, with the ghost unchanged, the hold runs again from its reset.
+- DRAG-7.14 r3 (moved into title or padding during the dwell: the dwell runs on into the cue, and the cue completes into the modal opening, with the cursor still there): **Follows the Then.** "*when* the cursor moves into the Card's title or padding, outside the section's smaller box, while the ghost stays in the same gap and level, *then* the dwell or cue runs on without restarting; completing the hold there opens the modal". Wiki board-drag-interaction §7.3 gives the hold's order: dwell, then cue.
+- DRAG-7.14 r4 (same, moved into the padding during the cue): **Follows the Then.** "the dwell or cue runs on without restarting; completing the hold there opens the modal".
+- DRAG-7.14 r5 (after the modal opens from the padding, the ghost is still at R's first child): **The case is silent, so it needs a session.** The wiki states the outcome and this Then doesn't carry it.
+  - DRAG-7.14's Then says only that completing the hold there "opens the modal".
+  - Where the ghost is then is set by wiki board-drag-interaction §7.3: "A hold opens the modal under the cursor, placed so that the ghost's spot among `R`'s children, first or last, sits under it … opening reads the gap and the depth afresh from the cursor".
+  - DRAG-7.15's Then states this in its own Given: the hold completing with the cursor still, and a modal placed under the cursor fitting inside the window. That Given doesn't restrict where in the Card the cursor is.
+  - Even there, the ghost is at R's first child only for a hold in the gap above the overflow row. At a window edge, DRAG-7.16's ghost needn't be there.
+
+======================================================================
+DRAG-7.15: A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement
+
+Then, as I read it:
+> *then* the modal opens with the ghost's spot under the cursor: from the gap above the overflow row, the gap before `R1`, at `R1`'s level; from the gap below it, the gap after `R2`, at `R2`'s level. The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened: `X` first among `R`'s attached children, before `R1`, or last, after `R2` (DRAG-7.3, DRAG-7.4). No pop happened: the drag is still at `P`'s Descendants layer.
+>
+> The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor. Its attached child is absent while it is carried (wiki board-drag-interaction §7.2), and a release right after commits the item there, with its child still attached and drawn under it again.
+
+- DRAG-7.15 r1 (item with a subtree, moved UP from below to the gap below R's overflow row: the modal opens with its spot under the cursor, and a release commits it last among R's children, child still attached): **Follows the Then.** The direction comes from "The same holds whichever way the cursor came to the gap: … or moving up to it, from those below". The subtree comes from "*And given* the item held carries a subtree … *then* the same holds … a release right after commits the item there, with its child still attached". The spot comes from "from the gap below it, the gap after `R2`, at `R2`'s level" and "last, after `R2`". The hold needs the ghost at the overflow row's level, `L + 1` (wiki board-drag-interaction §7.3).
+- DRAG-7.15 r2 (same for the gap above R's overflow row, from below, with a subtree): **Follows the Then.** The spot comes from "from the gap above the overflow row, the gap before `R1`, at `R1`'s level" and "first among `R`'s attached children, before `R1`". The direction and subtree come from "moving up to it, from those below" and the subtree sentence. The release commits the item first among R's attached children, with its child still attached.
+- DRAG-7.15 r3 (the item's attached child is absent from the section and the modal for the whole drag): **Follows the Then.** "Its attached child is absent while it is carried (wiki board-drag-interaction §7.2)". §7.2's "It leaves every list that draws it: the section, the hierarchy modal and the rows a section draws under the modal's backdrop" settles that "absent" means absent from both lists, from pickup to the drag's end.
+- DRAG-7.15 r4 (after the release, the child is drawn directly under the item in the modal): **Follows the Then.** "a release right after commits the item there, with its child still attached and drawn under it again". The release is in the modal, which stays open ("After a drag ends in the modal … the modal stays open where it is", wiki board-drag-interaction §7.3). The case's example is one attached child, which is drawn as the item's next row, one level deeper.
+- DRAG-7.15 r5 (cursor reaches the aim at R's own row in one sample, not a hover pass: the modal opens, and a release writes what the modal draws): **Follows the Then**, provided the one sample leaves the ghost in the hold's gap at the overflow row's level and the cursor then stays still. "The same holds whichever way the cursor came to the gap" puts no limit on how many samples the approach takes. "The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened" gives "writes what the modal draws". Which gap a cursor at R's own row gives the ghost is the list's shuffle, which this Then doesn't state.
+- DRAG-7.15 r6 (cursor reaches the overflow row's top quarter in one sample: no modal hold runs, the ghost is after the overflow row, and a release writes the same as the modal-hold release at that gap): **Contradicts the Then.**
+  - This case's Given is the hold completing: "*Given* the modal hold beside `R`'s overflow row completes with the cursor still". With the ghost after the overflow row at that row's level, its Then opens the modal: "from the gap below it, the gap after `R2`, at `R2`'s level".
+  - Wiki board-drag-interaction §7.3 runs the hold whenever the ghost "sits directly above or below an overflow row, at that row's level". So "no modal hold runs" can't hold with the ghost there, even if the release comes before the dwell ends.
+  - With the ghost there at level `L` instead, no hold runs, but then a release writes R's next sibling (DRAG-7.4), not the modal-hold release at that gap.
+  - Which gap a cursor in the overflow row's top quarter gives the ghost is the list's shuffle, which this Then doesn't state.
+
+======================================================================
+DRAG-7.17: When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor
+
+Then, as I read it:
+> *then* the modal's list is scrolled so that the spot sits under the cursor, and a release without moving the cursor commits it. From the gap below the overflow row, that's `R` with many attached children, and the release commits `X` last among them. From the gap above it, the spot is just under `R`, so it's many rows before `R`, such as a sibling of `R`'s before it with many attached children of its own, and the release commits `X` first among `R`'s attached children.
+
+- DRAG-7.17 r1 (gap above R's overflow row, a sibling of R before it with many attached children: the list scrolls so the spot is under the cursor, and a release commits first among R's attached children): **Follows the Then.** "the modal's list is scrolled so that the spot sits under the cursor" and "From the gap above it, the spot is just under `R`, so it's many rows before `R`, such as a sibling of `R`'s before it with many attached children of its own, and the release commits `X` first among `R`'s attached children". The sibling needs enough rows that the rows before the spot run longer than the modal can show (the Given). R has no earlier sibling in the Terms tree, so the setup adds one, as the Then's example does.
+
+======================================================================
+DRAG-7.18: After leaving the modal, a hold beside an overflow row opens it again in the same drag
+
+Then, as I read it:
+> *then* the modal opens again at the same Descendants layer, and a release in it places `X` by gap and depth (DRAG-7.9). It opens as often as the drag needs. No write occurs during the exit, re-entry or modal opening; only the final release commits the selected placement.
+
+- DRAG-7.18 r1 (assert one reopen only; is that enough for "as often as the drag needs"?): **The case is silent, so it needs a session.** The Then reads two ways on "It opens as often as the drag needs".
+  - One reading: it only says there's no limit on the one reopening the When names. One reopen asserts that.
+  - The other reading: it's an outcome of its own, beyond that reopening. Read that way, the Then gives no number of openings that would show it.
+  - The one reopen itself follows "the modal opens again at the same Descendants layer".
+- DRAG-7.18 r2 (no request of any kind between pickup and the final release, other than the final write): **Not stated by the Then or the wiki**, for requests that write nothing. "No write occurs during the exit, re-entry or modal opening; only the final release commits the selected placement" covers every write in the drag, so asserting that nothing but the final release writes follows the Then. A request that writes nothing, such as a read, is neither stated nor needed for the rule.
+- DRAG-7.18 r3 (re-entry by the full zoom-in hold with the side highlight naming P, for P's own Stub and, separately, for a Free Card from outside): **Follows the Then.** The When is "*when* the side highlight names `P` for the full zoom-in hold, the drag re-enters `P`'s Descendants". The Terms' `X` is either a Free Card zoomed in from outside or a Stub of `P`'s outside the tree, and "a case holds for either, unless it names one", so both variants follow.
+
+======================================================================
+DRAG-7.27: The carried item's overflow and its branch's overflow rows are absent during the drag
+
+Then, as I read it:
+> *then* its overflow row is absent for the whole drag, not drawn at Low. The gap after `Q` runs to `T`, with neither `R`'s hidden branch nor its overflow row offered as Top, Bottom or the named neighbor. Unrelated overflow rows remain drawn and keep their ordinary counts. *When* `R` is released as `B`'s next sibling, at level 1 (DRAG-4.10), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
+>
+> *Given* instead `Q` is picked up, *then* `R` is in its attached branch: both `R`'s row and `R`'s overflow row are absent. The same holds when Card `P` is picked up and zoomed into another section: no overflow row belonging to `P` or its attached branch is drawn there. On a cancel, the original section and its overflow rows return, with `R`'s overflow reading "2 children".
+
+- DRAG-7.27 r1 (R carried; T given an attached child, so it has an unrelated overflow row that stays drawn with its ordinary count): **Follows the Then.** "Unrelated overflow rows remain drawn and keep their ordinary counts." The tree has no other overflow row, so the clause can only refer to one the setup adds. With one attached child, T's overflow row reads "1 child" (wiki board-drag-interaction §9).
+- DRAG-7.27 r2 (R carried: the drop line is never on R's overflow row, and the gap after Q runs to T): **Follows the Then.** "its overflow row is absent for the whole drag, not drawn at Low. The gap after `Q` runs to `T`, with neither `R`'s hidden branch nor its overflow row offered as Top, Bottom or the named neighbor." No cue can be drawn on a row that's absent.
+- DRAG-7.27 r3 (Q carried: R's row, R's overflow row and T's row are absent): **The case is silent, so it needs a session**, for T's row. The wiki states the outcome and this Then doesn't carry it. The Then states "both `R`'s row and `R`'s overflow row are absent", giving R's place in Q's branch as the reason, but it doesn't name T. T is Q's attached child, and its absence is wiki board-drag-interaction §7.2's ("It leaves every list that draws it"). DRAG-8.1's Then states that a branch is absent, but in its own setup, not this tree. R's row and R's overflow row follow this Then.
+- DRAG-7.27 r4 (P carried and zoomed into another Card's section: no overflow row of P or its branch is drawn there): **Follows the Then.** "The same holds when Card `P` is picked up and zoomed into another section: no overflow row belonging to `P` or its attached branch is drawn there."
+- DRAG-7.27 r5 (R released as B's next sibling at level 1: R.parentId = P after B, R1 and R2 still attached children, no overflow row on R, R1 and R2 at level 2 in the section): **Follows the Then.** "*then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2."
+- DRAG-7.27 r6 (on cancel, the original section returns and R's overflow reads "2 children"): **Follows the Then.** "On a cancel, the original section and its overflow rows return, with `R`'s overflow reading "2 children"." The sentence isn't limited to one drag, so it holds for each drag the case names.
+
+======================================================================
+DRAG-7.31: A hidden Stub returned to its pickup slot after reopening the modal writes nothing
+
+Then, as I read it:
+> *then* no request is sent. `R2.parentId = R`, it remains attached with position `p` and `P`'s workphase, and the modal stays open showing it in that original slot. The modal shows the full hierarchy, so the section's hidden-slot seed doesn't turn this set-down into a move.
+
+- DRAG-7.31 r1 (no request at any point from pickup through the final release, including the pop out, the zoom back and the reopening): **Follows the Then.** "*then* no request is sent" is the outcome of the whole When: "*when* it pops out to `P`'s column, zooms back into `P`, … then reopens the modal by a hold, and the user moves the ghost back … and releases". So it covers the drag that the Given picks up, through the release, not only the release.
+- DRAG-7.31 r2 (after the release, the modal is still open and shows R2 in its original slot after R1a and before T at level L + 1): **Follows the Then.** "the modal stays open showing it in that original slot". The When places that slot at "`R2`'s original gap after `R1a` and before `T`, at level `L + 1`".
+
+======================================================================
+DRAG-7.32: Closing the Sheet returns to the unchanged modal, and only the next Escape closes the modal
+
+Then, as I read it:
+> - *when* the Sheet's X is clicked, *then* only the Sheet closes;
+> - *when* the Sheet's backdrop is clicked, *then* only the Sheet closes; the click does not dismiss the modal underneath;
+> - *when* Escape is pressed, *then* only the Sheet closes, not both surfaces in the same keypress.
+>
+> After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal. This hold applies only to those dismissal gestures: an automatic close because the Card is gone or its hierarchy is empty does not wait for the Sheet (DRAG-7.26, DRAG-7.35).
+
+- DRAG-7.32 r1 (a click on the Sheet's backdrop at the point where the modal's X lies closes only the Sheet and doesn't activate the modal's X): **Follows the Then.** "*when* the Sheet's backdrop is clicked, *then* only the Sheet closes; the click does not dismiss the modal underneath" and "While the Sheet is open, the modal cannot be dismissed by its own X". A click on the Sheet's backdrop counts as that click wherever it lands, including the point over the modal's X.
+- DRAG-7.32 r2 (the modal's box, meaning its place on screen, is the same before the Sheet opens and after each of the three closes): **Follows the Then.** "After each, the same modal remains at its prior place". Wiki board-drag-interaction §9's "closing the Sheet, any way it closes, returns to the modal as it was" settles "prior" as the place the modal had when the Sheet opened over it. The Then names the modal's place, which is how the row describes its box.
+- DRAG-7.32 r3 (the list scrolled to a non-zero offset before the Sheet opens, with the offset unchanged after each close): **Follows the Then.** "with the same list order, depths and scroll position". A non-zero offset is a setup the Given allows, not an outcome.
+- DRAG-7.32 r4 (after each close, one further Escape closes the modal): **Follows the Then.** "Once the Sheet has closed, another Escape closes the modal."
+
+======================================================================
+DRAG-7.9: A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level
+
+Then, as I read it:
+> *then* its drag starts at `P`'s Descendants layer, with no pop, as any Stub's does (DRAG-5.9). *When* it's released:
+> - in the gap between `R1` and `R1a` → one state, `R1`'s first child: `R2.parentId = R1`, attached, before `R1a`;
+> - in the gap between `R1a` and `T`, with `R2` itself passed over, aligned with `R1a` at level `L + 2` → `R2.parentId = R1`, attached, after `R1a`;
+> - in that gap at level `L + 1`, its own gap and depth → nothing is written (DRAG-4.29): the modal shows every level, so nothing between Top and Bottom is unseen;
+> - in a tab state whose resulting depth exceeds `CAP` → marked invalid, and a release writes nothing (DRAG-4.18);
+>
+> *then* `R2` stays attached throughout, with `P`'s workphase. The modal offers every placement the section does, and those among hidden rows that the section doesn't (DRAG-7.4).
+
+- DRAG-7.9 r1 (after each of the four releases, R2 is attached with P's workphase, asserted on the saved item): **Follows the Then.** "*then* `R2` stays attached throughout, with `P`'s workphase", together with the four bullets: two writes that keep it "attached", and two releases where "nothing is written".
+- DRAG-7.9 r2 (does "throughout" also require asserting R2's attached state during the drag, before release?): **The case is silent, so it needs a session.** "`R2` stays attached throughout, with `P`'s workphase" reads two ways. It may mean across the four releases, that is, what each one leaves saved. Or it may mean across each drag, from pickup to release. Read the second way, the Then names no mid-drag outcome for "attached" beyond its first sentence's "its drag starts at `P`'s Descendants layer, with no pop".
+- DRAG-7.9 r3 (does the closing sentence need its own assertion, apart from the four bullets?): **The case is silent, so it needs a session.** The sentence reads two ways.
+  - One reading: it's a summary that the bullets and DRAG-7.4 illustrate.
+  - The other reading: it's an outcome of its own. Then its first half, "The modal offers every placement the section does", isn't asserted by any of the four bullets, and the Then names no placement of the section's to assert for it.
+  - Its second half, "those among hidden rows that the section doesn't", is what the bullets show: placements under `R1` and beside `R1a`, among rows the section hides.
+
+======================================================================
+DRAG-7.6: Back in the section, a Stub whose own slot is hidden starts as the Card's last child
+
+Then, as I read it:
+> *then* the ghost is in the last gap, below `B`, at level 1, as `P`'s last child. `R1`'s own slot, under `R`, is behind `R`'s overflow row, which reads "1 child" meanwhile (DRAG-7.2). A release then commits `R1.parentId = P`, attached, last among `P`'s attached children, after `B`, with `R1a` still its child. Released in the column instead, before zooming back in, `R1` becomes Free with `parentId = R`, placed by the column's within-action (DRAG-5.1).
+>
+> *Given* instead `R`, whose slot the section shows, is picked up in the modal and pulled out the same way, *then* back in the section its ghost starts in its own slot, between `Q` and `T`, at level `L`, and a release there writes nothing (DRAG-4.30, DRAG-4.29).
+
+- DRAG-7.6 r1 (P also has an attached Stub X after B: the last gap is below X, and a release commits R1 last among P's attached children, after X): **No verdict: the row is set up outside this case's Given, so it's a question about a different case.** The Given is the tree, where `B` is P's last attached child. The Terms bring in `X` only where a case drags `X`, and this case drags `R1`. The Then names that tree's values: "the ghost is in the last gap, below `B`, at level 1, as `P`'s last child" and "last among `P`'s attached children, after `B`". A tree with another Stub after B isn't this case's Given.
+- DRAG-7.6 r2 (released in the column before zooming back in: R1 Free with parentId R, placed by the column's within-action with the {anchorId, side} the ghost's slot names): **Follows the Then.** "Released in the column instead, before zooming back in, `R1` becomes Free with `parentId = R`, placed by the column's within-action". Free means `isAttached` false (wiki board-drag-interaction §8: "A detach writes `isAttached: false` and leaves `parentId` untouched"). The column's within-action is the ghost's slot, named by anchor and side (wiki board-drag-interaction §1.1's table, §2 rule 3), the neighbor the side highlight names.
+- DRAG-7.6 r3 (R1a still R1's attached child after the release in P's section): **Follows the Then.** "with `R1a` still its child". "Still" keeps R1a as the Terms set it, R1's attached child.
+
+======================================================================
+DRAG-3.25: Every Stub-sized row has one fixed height, with a type pill or without
+
+Then, as I read it:
+> *then* each typed row, each untyped row and the overflow row has total height `s`. A type pill fits within the title's line, so it is no taller than that line and does not grow its row. Longer titles and other row content do not change the fixed height.
+>
+> *When* the hierarchy modal opens, *then* its typed and untyped rows also have height `s`, as do the static section rows still drawn under its backdrop. *When* a typed Stub is picked up from its section or the modal, *then* its in-list ghost and its carried copy each have a box of height `s`; the carried copy's border is inside that height. If the Stub has a branch, the carried copy's second line hangs outside that box and adds nothing to its height; the ghost has none. The same holds for an untyped Stub. No representation's box gains extra height from its pill, padding, content, carried border or branch line (DRAG-8.10).
+>
+> The case asserts one shared fixed height, without fixing its pixel value. The representation switch and pointer position when a Card zooms into Descendants remain DRAG-3.22's assertions.
+
+- DRAG-3.25 r1 (heights compared with each other, all equal to one s, not against a pixel value): **Follows the Then.** "The case asserts one shared fixed height, without fixing its pixel value."
+- DRAG-3.25 r2 (the pill's box is no taller than the title's text line): **Follows the Then.** "A type pill fits within the title's line, so it is no taller than that line and does not grow its row."
+- DRAG-3.25 r3 (a row with a long title has height s): **Follows the Then.** "Longer titles and other row content do not change the fixed height."
+- DRAG-3.25 r4 (section rows under the modal's backdrop have height s while the modal is open): **Follows the Then.** "as do the static section rows still drawn under its backdrop".
+- DRAG-3.25 r5 (the carried copy of a Stub with a branch has box height s, and its second line lies outside, below, that box): **Follows the Then.** "the carried copy's second line hangs outside that box and adds nothing to its height". Wiki hierarchy-placement §8's "It hangs under the copy's box" settles "outside" as below.
+- DRAG-3.25 r6 (that Stub's in-list ghost has no second line): **Follows the Then.** "the ghost has none".
+- DRAG-3.25 r7 (the carried copy's box height s is the same when picked up from the modal as from the section): **Follows the Then.** "*When* a typed Stub is picked up from its section or the modal, *then* its in-list ghost and its carried copy each have a box of height `s`", and "The same holds for an untyped Stub."
+
+======================================================================
+Files read:
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-7-overflow-and-hierarchy-modal.md
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-1-contexts-and-popping.md (DRAG-1.14, DRAG-1.30, DRAG-1.35)
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-3-card-column-bands.md (DRAG-3.25)
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-8-carried-branch.md (DRAG-8.1)
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\README.md
+- c:\Users\natha\Dev\KanbanApp\docs\wiki\board-drag-interaction\README.md (§1–§3.1, §4, §4.1, §5a, §6–§9)
+- c:\Users\natha\Dev\KanbanApp\docs\wiki\hierarchy-placement\README.md (§1–§8)
+```
+
+**Tally (the QA Engineer's count, not the desk's):** 54 rows. 45 follow the Then (DRAG-7.15 r5 on a condition). Six say the case is silent (DRAG-7.10 r6, DRAG-7.14 r5, DRAG-7.18 r1, DRAG-7.27 r3, DRAG-7.9 r2 and r3). One contradicts the Then (DRAG-7.15 r6). One is not stated by the Then or the wiki (DRAG-7.18 r2). One gets no verdict because the row stood outside the case's Given (DRAG-7.6 r1).
+
+### Batch 4c, Stop 2 — the Test Reviewer's first pass (2026-11-11)
+
+Spawned by the QA Engineer on the working tree over baseline `16fe9e07637a66f797a82fb3c2d5c8b01c9e5aed`. The brief gave the case IDs and their tests, the changed files, fifteen corrections after red runs as before-and-after, and the state of the runs; the Coder had listed no Vitest changes and nothing was held off. The harness indented the report; that indent is the only thing removed. The routing of each verdict is in Results.
+
+```text
+Test Reviewer, Story 10 batch 4c, Stop 2, first pass (2026-11-11)
+
+**Inputs and reading order.** The tree is the working tree on top of baseline `16fe9e07637a66f797a82fb3c2d5c8b01c9e5aed`. I read in this order:
+- the cases (the whole DRAG-7 file, DRAG-1.14, DRAG-3.25, and for the widened scope DRAG-2.22, DRAG-6.15 and DRAG-5.1 to 5.16);
+- `docs/test-plans/README.md`;
+- wiki board-drag-interaction §1 to §3.1, §4, §4.1, §5a and §7 to §9, and hierarchy-placement §1 to §8;
+- the batch 4c desk replies and the proof plan;
+- the five specs;
+- the helpers `overflowTree.ts`, `boardDragSurface.ts`, `dragGesture.ts`, `requestHarness.ts` and `boardLocators.ts`;
+- `popSession.test.ts`, where a clause turned on an internal test.
+
+**App source.** The only app file I read is `client/src/components/workflow/AGENTS.md`, for the test-attribute contract. It was attached when I opened `popSession.test.ts`.
+
+**Limit.** I had no shell, so I ran no `git diff`. I judged the tests as they stand now, and judged each correction from the brief's before-and-after.
+
+**Form.** The brief gave reasons for three corrections: #7 ("its Given: …"), #9 ("which is the Card's") and #10 ("T1 is a hidden row"). Its run-state note also gives a reason for #6 ("so the earlier clauses … are still checked"). I judged all four from the before-and-after and the Then alone.
+
+---
+
+## Verdicts: assigned cases
+
+### DRAG-7.6: Test gap
+Clauses the tests prove:
+- **"the ghost is in the last gap, below B, at level 1"**: `awaitProjection('6:0:true')` in `tests/ui/drag-7-hierarchy-modal.spec.ts` "DRAG-7.6, DRAG-7.2: a Stub whose own slot is behind an overflow row starts back in the section as P's last child…".
+- **"R's overflow row … reads '1 child' meanwhile"**: the same test, read from the screen.
+- **"R1.parentId = P, attached, … after B"**: the same test, from the saved item.
+- **"back in the section its ghost starts in its own slot, between Q and T, at level L, and a release there writes nothing"**: "DRAG-7.6: a Stub whose own slot the section shows comes back in that slot, and a release there writes nothing". It checks the projection at `2:L-1`, no write, and the saved item unchanged.
+- **"Released in the column instead … Free with parentId = R, placed by the column's within-action"**: "DRAG-7.6: released in the column before zooming back in…". The column context is asserted, the request carries the anchor and side the drop line draws, and the saved item has isAttached 0 and parentId R.
+
+Gaps:
+1. **The pull-out isn't confirmed (check 3).** The spec's `pullOutAndZoomBack` asserts that the modal closes. It never asserts that the drag reached P's column before the zoom back. Its final `awaitDragContext(descendants)` would pass at once if the drag had never left Descendants.
+   - In "…comes back in that slot…" this can pass for the wrong reason: with no pop and no zoom, the cursor at the section's middle reads R's own slot, and the release writes nothing.
+   - Fix: inside the helper, wait for the column context between the modal closing and the hover back onto P, as the third DRAG-7.6 test does.
+2. **"with R1a still its child"**: the hidden-slot test asserts only R1a.parentId. The desk (7.6 r3) reads "still" as keeping R1a as R1's attached child, so R1a.isAttached should be asserted too.
+
+### DRAG-7.9: Test gap
+Clauses the tests prove:
+- **"starts at P's Descendants layer, with no pop"**: `awaitDragContext` right after the pickup, in "DRAG-7.9, DRAG-7.28: a drag in the modal starts at the Descendants layer, and between R1 and R1a the one state is R1's first child".
+- **Bullet 1 (R1's first child, attached, before R1a)**: the same test. Projection `4:4:true`; saved with parent R1, isAttached 1 and position below R1a's.
+- **Bullet 2 (after R1a)**: "DRAG-7.9: in the gap R2 sits in, one tab right of its own depth, it is R1's last child, after R1a". The Given is asserted first (R2 under R, attached, in Todo; R1a the row before it). Projection `5:4:true`; saved under R1, attached, after R1a.
+- **Bullet 3 (own gap and depth, nothing written)**: "DRAG-7.9, DRAG-7.19: set back down in its own gap and depth…".
+- **Bullet 4 (past CAP: invalid, nothing written)**: "DRAG-7.9, DRAG-7.12: a tab state past the depth cap…". CAP is read from the board's `itemDepthCap`, and the projection's valid flag is false.
+  - This test uses its own deep tree and carries X instead of R2, because the Terms' tree can't reach CAP. Every clause still holds.
+- **"R2 stays attached throughout, with P's workphase"**, read as the saved item after each of the four releases (desk r1): all four tests.
+
+Gap:
+1. **Bullet 1's "→ one state"**: no test tries a second offset in the R1/R1a gap; the first-child test aims at one x only. DRAG-7.3's test in `drag-7-overflow-row.spec.ts` shows how: tab ±5 and check that the projection stays at `4:4`.
+
+Already routed to a Planner session: whether "throughout" covers the drag before the release, and whether the closing sentence needs its own assertion (desk r2 and r3; Open questions item 3).
+
+### DRAG-7.10: Test gap
+Clauses the eight passing matrix variants prove (hold-stub and hold-free, in "DRAG-7.10[, DRAG-1.14]: … pops once to … on …, Free, and a release after Card Q writes that placement"):
+- **"exactly one pop closes the modal and takes the drag directly to K"**: the modal is gone, `data-drag-state` is locked, and `data-drag-context` is K.
+- **"Free"**: the item's row in K is a Card (role article), and the saved item has isAttached 0.
+- **"bounded by K"**: `withinExcess` ≤ 2 px, on the x axis for a merged column and on both axes for a sub-row (wiki §2). It is read from the painted box during the carry, and its header says it reads the screen.
+- **"{anchorId: Q, side: after}"**: the drop line is on CardQ, after it, and one request is sent with that anchor and side, no parentId, and isAttached not true.
+  - "a Stub picked up attached has isAttached: false with its original parentId": the hold-stub variants.
+  - "an item brought in Free stays Free with its original parentId": the hold-free variants. Z's parent is null before and after, which still catches an attach into P.
+- **"No attach into P"**: one request, with no parentId.
+- **"From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of K"**:
+  - "DRAG-7.10: in an expanded sub-row, reaching Board takes another pop out of the sub-row": the drag is locked in K after the first pop, and reaches popped-out with no context only when K's clock runs out.
+  - "DRAG-7.10: in an expanded sub-row, the sibling sub-row beside it is not reached…": the Given is asserted (the point is below K and nearer than the distance). The drag stays locked in K, the drop line and the request are K's, and the item is saved in K's workphase.
+- **One excursion that satisfies neither threshold**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion out of the modal shorter than the pop-out delay…" and "DRAG-7.10: an excursion out of the modal shorter than the pop-out distance…". The second asserts its Given: the point is outside the modal and nearer than the distance.
+- **The header**: "DRAG-7.10: the modal's header is part of the modal…".
+
+Gaps:
+1. **"shown as shortCard", for the ghost** (desk r5 reads it as both copies). The matrix asserts the carried copy's `data-drag-overlay-form` is short-card. It checks the ghost only for role article, which a full Card also has. B17 and B23 in `drag-5-stub-detach.spec.ts` show how: assert the ghost's box height equals the short-card copy's.
+2. **"No further exit from P's box is required"** has no passing test.
+   - `rest.owner === 'P'` is asserted only for the click arrival, and those five tests are red.
+   - In the passing variants, `restPoint` may fall back to CardQ, outside P's box, and nothing records which point it used.
+   - Fix: assert the owner is 'P' wherever a point in P exists, at least in the passing "…reaching Board takes another pop out of the sub-row" test, which rests at 'P' after a click.
+
+**The red click arrival, left as written.** The click arrival fails "bounded by K" in four matrix variants and in "DRAG-7.10: resting beyond P's box, inside its column…". These tests assert the clause as the Then states it, so this is neither a test gap nor a case gap. Whether the wiki or the code is wrong is a ruling (test-plans README, "When a test for a case fails"). Until it is made, no passing test proves the click arrival.
+
+Already routed: the two-excursion reset (desk r6; Open questions item 1).
+
+### DRAG-7.12: Test gap
+Clauses `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.12: a modal a hold opens carries the drag's tiers…" proves:
+- **R and R1 Full, R1a Mid, Y Low**: `data-drop-tier` reads parent, anchor and neither on the modal's rows. This is an attribute the app provides, and the spec's comment maps the names to the tiers.
+- **The Given (R and R1 Valid, R1a Depth-capped)**: `data-drop-state`, read once the modal draws those rows (desk r3).
+- **"does not recompute them"**: R's tier in the section before the modal opens equals its tier in the modal (desk r2).
+- **"or copy an ancestor's tier onto a descendant"**: Y is Low under a Mid R1a.
+
+Gap:
+1. **"The static section rows under the backdrop take no target tier"** is asserted as zero `[data-drop-tier]` inside article P. Nothing first shows that the section still draws rows there, so the count would also pass if it drew none. Assert one static row first, as the `staticRow` helper in `drag-stub-row-height.spec.ts` finds them.
+
+### DRAG-7.13: Test gap
+Clauses the tests prove:
+- **Silent dwell, then the cue on R's overflow row, then the modal opening at P's Descendants layer**:
+  - "DRAG-7.13: a Free Card zoomed into P and held above R's overflow row…". The Given is asserted first: Free with a null parent (`seedFreeCard`), and projection `3:3` before the hold.
+  - The Stub version, "DRAG-7.13: a hold above R's overflow row…".
+- **A release before the cue completes leaves the modal closed and commits R's first child**: "…commits a Free Card zoomed in above R's overflow row…" and the Stub version.
+- **The same below the overflow row, at L+1, as R's last child**: "…held below R's overflow row, at its level, opens the modal as R's last child" and "…zoomed in below R's overflow row…".
+- **B, P's own Stub, opens it too**: "DRAG-7.13: any item at the layer opens it: B…".
+
+Gap:
+1. **"a visible cue shows on R's overflow row"**: `cueOn` is checked with `toHaveCount(1)`. That proves the element is in the DOM, not that it can be seen. Assert it is visible: a painted box with height and some width, a beat into the cue.
+   - `cueOn` also matches a substring of an inline style and names an app internal (`dragChrome.tsx::ZoomCue`). It doesn't use an attribute the app provides for tests.
+
+### DRAG-7.14: Test gap
+Clauses the tests prove:
+- **Bullet 2 (a tab from L+1 to L resets the hold and the cue goes; tabbing back starts a fresh dwell)**: "DRAG-7.14: the hold starts over when the ghost changes level or gap".
+- **Bullet 3 (leaving the whole Card's box)**: "DRAG-7.14: the cursor leaving the whole Card's box ends the hold…".
+  - The ghost stays in its gap (`3:3`), the hold reads null, the cue is gone, there's no modal and no pop.
+  - The hold still reads null after the dwell's length plus slack, and a fresh dwell starts on return.
+- **Bullet 4, during the cue**: "…moving into the Card's title or padding during the cue…". A restart would read dwell, so the single read after 100 ms tells run-on from restart. Completing the hold there opens the modal, and the point is asserted inside the Card and left of the rows.
+- **Bullet 5**: "DRAG-7.14: the carried copy moving within the gap…". With a 1.5 s dwell, a restart would read dwell.
+- `popSession.test.ts`'s DRAG-7.14 tests are in the approved clock category and back the logic of bullets 1 to 3.
+
+Gaps:
+1. **Bullet 4 during the dwell, "runs on without restarting"**: in "…during the dwell lets the hold run on…", a restarted dwell would also read dwell 100 ms later and also complete within `opens(tuning)`. Nothing tells run-on from restart. Two ways to close it:
+   - a comparative wait: move into the padding late in a long dwell, then require the cue within the dwell's remainder plus a margin smaller than the dwell;
+   - or a `popSession.test.ts` test, in the clock category that is approved outright: the cursor moves within the layer, the target is unchanged, and the hold keeps its `since`.
+2. **Bullet 1 (another gap)**: in "the hold starts over…", the step to another gap asserts only that `data-drag-modal-hold` is null. It doesn't confirm the ghost changed gap (no projection read after the hover to A), or that the cue is gone from the screen.
+
+Already routed: where the ghost is after the hold completes in the padding (desk r5; Open questions item 4).
+
+### DRAG-7.15: Test gap
+Clauses the tests prove:
+- **The spot under the cursor, for both gaps, both approaches, and with or without a child.** All eight combinations are covered:
+  - the five "DRAG-7.15: held from above|below, to the gap above|below R's overflow row, for an item…" tests;
+  - "DRAG-7.15, DRAG-7.19: the modal opens with the ghost's spot under the cursor…", from below to both gaps, without a child;
+  - "DRAG-7.15: held from above, down to the gap above R's overflow row…", without a child.
+- Each asserts that the cursor is inside the modal, that the ghost's painted row is under the cursor, and that the drag is at P's Descendants layer. `placementShown`, read from the painted rows, gives R's first child before R1 or R's last child after R2, and the release writes that parent and order.
+- **"Its attached child is absent while it is carried … drawn under it again"**: the child is absent from the whole page during the drag, and is the item's next row in the modal after the release.
+- **The single-approach variant** (desk r5): "DRAG-7.15: reaching R's row in a single approach…".
+
+Gap:
+1. **"X first among R's attached children"**: isAttached isn't asserted after the release; `expectReleaseCommitsShown` checks parent and order only. In the child variants the item is still drawn in the modal after the release, which shows it's attached; the no-child variants show nothing.
+   - Fix: add `placed.isAttached === 1` to `expectReleaseCommitsShown`.
+   - Separately, the Given's "attached child of its own" is checked by parentId only.
+
+Already routed: the overflow row's top-quarter aim (desk r6; Open questions item 2).
+
+### DRAG-7.17: Test gap
+Clauses the tests prove:
+- **From the gap below**: "DRAG-7.17: when R's children run longer than the modal…". The list is scrolled (`scrollTop` > 0), the spot is under the cursor, and the release, with the cursor unmoved, commits X after E19.
+- **From the gap above**: "DRAG-7.17: from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too". A sibling S with 20 children comes before R. The list is scrolled, the spot is under the cursor, and the release commits X before R1.
+
+Gap:
+1. **"commits X last among them" and "first among R's attached children"**: neither test asserts isAttached after the release. This is the same fix as DRAG-7.15's.
+
+### DRAG-7.18: Proves the case
+- **The Given (a hold opened the modal, then a pop out to P's column)**: both "DRAG-7.18: after leaving a modal a hold opened, P's own Stub | a Free Card zoomed in…" tests assert the first opening at Descendants, the column context after the pop, and the modal gone.
+- **The When**: the side highlight names P for the full zoom-in hold, the drag reaches P's Descendants again, and the projection reaches `3:3` beside the overflow row.
+- **"opens again at the same Descendants layer"** and **"a release in it places X by gap and depth"**: the saved item is R's first child, before R1.
+- **"No write occurs during the exit, re-entry or modal opening"**: no writes before the release.
+
+One reopen is asserted (desk r1; Open questions item 5). The release isn't checked for isAttached, which this Then doesn't name.
+
+### DRAG-7.27: Test gap
+Clauses the tests prove (all in `tests/ui/drag-7-overflow-row.spec.ts`):
+- **R carried** ("DRAG-7.27: a dragged R carries its overflow row and its branch…"):
+  - the Given is asserted first ("2 children" and T's "1 child");
+  - R's overflow row and branch are absent at pickup and again at the aim below B;
+  - the gap after Q runs to T (section rows A, Q, R, T, T's overflow row, B);
+  - the line is never on R's overflow row;
+  - T's overflow row keeps "1 child";
+  - the release saves R under P, after B, with R1 and R2 still its children; R's attachment shows because they're drawn in the section;
+  - R has no overflow row afterwards, and there is one write.
+- **The cancel**: "DRAG-7.27: cancelling a drag of R brings its overflow row back…".
+- **Q carried**: "DRAG-7.27: a dragged Q carries R…".
+- **P carried into another Card**: "DRAG-7.27: P carried and zoomed into another Card's section…". The Given is asserted: CAP ≥ 7, and P's two overflow rows are drawn.
+
+Gap:
+1. **"R1 and R2 show in the section below it, at level 2"**: the test checks their order only. Their indent (`descendantsIndentPx(1)`) isn't asserted.
+
+Already routed: whether T's row is also absent when Q is carried (desk r3; Open questions item 6).
+
+### DRAG-7.28: Test gap
+Clauses the tests prove:
+- **"R1's Sheet opens … available for interaction"; "not the root Card P"; "the modal stays open at the same place with the same hierarchy"; "writes nothing"**: "DRAG-7.28: a click on a row in the modal opens that item's Sheet above it". It reads the heading, the modal's box, `modalState`, a title edit opened, and no writes.
+- **"carrying that row opens no Sheet"**: "DRAG-7.28: carrying a row in the modal opens no Sheet…" checks the Sheet stays closed before, during and after the release.
+- **"The drag still places by gap and depth"**: parent R1 in that test, plus the saved order (R2 before R1a) in "DRAG-7.9, DRAG-7.28: a drag in the modal starts…".
+
+Gaps:
+1. **"opens above the modal"**: the test clicks the Sheet's title "where the modal lies under it", but nothing checks that the point lies inside the modal's box. If the two don't overlap, the click shows the Sheet takes input, not that it's in front of the modal. Fix: `expectInside(modal, point)` on the clicked point.
+2. **"When instead a press on R1 starts its drag"**: both drag tests press R2. The Then pairs the click and the press on the same row, R1. Carry R1, or a Planner session can change the case to "a row".
+
+### DRAG-7.31: Proves the case
+`tests/ui/drag-7-hierarchy-modal.spec.ts` "DRAG-7.31: a hidden Stub returned to its pickup slot after reopening the modal writes nothing…":
+- **The Given**: R2 is under R, attached, in Todo, before the pickup.
+- **The When**: the ghost starts as P's last child (`7:0`), the modal reopens by a hold (`3:3`, modal visible), and the ghost returns after R1a and before T, at R2's level (`5:3`).
+- **"no request is sent"**: recorded from before the pickup through the release.
+- **"R2.parentId = R, … attached with position p and P's workphase"**: the saved item.
+- **"the modal stays open showing it in that original slot"**: the row order and the indent.
+- The `7:0` seed only arises from a zoom back from the column, so `pullOutAndZoomBack`'s unconfirmed column step (DRAG-7.6, gap 1) can't let this test pass wrongly.
+
+Minor case gap for a Planner session: `watchWrites` records non-GET requests only, so the test proves "no write". The title says "writes nothing", but the Then says "no request is sent". The board polls notifications by GET every 15 s, so the literal reading can't be meant. The Then could say "nothing is written".
+
+### DRAG-7.32: Proves the case
+The four "DRAG-7.32: closing the Sheet over the hierarchy modal by Escape | its X | its backdrop | its backdrop over the modal's own X…" tests, each from a fresh state:
+- **The Given**: the list is scrolled to 30 and read back, and the Sheet is open, in place, with R1's heading.
+- **"only the Sheet closes"**: the Sheet slides out and the modal stays visible.
+- **"the same modal remains at its prior place, with the same list order, depths and scroll position"**: box equality and `modalState` equality (rows, titles, indents, `scrollTop`).
+- **"nothing is written"**.
+- **"the modal cannot be dismissed by its own X, its backdrop or Escape"**: the click over the modal's X, the backdrop click and Escape each leave the modal open.
+- **"another Escape closes the modal"**.
+
+Note: the spec's comment says an Escape pressed while the Sheet slides in was lost in 4 of 40 runs, and calls that "a question for the case's owner (the Open questions)". The plan's Open questions, as I read them, don't hold it. I don't read it as a case gap: wiki §9 has Escape close the Sheet, with no exception while it enters. It's an adjacent finding about the app, for Nathan or the PO, and it should be recorded where the comment says it is.
+
+### DRAG-1.14: Proves the case, with one proposed mapping
+Clauses the tests prove:
+- **"one pointer sample decides", for the modal's box, out to K with every clock off**: the hold-stub and hold-free distance variants of the DRAG-7.10 matrix. One `moveOnce` lands at least 150 px outside the modal, and the drag is in K.
+- **For a sub-row, out to Board**: `tests/ui/drag-5-stub-detach.spec.ts` "DRAG-1.14: a yank past the pop-out distance from an expanded sub-row, with every clock off, pops it to Board". The Given is asserted (24 px seeded, locked in the sub-row), then one sample, then popped-out with no context.
+- **For the Card's box, out to the column**: "DRAG-1.14: a yank past the pop-out distance, with every clock off, pops Descendants -> Column…". The detach on release shows it landed in the column.
+- **"given popDistancePx is 0 … for less than popDelayMs, then no pop happens"**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion out of the modal shorter than the pop-out delay…".
+- The click-arrival distance variants are red, but their DRAG-1.14 clauses are also proved by the passing hold variants.
+
+**"Descendants uses the whole Card's box"** isn't told apart from the section's box by any DRAG-1.14 carrier. B25 does that; see the proposed mappings. Without that mapping, this clause is a test gap.
+
+### DRAG-3.25: Test gap
+Clauses the tests prove (all in `tests/ui/drag-stub-row-height.spec.ts`):
+- **Typed rows, untyped rows, long-title rows, rows with a child, and the overflow row all have height `s`; the pill is no taller than the title's line**: "DRAG-3.25: a section's typed, untyped and long-title Stub rows and its overflow row are one height…". Heights are compared with each other only.
+- **The modal's rows have height `s`**: "DRAG-3.25: the hierarchy modal's typed and untyped rows and the section's rows under its backdrop are one height".
+- **After a pickup, the ghost and the carried copy have height `s`, the border inside it; with a branch, the second line hangs below the copy's box, adds nothing to its height, and the ghost has none**: the eight "DRAG-3.25: a typed|untyped Stub … picked up from its section|the modal…" tests.
+
+Gaps:
+1. **"the static section rows still drawn under its backdrop" have height `s`**: `staticRow` takes the title's parent as the row's box and never checks that. If that parent is an inner content box, a static row grown by padding would still read `s`.
+   - Fix: first establish, on a registered row, that `itemRow(page, b.id)`'s box equals the box of B's title's parent.
+2. **"When a typed Stub is picked up"**: the pickup tests never confirm the Stub is typed, for example that its pill is drawn, as the first test does. The plan notes that `seedItem`'s `type` option is unchecked, so a seeding slip would make the typed variants untyped without anything failing.
+
+---
+
+## Verdicts: widened scope (every ID on a test in a changed file)
+
+- **DRAG-7.1, DRAG-7.3, DRAG-7.4, DRAG-7.5, DRAG-7.22, DRAG-7.24, DRAG-7.29** (`drag-7-overflow-row.spec.ts`): Proves the case. Each carrying test still asserts its Then. `seedOverflowTree` seeds the same tree, X included, with Y off by default.
+- **DRAG-7.2**: Proves the case.
+  - The count tests in `drag-7-overflow-row.spec.ts` carry it.
+  - "DRAG-7.6, DRAG-7.2: …" carries "1 child" while R1 is dragged.
+  - The existing internal pointer `descendantsSection.test.ts` "DRAG-7.2: leaves the dragged item out of the count, and draws none when it was the only child" carries the only-child clause, which the deleted skipped test also carried. The deletion goes in the living-docs handoff.
+- **DRAG-7.7, DRAG-7.8, DRAG-7.11, DRAG-7.19, DRAG-7.23, DRAG-7.25, DRAG-7.26, DRAG-7.33, DRAG-7.34, DRAG-7.35** (`drag-7-hierarchy-modal.spec.ts`, and `drag-7-modal-hold.spec.ts` for DRAG-7.19 and DRAG-7.25): Proves the case.
+  - DRAG-7.7's fixture has an extra Stub X after B, so its expected rows end in X. Every clause of the Then still holds with X as an extra last row.
+- **DRAG-7.16, DRAG-7.21** (`drag-7-modal-hold.spec.ts`): Proves the case.
+- **DRAG-1.1, DRAG-4.12, DRAG-5.1, DRAG-5.2, DRAG-5.3, DRAG-5.4, DRAG-5.9, DRAG-5.10, DRAG-5.13, DRAG-5.14, DRAG-5.15, DRAG-5.16** (`drag-5-stub-detach.spec.ts`): Proves the case.
+  - I read each test against its Then. Per the brief, the file's only new test is the sub-row DRAG-1.14 one.
+  - The `boardDragSurface.ts` helpers these tests use read as the tests expect. Without a diff I can't confirm `expectWithin` is unchanged in behavior, but it now polls `withinExcess` ≤ 2, which matches its message.
+  - For DRAG-1.1, these tests carry only the Stub-start rows; its other rows are carried in other files, outside this pass.
+- **DRAG-2.22** (Open): Test gap.
+  - "DRAG-7.21, DRAG-2.22: a ghost in an over-cap state beside an overflow row starts no hold…" carries only the Depth-capped owner clause: no dwell, no cue, no modal. It reads the projection's invalid flag and doesn't assert R's `data-drop-state` depth-capped (the Given).
+  - Two clauses have no test in these files: "a Mid Card … no zoom-in dwell or progress cue" and the Cycle-forming owner. For two others, see the mappings below.
+  - DRAG-2.22 isn't assigned to 4c.
+- **DRAG-6.15** (Open): Test gap. "DRAG-7.23, DRAG-6.15: a reload that lands mid-drag in the modal…" carries one cause (another item's failed drop) in one context (the modal).
+  - Its assertions are good: the drag has ended, no carried copy, the rows as the server has them, one write in all, and none after the pointer comes up.
+  - The stale-reindex cause, the column-reorder cause, and the column/sub-row and section contexts have no surface test here. `useBoardDnd.test.ts` carries the ID internally, without an approved mapping.
+  - DRAG-6.15 isn't assigned to 4c.
+
+---
+
+## Cross-cutting
+
+1. **L is pinned to today's default (check 2).**
+   - `overflowTree.ts` builds its tree "with the section at its default of three levels".
+   - The specs then pin depths that follow from L = 3, both in projection literals (`3:3`, `6:3`, `5:3`, `4:4`, `7:0`, `'6:0'`) and in indents.
+   - No spec seeds `sectionLevels`; the overflow-row spec reads `DEFAULT_DRAG_TUNING.sectionLevels`, but the tree still assumes 3.
+   - A retune would fail these tests loudly rather than let them pass wrongly. Still, the Thens name L, so the value should be the test's own: seed `sectionLevels: 3` in the specs' tunings.
+2. **Helper headers (check 4).**
+   - `overflowTree.ts`: `placementShown` (the screen), `pointOutsideModal` (the screen) and `holdFreeAt` (`data-drag-context`) say what they read. These don't:
+     - `dropLineOn` reads the app's `data-drop-side` and the nearest row's `data-item-id` or `data-overflow-row`;
+     - `rowIds` and `sectionRows` read those attributes in DOM order, not painted order. That's fine after a drag ends and at a ghost's own slot, but the header should say so;
+     - `modalState` reads DOM rows, button text, computed padding and `scrollTop`;
+     - `expectCentered` and `expectInside` read the screen;
+     - `holdAt` waits on `data-drag-context`.
+   - `boardDragSurface.ts`: `zoomIntoCard` and `withinExcess` say what they read. The file header covers screen geometry only, not these:
+     - `releaseMove` reads the network answer;
+     - `expectOneMove` reads the recorded requests;
+     - `paintedCardOrder` reads `aria-label` plus the painted box.
+   - `dragGesture.ts`: `awaitProjection`'s header says "the gap counted among all the section's rows". The app counts the rows behind an overflow row too (AGENTS.md: "a gap among *all* the rows"), and correction 10's 4 → 5 turned on exactly that. The header should say "every row of the Card's hierarchy, those behind an overflow row included".
+
+---
+
+## Corrections after a red run
+
+1. **DRAG-7.10, hold-free: Z seeded before P instead of last.** Accepted. This changes how the state is reached. Z's parent is still null before and after, which still catches an attach into P.
+2. **1280×720 → 1800×1100 window.** Accepted.
+3. **Re-measured aim passes, `leanAtGhost`, then a poll of the drop line.** Accepted. The poll waits without moving, and the line must still be on CardQ, after it.
+4. **Zoom hold 650 + 350 → 1500 + 800.** Accepted. An aim slower than 2.3 s would zoom Z into CardQ and fail the test, not pass it.
+5. **`popDistancePx` 24 → 150.** Accepted. The case holds at whatever value the test sets, and one sample still decides.
+6. **"Bounded by K" measured at the drop line but asserted last.** Accepted. The bound is still ≤ 2 px; only the order changed.
+7. **Sibling sub-row test: `popDistancePx` 24 → 60.** Accepted. The Given is now asserted (below K, nearer than the distance), and the Then still holds.
+8. **DRAG-7.13: Z seeded before P.** Accepted.
+9. **DRAG-7.14, two changes.** Both accepted.
+   - The wait: dwell + cue (60 s) → the dwell's length plus slack. With a 60 s cue, any hold that started during the wait would still read non-null at its end, so the check is as strong over its window.
+   - The padding point: the new point is asserted inside the Card and left of the rows.
+10. **DRAG-7.27: gap 4 → 5, and a re-aiming poll for "P carried".** Accepted. The 5 only checks the aim was reached; the Then's outcome (after B, level 1) is asserted on the saved item. The poll for P carried is an aim.
+11. **DRAG-7.31: the x for the return aim.** Accepted. The expected projection `5:3` comes from the Then.
+12. **DRAG-3.25: the row's first button instead of the exact title.** Accepted. A wrong press would fail the Descendants context or the heights. Asserting which item is carried would make it airtight.
+13. **DRAG-7.17 above: a poll that re-aims until the projection matches.** Accepted. Aims short of R's gap read R's level, where no hold runs. To be airtight, also assert the running hold names R (`awaitModalHold(page, /^<R>:/)`) before the modal opens.
+14. **DRAG-7.32: one test closing four times → four fresh tests, each waiting for the Sheet to be in place.** Accepted. This reaches the Given, and every clause holds. The lost-Escape observation still needs recording (see DRAG-7.32).
+15. **DRAG-7.10 excursions: two 800 ms excursions with a literal delay → one excursion per test, with seeded values.** Accepted. The two-excursion reset isn't in DRAG-7.10's Then (desk r6). Its coverage now rests on the Coder's clock test (Stop 3) and the Planner's answer to item 1.
+
+## Held-off cases
+None.
+
+## Proposed mappings
+1. **DRAG-1.14** onto `tests/ui/drag-5-stub-detach.spec.ts` "DRAG-5.15: B25 title is inside the whole Card and releases the first-child gap" and "DRAG-5.15: B25 padding is inside the whole Card and releases the first-child gap". These are surface tests, so no approval is needed. With `popDistancePx` 8, a point in the Card's title or padding, asserted further than the distance above the first row, pops nothing for twice `popDelayMs`. That shows "Descendants uses the whole Card's box".
+2. **DRAG-2.22**, for two of its clauses. These are surface tests, so no approval is needed. The case isn't assigned to 4c; this is for the Reconciler or a later batch.
+   - "An overflow row belonging to the carried branch is absent": onto `tests/ui/drag-7-overflow-row.spec.ts` "DRAG-7.27: a dragged R carries its overflow row and its branch…" and "DRAG-7.27: a dragged Q carries R…".
+   - "A Full overflow row with a Valid owner retains the ordinary valid hold behavior": onto `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.13: a hold above R's overflow row is a silent dwell…".
+
+No internal mapping is proposed. Where the surface tests cover a whole case, an internal test isn't mapped beside them. The one internal test that would close a gap, DRAG-7.14's run-on during the dwell, doesn't exist yet.
+```
+
+**`/code-review` at `medium`** on `tests/helpers/overflowTree.ts` and `boardDragSurface.ts` (the QA Engineer's own self-check, not a reviewer verdict) returned seven findings, recorded with their actions in Results.
+
+### Batch 4c, Stop 2 — the Test Reviewer's second pass (2026-11-11)
+
+The same reviewer agent, continued. Its first attempt at this pass was cut off by a usage limit before any verdict; it was restarted on tree `0b49e31e624d18ada551bd480d72493fe94911ef`. The brief gave the changes made for the first pass's gaps, the lint-only edits, and the one correction made since (DRAG-7.17's gap-above test), before and after. The report is word for word.
+
+```text
+Test Reviewer, Story 10 batch 4c, Stop 2, second pass (2026-11-11)
+
+**Inputs.** I read the files as they stand on disk, which the coordinator gives as tree `0b49e31e624d18ada551bd480d72493fe94911ef`. I have no shell, so I couldn't check that tree ID or diff it. I judged each change from its before-and-after.
+
+**Scope.** This pass covers:
+- every case I gave a Test gap in the first pass;
+- every case the changes touch. Change 1 reaches DRAG-7.31. The `holdFreeAt` change (14) reaches DRAG-7.10's hold-free variants, DRAG-7.13's Free Card tests and DRAG-7.18. The B25 retitle (13) reaches DRAG-1.14 and DRAG-5.15;
+- the one correction after a red run;
+- the new check 7, with cost notes at the end.
+
+**Form.** The brief carried reasons and arguments in three places:
+- "it goes to a clock test in popSession.test.ts, a Coder handoff";
+- "cross-cutting item 1 is answered by the guard in seedTree rather than by seeding";
+- "Changes with no assertion or setup effect".
+
+I judged each of these from the before-and-after and the Then alone. The cosmetic changes do read as having no effect: unused imports and names removed, `{ cause: error }` added, and the §4.1 comment.
+
+---
+
+## Verdicts
+
+### DRAG-7.6: Proves the case
+- **"ghost in the last gap, below B, at level 1"**: `awaitProjection('6:0:true')`, in `tests/ui/drag-7-hierarchy-modal.spec.ts` "DRAG-7.6, DRAG-7.2: a Stub whose own slot is behind an overflow row starts back in the section as P's last child…".
+- **"R's overflow row … reads '1 child' meanwhile"**: the same test, read from the screen.
+- **"R1.parentId = P, attached, … after B, with R1a still its child"**: the same test. It now asserts R1a's parentId and isAttached.
+- **The When's pull-out to P's column**: `pullOutAndZoomBack` now waits for `data-drag-context` to match `/^column:/` between the modal closing and the hover back onto P. A drag that never left Descendants can no longer pass.
+- **"back in the section its ghost starts in its own slot, between Q and T, at level L, and a release there writes nothing"**: "DRAG-7.6: a Stub whose own slot the section shows comes back in that slot, and a release there writes nothing". Its zoom back now passes through the column.
+- **"Released in the column instead … Free with parentId = R, placed by the column's within-action"**: "DRAG-7.6: released in the column before zooming back in…".
+
+### DRAG-7.9: Proves the case
+- **"starts at P's Descendants layer, with no pop"**, and **bullet 1, "one state, R1's first child: … attached, before R1a"**: "DRAG-7.9, DRAG-7.28: a drag in the modal starts at the Descendants layer, and between R1 and R1a the one state is R1's first child". Offsets of −3, +3 and 0 levels from the aim each read `4:4:true` before the release. The saved item has parent R1, isAttached 1, Todo, and sits before R1a.
+- **Bullet 2**: "DRAG-7.9: in the gap R2 sits in, one tab right of its own depth, it is R1's last child, after R1a".
+- **Bullet 3**: "DRAG-7.9, DRAG-7.19: set back down in its own gap and depth…".
+- **Bullet 4**: "DRAG-7.9, DRAG-7.12: a tab state past the depth cap…".
+- **"R2 stays attached throughout, with P's workphase"**, as saved after each release: all four tests.
+- Still with a Planner session: desk r2 and r3, Open questions item 3.
+
+### DRAG-7.10: Proves the case, with five tests red at one clause, which needs a ruling
+Clauses the matrix proves, in "DRAG-7.10[, DRAG-1.14]: … pops once to … on …, Free, and a release after Card Q writes that placement":
+- **"exactly one pop … directly to K"**: the modal is gone, the state is locked and the context is K.
+- **"Free"**: the item's row in K is an article, and the saved item has isAttached 0.
+- **"shown as shortCard"**: the carried copy's `data-drag-overlay-form` reads short-card. The ghost's box height now equals the copy's within 0.05 px, which a full Card with no description wouldn't match.
+- **"bounded by K"**: `withinExcess` is at most 2 px.
+- **"{anchorId: Q, side: after}"**: one request, no parentId, isAttached not true.
+  - A Stub keeps its parentId with isAttached 0.
+  - A Free Card keeps its parentId and stays Free.
+- **"No attach into P"**.
+
+Clauses other tests prove:
+- **"No further exit from P's box is required"**: "DRAG-7.10: in an expanded sub-row, reaching Board takes another pop out of the sub-row" and "DRAG-7.10: in an expanded sub-row, the sibling sub-row beside it is not reached…". Both pass, both now assert the rest point lies in P's own box (owner P), and both show the one pop to K from there.
+- **"From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of K"**: the same two tests.
+- **One excursion that satisfies neither threshold**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion…" and "DRAG-7.10: an excursion out of the modal shorter than the pop-out distance…".
+- **The header**: "DRAG-7.10: the modal's header is part of the modal…".
+
+**Red against the app.** For the click arrival, "bounded by K" fails in the four click matrix variants and in "DRAG-7.10: resting beyond P's box, inside its column…". The tests assert the clause as the Then states it. Whether the wiki or the code is wrong is a ruling (test-plans README, "When a test for a case fails"). Until it's made, no green test proves the click arrival's bound.
+
+Still with a Planner session: desk r6, Open questions item 1.
+
+### DRAG-7.12: Proves the case
+In `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.12: a modal a hold opens carries the drag's tiers…":
+- **R and R1 Full, R1a Mid, Y Low**: read from `data-drop-tier`.
+- **The Given**: read from `data-drop-state`.
+- **"does not recompute them"**: R's tier is the same before and after the modal opens.
+- **"The static section rows under the backdrop take no target tier"**: the test now first finds a row titled A visible inside article P, then counts zero `[data-drop-tier]` there.
+
+### DRAG-7.13: Proves the case
+- **"during the modal hold's dwell, then nothing new is shown"; "then a visible cue shows on R's overflow row"; "when the cue completes, then the hierarchy modal opens, with the drag at P's Descendants layer"**: "DRAG-7.13: a hold above R's overflow row is a silent dwell…" and "DRAG-7.13: a Free Card zoomed into P and held above R's overflow row…". The cue element is now asserted visible, not only present. The Free Card's Given, Free with a null parent, is asserted first.
+- **A release before the cue completes**: "…a release before the cue completes commits…" (Stub), and "…commits a Free Card zoomed in above|below…".
+- **The same below the overflow row**: "…held below R's overflow row, at its level, opens the modal as R's last child".
+- **B, P's own Stub**: "DRAG-7.13: any item at the layer opens it: B…".
+- `holdFreeAt` now finds Card P by `p.title`, which is the same Card.
+
+### DRAG-7.14: Test gap
+Clauses the tests prove:
+- **Bullet 1 (another gap)**: "DRAG-7.14: the hold starts over when the ghost changes level or gap". At the other gap the hold reads null, the cue count is 0, and `data-drag-projection` no longer starts with `6:`.
+- **Bullet 2**: the same test.
+- **Bullet 3**: "DRAG-7.14: the cursor leaving the whole Card's box ends the hold…".
+- **Bullet 4, during the cue**: "…moving into the Card's title or padding during the cue…".
+- **Bullet 5**: "…the carried copy moving within the gap…".
+- `popSession.test.ts`'s DRAG-7.14 tests back bullets 1 to 3's logic. They're in the approved clock category.
+
+Gap:
+1. **Bullet 4 during the dwell, "the dwell … runs on without restarting"**: unchanged. "…during the dwell lets the hold run on…" can't tell run-on from restart, since a restarted dwell also reads dwell and also completes. It stays a gap until the Coder's `popSession.test.ts` test lands. That test is in the clock category, so it counts without approval; it should carry DRAG-7.14, with the cursor moving within the layer and the hold keeping its `since`.
+
+Optional tightening for bullet 1: `not.toHaveAttribute(/^6:/)` also passes if the projection attribute were absent. With every clock off and the cursor inside P that can't happen here, but asserting the Descendants context, or the expected gap, would make it airtight.
+
+### DRAG-7.15: Proves the case
+- **Spot under the cursor, for both gaps, both approaches, with and without a child**: the five "DRAG-7.15: held from above|below, to the gap above|below R's overflow row…" tests, "DRAG-7.15, DRAG-7.19: the modal opens with the ghost's spot under the cursor…" and "DRAG-7.15: held from above, down to the gap above R's overflow row…".
+- **"commits what it would have before the modal opened: X first among R's attached children, before R1, or last, after R2"**: `expectReleaseCommitsShown` now asserts `placed.isAttached` is 1, besides the parent and order read from the painted modal.
+- **The Given's attached child**: its parentId and isAttached are now asserted.
+- **"Its attached child is absent while it is carried … drawn under it again"**: as in the first pass.
+- Still with a Planner session: desk r6, Open questions item 2.
+
+### DRAG-7.17: Proves the case
+- **From the gap below**: "DRAG-7.17: when R's children run longer than the modal…". The list is scrolled and the spot is under the cursor. The release, with the cursor unmoved, saves X under R, attached, after E19.
+- **From the gap above**: "DRAG-7.17: from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too". The Given is the sibling S with 20 children before R, and the list is scrolled after the modal opens. The projection reads `24:3:true` before and after the modal opens, and the spot is under the cursor. The release saves W under R, attached, before R1. The correction is judged below.
+
+### DRAG-7.18: Proves the case
+Unchanged from the first pass. The `holdFreeAt` change touches only how the Free Card variant finds P. One reopen is asserted; desk r1 is still with a Planner session, Open questions item 5.
+
+### DRAG-7.27: Proves the case
+- **R carried**: "DRAG-7.27: a dragged R carries its overflow row and its branch…", with the clauses as in the first pass.
+- **"R1 and R2 show in the section below it, at level 2"**: the test now asserts that each has padding-left `descendantsIndentPx(1)`, besides the section order.
+- **The cancel**: "…cancelling a drag of R…".
+- **Q carried**: "…a dragged Q carries R…".
+- **P carried into another Card**: "…P carried and zoomed into another Card's section…". Dropping the unused `p` changes nothing; the Card is found by its title.
+- Still with a Planner session: desk r3, Open questions item 6.
+
+### DRAG-7.28: Proves the case
+- **"R1's Sheet opens above the modal and is available for interaction"**: "DRAG-7.28: a click on a row in the modal opens that item's Sheet above it".
+  - The test waits for the Sheet's painted right edge to reach the window's edge.
+  - It takes a point inside both the Sheet's and the modal's painted boxes. At that point, `elementFromPoint` lies in the "Item details" complementary region. That is the screen's stacking, so the Sheet is above the modal.
+  - The title click then opens an edit.
+- **"The modal stays open at the same place with the same hierarchy, and opening the Sheet writes nothing. The Sheet belongs to R1"**: the same test.
+- **"When instead a press on R1 starts its drag in the modal, then carrying that row opens no Sheet"**: "DRAG-7.28: carrying a row in the modal opens no Sheet, and the release still places by gap and depth". R1 is pressed and carried to the gap after R2 (`4:3:true`), and the Sheet stays shut while it's carried and after the release.
+- **"The drag still places by gap and depth"**: the same test saves R1 under R, after R2, with R1a still under R1. The first-child test still carries the saved order R2 before R1a.
+
+### DRAG-7.31: Proves the case
+In "DRAG-7.31: a hidden Stub returned to its pickup slot after reopening the modal writes nothing…", its When's pop to P's column is now asserted through `pullOutAndZoomBack`. Otherwise the verdict is as in the first pass. The wording question ("no request" against "writes nothing") is still with a Planner session.
+
+### DRAG-7.32: Proves the case
+Unchanged; only the spec's comment changed. **Record note:** the comment says the lost early Escape is "recorded in Results and the Open questions". In `docs/planning/epic-3-5-stories/story-10-batches.md`, though:
+- the Results entry for T3 still calls it "a Planner question";
+- the Open questions section has no entry for it.
+
+The spec and the plan should say the same thing.
+
+### DRAG-1.14: Proves the case
+- **Out to K from the modal's box, by one sample**: the hold-stub and hold-free distance variants of the DRAG-7.10 matrix.
+- **Out to Board from a sub-row**: `tests/ui/drag-5-stub-detach.spec.ts` "DRAG-1.14: a yank past the pop-out distance from an expanded sub-row, with every clock off, pops it to Board".
+- **Out to the column from the Card's box**: "DRAG-1.14: a yank past the pop-out distance, with every clock off, pops Descendants -> Column…".
+- **"given popDistancePx is 0 … no pop happens"**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion…".
+- **"Descendants uses the whole Card's box"**: now carried by "DRAG-5.15, DRAG-1.14: B25 title is inside the whole Card and releases the first-child gap" and "DRAG-5.15, DRAG-1.14: B25 padding is inside the whole Card and releases the first-child gap".
+  - With `popDistancePx` 8, a point in the Card's title or padding is asserted further than the distance above the first row.
+  - It pops nothing for twice `popDelayMs`, and the drag stays at Descendants.
+  - The stamp is title-only.
+
+### DRAG-5.15: Proves the case
+Its two B25 tests changed in title only.
+
+### DRAG-3.25: Test gap
+Clauses the tests prove:
+- **Section rows of one height `s`, and a pill that fits its title's line**: "DRAG-3.25: a section's typed, untyped and long-title Stub rows and its overflow row are one height…".
+- **Modal rows and static rows of height `s`**: "DRAG-3.25: the hierarchy modal's typed and untyped rows and the section's rows under its backdrop are one height". Before the modal opens, the box of B's title's parent is shown to equal B's registered row box, in height and y. So measuring the static rows by the title's parent now measures the row. This rests on the static rows having the live rows' structure, which is reasonable for the same section drawn static.
+- **After a pickup, the ghost and the carried copy have height `s`; a branch's line hangs below the copy, and the ghost has none**: the eight "DRAG-3.25: a typed|untyped Stub … picked up from…" tests. The typed Given is now asserted: the Story name is drawn once on A or F before the pickup.
+
+Gap:
+1. **"The same holds for an untyped Stub"**: the untyped pickup variants check only that the Task name isn't drawn on B or E. An untyped fixture that came out with a Story or Epic pill would pass, and the untyped half would go untested. The section and modal tests' untyped rows aren't checked at all.
+   - Fix: assert in `seedHeightTree` that each untyped item's saved type is empty, or that none of `fetchItemTypes`'s names is drawn on those rows. That covers all ten tests.
+
+### DRAG-2.22 (Open, not assigned to 4c): Test gap
+Unchanged. "DRAG-7.21, DRAG-2.22: …" carries only the Depth-capped owner clause. The Mid Card and Cycle-forming clauses have no test in these files. My first-pass mappings for two of its other clauses are still open (below).
+
+### DRAG-6.15 (Open, not assigned to 4c): Test gap
+Unchanged. "DRAG-7.23, DRAG-6.15: …" carries one cause (another item's failed drop) in one context (the modal).
+
+**Widened scope.** The other IDs on tests in the changed files keep their first-pass verdict of Proves the case. In this pass their tests changed only cosmetically, or through helper headers.
+
+---
+
+## Changes since the first pass
+1. **`pullOutAndZoomBack` waits for the column context.** Accepted. It confirms the When's pop to P's column for DRAG-7.6 and DRAG-7.31. `/^column:/` matches any column, but a zoom back into P is only possible from P's own column, so the looser match can't let a wrong path pass.
+2. **R1a's isAttached.** Accepted.
+3. **Offsets −3, +3 and 0 each read `4:4:true`.** Accepted. This proves "one state".
+4. **The ghost's height equals the carried copy's.** Accepted. This proves the ghost is a shortCard.
+5. **Owner P asserted in the two passing sub-row tests.** Accepted.
+6. **A row titled A visible before the zero-tier count.** Accepted.
+7. **The cue asserted visible.** Accepted.
+8. **Cue count 0, and the projection no longer gap 6.** Accepted, with the optional tightening under DRAG-7.14.
+9. **isAttached after the release (DRAG-7.15 and both DRAG-7.17 tests), and the child's isAttached in DRAG-7.15's Given.** Accepted.
+10. **R1 and R2 at indent 1.** Accepted.
+11. **The overlap-point stacking check, and R1 carried.** Accepted. The carry test's poll re-aims at a fixed point until it reads `4:3:true`, which is an aim and not a looser assertion.
+12. **The static-row self-check and the pill Given.** Accepted, with the untyped residue under DRAG-3.25.
+13. **DRAG-1.14 on the B25 titles.** Accepted. The stamp is title-only, so it needs a `check:docs` run.
+14. **`overflowTree.ts` and `boardDragSurface.ts`.** Accepted.
+    - `holdFreeAt` finds P by `p.title`, which is the same Card.
+    - The listed helpers' headers now say what they read: the screen, an app attribute, the network answer, or recorded requests.
+    - The `sectionLevels` guard in `seedTree` reads the configured value and fails loudly on a retune, so nothing can pass at the wrong L. The depth literals remain tied to 3 through the guard. Seeding `sectionLevels: 3` would let these tests keep running after a retune, but that's upkeep, not proof.
+    - Still outstanding, and not in a changed file: `dragGesture.ts::awaitProjection`'s header says "among all the section's rows". The app counts rows behind an overflow row too.
+15. **The DRAG-7.32 comment.** Accepted as a comment. See the record note under DRAG-7.32.
+
+## Corrections after a red run
+1. **DRAG-7.17, "from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too"**: X carried up from below, aimed at the overflow row's top quarter, with the QUICK hold and a re-aiming poll → W carried down from above, aimed at R's center, with the HOLD hold and one `awaitProjection`. **Accepted.**
+   - Only how the state is reached and aimed changed. The carried item is a different Stub of P's, and the hold's thresholds are the test's own.
+   - The expected values are unchanged: gap `4 + count` at depth 3 before and after the modal opens, the list scrolled, the spot under the cursor, and the item saved under R, attached, before R1.
+   - DRAG-7.17's Then doesn't fix the approach, and DRAG-7.15's says either way.
+   - Swapping the re-aiming poll for a single wait is stricter, not looser.
+
+## Held-off cases
+None.
+
+## Proposed mappings
+1. **DRAG-1.14 onto the B25 tests**: applied (change 13).
+2. **DRAG-2.22**, still open. These are surface tests, so no approval is needed, and the case isn't assigned to 4c:
+   - "An overflow row belonging to the carried branch is absent": onto `tests/ui/drag-7-overflow-row.spec.ts` "DRAG-7.27: a dragged R carries its overflow row and its branch…" and "DRAG-7.27: a dragged Q carries R…".
+   - "A Full overflow row with a Valid owner retains the ordinary valid hold behavior": onto `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.13: a hold above R's overflow row is a silent dwell…".
+
+## Cost notes
+Nathan decides on these, with the QA Engineer's recommendation. None of them is a gap.
+
+1. **DRAG-7.10's matrix: one gesture across twelve variants, and more than two corrections.**
+   - Every variant makes the same gesture, a pop out of the modal, and the twelve differ by arrival, K and threshold.
+   - It needed four corrections to its aim or timing in the first pass: #2, #3, #4 and #5.
+   - The hold-free variants wait out a 2.3 s zoom, then a hold, then a pop: more than two clocks in a row.
+   - What each axis buys:
+     - Arrival buys the release clause, a Stub detaching against a Free Card staying Free.
+     - K buys the bound's axes.
+     - The threshold, clock against distance, is the pop machine's to decide. `popSession.test.ts` already carries DRAG-1.14's distance term, in the approved clock category.
+   - Simpler form: keep one surface test per release outcome, with a sub-row variant for the second axis, and leave the threshold half to the pop machine. Nathan chose the full twelve (proof plan, decision 2); this gives him the cost side. It doesn't touch the click arrival's red bound.
+2. **DRAG-7.17's gap-above test: a second correction to its aim and timing.** The first was #13 in the first pass; the second is this pass's.
+   - Clause: "From the gap above it … the list is scrolled so that the spot sits under the cursor … and the release commits X first among R's attached children."
+   - Cost: a sibling with 20 children, a 1.5 s hold, and two corrections.
+   - The gap-below test already shows the gesture reaching the scroll and the write. The gap-above variant differs only in where the spot lies, which is `modalPlacement.ts`'s scroll math, and `modalPlacement.test.ts` has DRAG-7.17 tests for it, such as "scrolls the list to bring a spot deep in it under the cursor". Mapping them would need Nathan's approval, since modal geometry isn't an approved category.
+   - The options are to keep the test, which now passes with no re-aim, or one gesture with the matrix inside.
+3. **DRAG-7.18: a zoom hold whose length buys no clause.** Each variant waits out a hold, a pop, a 2.3 s zoom (`ZOOM_BACK` 1500 + 800) and a hold.
+   - The chain itself is the When.
+   - The zoom's length, though, buys no clause. It's long because the pop rests the cursor on F's row, a Card in the column, and a short zoom would carry the drag into F.
+   - Resting the pop on column space outside any Card would let the zoom be short and save about 1.5 s per variant.
+4. **DRAG-7.31: a chain of three clocks.** It waits out a pop (300 ms), a zoom (650 + 350) and a modal hold (200 + 300), then re-aims with a poll. The chain is the When, so each wait buys a step of it, and the waits are short. Keep it as it is.
+
+## Files
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-hierarchy-modal.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-modal-hold.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-overflow-row.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-stub-row-height.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-5-stub-detach.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\overflowTree.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\boardDragSurface.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\dragGesture.ts
+- c:\Users\natha\Dev\KanbanApp\docs\planning\epic-3-5-stories\story-10-batches.md
+```
+
+**After this pass** (the QA Engineer, tree `5b0f5c79bc84b1098bd5b2b94468eead5b20972f`; not yet seen by the reviewer): DRAG-3.25's gap is answered in `seedHeightTree`, which now asserts each typed item's saved type and that each untyped item's is null. DRAG-7.14's optional tightening is taken: the "starts over" test asserts the Descendants context and a projection at a gap other than 6. DRAG-7.14's remaining gap is a Coder clock test, in Open questions.
+
+### Batch 4c, after Stop 3 — the Test Reviewer's third pass (2026-11-12)
+
+The same reviewer agent, continued, on tree `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`. A usage limit cut off its first attempt, and it was resumed with the same brief. The brief gave the Coder's two ID-bearing Vitest changes, the QA Engineer's changes since the second pass (the DRAG-3.25 Given, DRAG-7.14's assertion at the other gap, the cue locator on `data-drag-cue`, the DRAG-7.10 matrix cut to eight by Nathan's decision, and `awaitProjection`'s header), and the runs. The report is word for word.
+
+```text
+Test Reviewer, Story 10 batch 4c, third pass, after the Coder's return (Stop 3), 2026-11-12
+
+**Inputs.** I read the files on disk, which the coordinator gives as tree `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`. I have no shell, so I couldn't check the tree or diff it.
+
+**Scope.**
+- The Coder's two ID-bearing Vitest changes, and the new popSession test that carries no ID.
+- Playwright changes 3 to 7.
+- Every case with an open gap, and every case the changes touch. Change 5 reaches the cue checks in DRAG-7.13, DRAG-7.14 and DRAG-7.21.
+- Check 7, with cost notes at the end.
+
+**Run state.** 130 passed, 0 failed, on this tree. That includes the five DRAG-7.10 click-arrival tests that were red at "bounded by K".
+
+**Form.** The brief asserts that the new DRAG-7.14 Vitest test "is in the clock category". I checked that against `docs/test-plans/README.md` rather than taking it.
+
+**Disclosure.** For the changed DRAG-3.22 test I meant to read only the header of `client/src/components/workflow/dragOverlayGeometry.ts`. I read lines 1 to 60, which runs past the header into the body of `overlayWidthFor` (lines 33 to 36) and the first lines of `overlayShapeFor`. My verdict on that change doesn't rest on them: it needs only the before-and-after. `client/src/components/workflow/AGENTS.md` came into view when I opened `popSession.test.ts`; my definition allows that file. I used it for the `data-drag-cue` contract.
+
+---
+
+## Verdicts
+
+### DRAG-7.14: Proves the case
+- **Bullet 1 (another gap)**: `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.14: the hold starts over when the ghost changes level or gap". At the other gap, the hold reads null and the cue count is 0. The drag is still at P's Descendants layer, and the projection is present and not in gap 6 (`/^(?!6:)\d+:/`).
+- **Bullet 2 (a tab from L+1 to L resets; tabbing back starts a fresh dwell)**: the same test.
+- **Bullet 3 (leaving the whole Card's box)**: "DRAG-7.14: the cursor leaving the whole Card's box ends the hold…".
+- **Bullet 4 ("the dwell or cue runs on without restarting; completing the hold there opens the modal")**:
+  - The surface tests "…moving into the Card's title or padding during the dwell|cue…" show the padding is inside the layer: the hold runs on, nothing pops, and the modal opens.
+  - The new `client/src/components/workflow/popSession.test.ts` test "DRAG-7.14: runs on from the same start while the cursor moves into the Card's title or padding, through the dwell and the cue, and completes there" shows the clock doesn't restart.
+    - A sample in the padding during the dwell returns the same session.
+    - The cue comes at `modalHoldDwellMs` with the same `since`.
+    - A move back over the rows and into the padding during the cue keeps the same session.
+    - The hold completes at dwell plus cue.
+    - The thresholds come from the tuning. It is in the approved clock category, so it counts without approval.
+- **Bullet 5**: "DRAG-7.14: the carried copy moving within the gap…".
+- The other `popSession.test.ts` DRAG-7.14 tests, in the same category, back the logic of bullets 1 to 3.
+
+### DRAG-7.10: Proves the case
+The matrix is down to eight variants. Every arrival leaves on the clock; P's own Stub (hold-stub) also leaves on one sample of the distance. All eight pass.
+
+In `tests/ui/drag-7-hierarchy-modal.spec.ts` "DRAG-7.10[, DRAG-1.14]: … pops once to … on …, Free, and a release after Card Q writes that placement":
+- **"opened by a click or by a hold"**: the click, hold-stub and hold-free arrivals.
+- **"satisfies popDelayMs or the enabled popDistancePx"**: the clock in all three arrivals, the distance in the two hold-stub distance variants.
+- **"exactly one pop … directly to K"**: the modal is gone, the state is locked and the context is K.
+- **"Free … shown as shortCard"**: the item's row in K is an article. The carried copy's form is short-card, and the ghost's height equals the copy's.
+- **"bounded by K"**: `withinExcess` is at most 2 px, now green for every arrival.
+- **"{anchorId: Q, side: after}"**: one request.
+  - "a Stub picked up attached has isAttached: false with its original parentId": the click and hold-stub arrivals.
+  - "an item brought in Free stays Free with its original parentId": the hold-free arrival.
+- **"No attach into P"**: no parentId in the request.
+
+Clauses other tests prove:
+- **"No further exit from P's box is required"**:
+  - the click clock variants, which assert owner P and now pass;
+  - "DRAG-7.10: in an expanded sub-row, reaching Board takes another pop out of the sub-row";
+  - "…the sibling sub-row beside it is not reached…".
+- **"From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of K"**: the same two sub-row tests.
+- **One excursion that satisfies neither threshold**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion…" and "DRAG-7.10: an excursion out of the modal shorter than the pop-out distance…".
+- **The header**: "DRAG-7.10: the modal's header is part of the modal…".
+- **Resting beyond P's box**: "DRAG-7.10: resting beyond P's box, inside its column…", now green.
+
+Still with a Planner session: desk r6, Open questions item 1. The new two-excursion test is under Proposed mappings.
+
+### DRAG-1.14: Proves the case
+- **"Descendants uses … the modal's box", out to K by one sample, before `popDelayMs`**: the two hold-stub distance variants, to the column and to the sub-row.
+- **A column or sub-row, out to Board**: `tests/ui/drag-5-stub-detach.spec.ts` "DRAG-1.14: a yank past the pop-out distance from an expanded sub-row, with every clock off, pops it to Board".
+- **The Card's box, out to the column**: "DRAG-1.14: a yank past the pop-out distance, with every clock off, pops Descendants -> Column…".
+- **"Descendants uses the whole Card's box"**: "DRAG-5.15, DRAG-1.14: B25 title|padding is inside the whole Card…".
+- **"given popDistancePx is 0 … no pop happens"**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion…".
+- Two of the removed matrix variants carried DRAG-1.14 in their titles. Removing an ID-bearing test goes in the living-docs handoff (test-plans README, "How tests and cases point at each other").
+
+### DRAG-3.25: Proves the case
+- **The Given, "typed and untyped Stubs"**: `seedHeightTree` in `tests/ui/drag-stub-row-height.spec.ts` now asserts that A, R, R1, C and F are saved with their types, and that P, Q, R2, B, D, E and E1 are saved with none. That covers all ten tests. The pickup tests also check that the typed Stub's pill is drawn.
+- **Section rows of one height `s`, and a pill that fits its title's line**: "DRAG-3.25: a section's typed, untyped and long-title Stub rows and its overflow row are one height…".
+- **Modal rows and static rows of height `s`**: "DRAG-3.25: the hierarchy modal's typed and untyped rows and the section's rows under its backdrop are one height". The static-row measure is checked first against a registered row's box.
+- **After a pickup, the ghost and the carried copy have height `s`; a branch's line hangs below the copy, and the ghost has none**: the eight "DRAG-3.25: a typed|untyped Stub … picked up from…" tests.
+
+### DRAG-7.13: Proves the case
+As in the second pass. The cue is now found by `[data-drag-cue]`, which `client/src/components/workflow/AGENTS.md` documents as the attribute on a hold's cue fill bar, inside the row it is drawn on. So the cue's absence during the dwell, and its presence and visibility during the cue, read an attribute the app provides. Tests: "DRAG-7.13: a hold above R's overflow row is a silent dwell…" and "DRAG-7.13: a Free Card zoomed into P and held above R's overflow row…".
+
+### DRAG-7.21: Proves the case
+Its cue check now reads `[data-drag-cue]`; nothing else changed. Test: "DRAG-7.21, DRAG-2.22: a ghost in an over-cap state beside an overflow row starts no hold…".
+
+### DRAG-3.22: Proves the case
+I widened scope to it because `dragOverlayGeometry.test.ts` changed. Its surface carriers are `tests/ui/drag-layer-transitions.spec.ts` and `tests/ui/drag-card-forms.spec.ts`; neither changed in this pass, and its verdict rests on them. The changed internal test is judged below. It doesn't count without an approved mapping, and I don't propose one beside surface tests that prove the case whole.
+
+### DRAG-2.22 (Open, not assigned to 4c): Test gap
+Unchanged. "DRAG-7.21, DRAG-2.22: …" carries only the Depth-capped owner clause. The Mid Card and Cycle-forming clauses have no test in these files.
+
+### DRAG-6.15 (Open, not assigned to 4c): Test gap
+Unchanged. "DRAG-7.23, DRAG-6.15: …" carries one cause in one context: another item's failed drop, in the modal.
+
+**Widened scope.**
+- In the changed Playwright files, every other ID keeps its second-pass verdict of Proves the case: DRAG-7.6, 7.9, 7.12, 7.15, 7.17, 7.18, 7.27, 7.28, 7.31, 7.32 and the rest of the first pass's list. Their tests didn't change in this pass beyond the cue locator and the projection helper's header.
+- The changed Vitest files carry about 85 ID-bearing tests: `popSession.test.ts`, `dragOverlayGeometry.test.ts`, `KanbanCard.test.tsx`, `dragChrome.test.tsx`, `dragStructure.test.ts` and `ItemDetailPanel.test.tsx`.
+  - The Coder lists no ID-bearing change in them beyond the two judged below, so I didn't re-judge those tests clause by clause.
+  - None of them changes a verdict here. An internal test counts only through an approved mapping or an approved category.
+
+---
+
+## The Coder's ID-bearing Vitest changes
+1. **New: `popSession.test.ts` "DRAG-7.14: runs on from the same start while the cursor moves into the Card's title or padding, through the dwell and the cue, and completes there".** Accepted, and it counts.
+   - It is the pop state machine's clock logic, with its thresholds read from the tuning, so it is in the category approved outright.
+   - It closes DRAG-7.14's one gap.
+   - The test's `sample` helper builds the board's order of operations itself: the pop step, then the hold, with no target once the cursor is outside. The surface test "…the cursor leaving the whole Card's box ends the hold…" covers how the board composes them, so nothing is left unproved.
+2. **Changed: `dragOverlayGeometry.test.ts` "DRAG-3.22: locked at a Card's Descendants layer, or the modal that holds it: the Stub, at a row's width".** Accepted.
+   - The only change is a third argument, `null`, for a parameter the module's header now lists: a Card's width, which a Stub's drag sets for its shortCard.
+   - The expected values are unchanged: the Stub form, at the Card's width less its inset, and at the modal list's width.
+   - It is internal and has no approved mapping for DRAG-3.22, so it doesn't count, and none is proposed.
+
+The new test with no ID, "two excursions out of the hierarchy modal's box, each shorter than popDelayMs, pop nothing: a return restarts the clock", is sound. A return into the header restores the locked session, the second excursion runs its own clock, and the drag pops only when that second excursion alone reaches `popDelayMs`. See Proposed mappings for which ID it should carry.
+
+## Playwright changes since the second pass
+3. **`seedHeightTree` asserts each item's saved type.** Accepted. This closes DRAG-3.25's gap for all ten tests.
+4. **DRAG-7.14, "the hold starts over…", at the other gap.** Accepted. The test now asserts the Descendants context and a projection that is present and not in gap 6, so the check can't pass when the projection is absent.
+5. **`cueOn` matches `[data-drag-cue]`.** Accepted. This is a documented attribute the app provides, scoped to the owner's overflow row. Its comment still names `dragChrome.tsx::ZoomCue`, which is harmless.
+6. **The DRAG-7.10 matrix, from 12 variants to 8.** Accepted. This is Nathan's decision on cost note 1. Every DRAG-7.10 clause still has a passing test (see its verdict), and DRAG-1.14's modal-box distance clause rests on the two hold-stub distance variants. The two removed tests that carried DRAG-1.14 go in the living-docs handoff.
+7. **`awaitProjection`'s header.** Accepted. It now says the gap counts every row of the Card's hierarchy, those behind an overflow row included.
+
+## Corrections after a red run
+None since the second pass.
+
+## Held-off cases
+None.
+
+## Proposed mappings
+1. **The two-excursion test needs an ID first.** "two excursions out of the hierarchy modal's box…" in `popSession.test.ts` shows wiki §3.1's clock reset at the modal's box. No case's Then states that reset for the modal yet:
+   - DRAG-7.10 states one excursion;
+   - DRAG-1.30 states the reset for a Card in its column;
+   - DRAG-5.5 states it for the Card's box.
+
+   So I can propose no mapping until a Planner session answers Open questions item 1. Once it carries the ID the Planner chooses, it counts without approval, since it is in the clock category.
+2. **DRAG-2.22**, still open. These are surface tests, so no approval is needed, and the case isn't assigned to 4c:
+   - "An overflow row belonging to the carried branch is absent": onto `tests/ui/drag-7-overflow-row.spec.ts` "DRAG-7.27: a dragged R carries its overflow row and its branch…" and "DRAG-7.27: a dragged Q carries R…".
+   - "A Full overflow row with a Valid owner retains the ordinary valid hold behavior": onto `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.13: a hold above R's overflow row is a silent dwell…".
+
+## Cost notes
+Nathan decides on these, with the QA Engineer's recommendation. None of them is a gap.
+
+1. **DRAG-7.10's matrix**: decided (eight variants); nothing to add.
+2. **DRAG-7.17's gap-above test** (second pass, note 2): open, and the test is unchanged. It needed two corrections to its aim and timing. The gap-above variant differs from the gap-below one only in the modal's scroll math, which `modalPlacement.test.ts`'s DRAG-7.17 tests cover; mapping them would need Nathan's approval. The options are to keep it or to move to one gesture with the matrix inside.
+3. **DRAG-7.18** (second pass, note 3): open, and the test is unchanged. The 2.3 s zoom hold (`ZOOM_BACK`) buys no clause. It's long only because the pop rests the cursor on F, a Card in the column. Resting the pop on column space outside any Card would allow a short zoom.
+4. **DRAG-7.31**: keep it as it is. Its chain of clocks is the When.
+
+None of this pass's changes adds a cost:
+- change 4 adds one wait for the context;
+- `seedHeightTree`'s 12 reads of saved items each buy the Given.
+
+## Files
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\popSession.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\dragOverlayGeometry.test.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-hierarchy-modal.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-modal-hold.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-stub-row-height.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\dragGesture.ts
+```
 
 ## Amendments
+
+- **2026-11-11 — DRAG-7.10's "bounded by `K`" ruled: the wiki stands, and the width is a defect (PO, a deduction for Nathan to overrule).** A Stub picked up in a click-opened modal and popped out to its column is carried at the modal row's width, 574 px in a 272 px column. Wiki board-drag-interaction already settles it in three places, and none excepts a modal a click opened:
+  - **§2:** a carried card follows the cursor only within its context's own extent.
+  - **§3:** a pop out of Descendants leaves the item bounded by the column or sub-row that contains its Card, shown there as a Free Card.
+  - **§5a:** the carried copy switches back to shortCard at the pop-out to a column. §7.3 has the modal bound the layer only while it's open.
+  - **So:** no wiki or case change. The fix is the Coder's, in a session Nathan opens. The five red tests stay as written and go green with the fix. A hold-opened modal already behaves this way, so the fix makes the two arrivals agree.
+  - **If overruled:** the PO writes the exception into §2 and §7.3, and a Planner session rewords DRAG-7.10 and DRAG-1.28.
+
+- **2026-11-11 — Stops 1 and 2 weigh a surface test's cost (Nathan).** The testing-strategy guide, the QA Engineer persona and the Test Reviewer's definition now hold the standing rule; the stops point at it. Stop 1 names what proves each clause, flags the costly ones with a recommendation, and proposes a split for a case past six gesture variants, from 4d on. Stop 2 stops work on a test at its second aim or timing correction and sends the reviewer's cost notes to Nathan, from 4c's resume on. No case, status or assignment changes, and the QA Engineer still never proposes Manual. The catalog README's part waits for a Planner session (the plan's Living-docs handoff).
+
+- **2026-11-11 — D2's repeats drop to ten (Nathan).** From 4c's Stop 4 on, an added or changed drag test passes ten repeats at the adopted five workers. The execution boundary and Stop 4 now say so. 4a and 4b's twenty-repeat evidence stands, and the batch-final full run is unchanged. D2 in the plan holds the reason.
 
 - **Stop 5 complete (Test Planner, from the confirming Reconciler).** All 26 cases become Automated: four Extend, twenty New and two Rework. Whole-catalog identity checks are clean; the associated DRAG-3.3 pointer is maintained under the approved request category. Catalog totals become 378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO, with 91 active story assignments remaining. All 70 variants meet D2 and the final suite/gate pass on the unchanged snapshot. DRAG-3.12 stays separate and nonblocking. Stop for review/commit; no 4c or new discovery cycle.
 
@@ -403,6 +1454,38 @@ No desk answer or Test Reviewer verdict has been issued under the new workflow y
 - **2026-11-10 — Five-worker default after the extended trial (Nathan).** Replace the initial three-worker default with five for its measured speed benefit and no newly observed failure identity or mode. Future D2 repeats and batch-final runs use five. Re-evaluate with the smoke suite, considering lower E2E frequency outside Story 10 and capacity for simultaneous work; revisit sooner if failures or contention change. Six is dropped for its small additional saving. Failure destinations and D2's bar stand.
 
 ## Open questions
+
+### Batch 4c Stop 2 — defects, hooks and questions (QA Engineer, 2026-11-11; updated 2026-11-12 after the Coder's return)
+
+**Answered by the Coder's return** (Results has the evidence):
+
+1. **DRAG-7.10, "bounded by `K`"** (the PO ruled the wiki stands, Amendments): fixed. The five tests that were red pass unchanged.
+2. **The Escape lost as the Sheet opens over the modal:** the Coder's return changes the Sheet's and the modal's Escape handling, with Vitest tests. The surface tests still wait for the Sheet to be in place, so no Playwright run has pressed Escape early since; the trace's early-Escape sequence wasn't rerun.
+3. **The two clock tests in `popSession.test.ts`:** both written. The DRAG-7.14 run-on test closes the reviewer's last gap. The two-excursion test carries no ID yet: it waits on question 1 of the Stop 1 list below.
+4. **The cue hook:** `data-drag-cue` on the fill bar. `cueOn` now reads it.
+
+**Decided by Nathan (2026-11-12):** the reviewer's cost notes as recommended (DRAG-7.10's matrix cut to eight; DRAG-7.17, 7.18 and 7.31 kept); Stop 4 repeats the five files whole; `awaitProjection`'s header reworded.
+
+**Answered by the Planner (2026-11-12),** besides the six Stop 1 answers below. The numbers remain for Review log references:
+
+5. **DRAG-7.32: is a Sheet that is still sliding in "open"?** Yes, once it has begun opening and is visible above the modal. The case now says Escape during its entrance closes only the Sheet. This follows wiki board-drag-interaction §9's one-Escape-at-a-time rule; it needs no timing or animation claim.
+6. **DRAG-7.31: "no request" against "writes nothing".** The title says the one and the Then said "*then* no request is sent". The case now says no item write request is sent from pickup through release. Read requests and background polling are outside the no-write rule in wiki board-drag-interaction §7.1 and hierarchy-placement §5. The test's non-GET request observation is stronger than the final-release-only check.
+7. **DRAG-7.17's Given doesn't say the spot is within the modal's reach** (raised by the [flake investigation](../../audits/story-10-drag-flake-investigation.md)). The Given now requires that the modal's scroll range can put the spot under the cursor after it is kept inside the window. Where it cannot, DRAG-7.16's fresh reading governs. The gap-above test keeps the spot within reach.
+
+### Batch 4c Stop 1 — Planner answers (QA Engineer questions, 2026-11-11; Planner answers, 2026-11-12)
+
+From the desk's verdicts (Review log). The original question numbers remain for references there. Nathan (2026-11-11) directed that the Planner's answers stand unless the Planner needs a PO or Nathan ruling. The Planner resolved all six from the in-force wiki; no PO ruling is needed. The case changes and consequences for the QA Engineer and Coder are below.
+
+1. **DRAG-7.10 r6.** The case's Then now includes two excursions outside the modal, each short of `popDelayMs` and `popDistancePx`, whose combined time exceeds `popDelayMs`. Returning between them restarts the clock, so the modal stays open. The Coder's two-excursion clock test carries DRAG-7.10, whose Given is a modal drag. DRAG-1.30's Given is a Card locked in its column, so its ID does not cover this modal variant. The existing surface test keeps its single-excursion assertion. Wiki board-drag-interaction §3.1 governs every pop-out layer.
+2. **DRAG-7.15 r6.** Drop the overflow-row top-quarter one-step aim as stated. With the ghost directly beside the overflow row at its level, wiki board-drag-interaction §7.3 starts the hold; a release before its completion can still save the same gap by DRAG-7.13. At another level, the hold does not run but the release names another placement. No case asserts "no hold" and the same modal-hold placement together. The valid one-step aim at `R`'s own row stays. This answer supersedes item 10's contradictory aim and the earlier 4c note above.
+3. **DRAG-7.9 r2 and r3.** The case now says that each of its four released placements leaves `R2` attached with `P`'s workphase; it doesn't require a separate mid-drag attachment assertion. Its named gaps already include hidden rows, so the broad closing sentence has become a concrete statement about those two gaps, without an independent every-placement enumeration. The existing saved-state assertions follow the revised Then.
+4. **DRAG-7.14 r5.** The padding clause now states the ghost's gap and level when the modal can place its spot under the cursor inside the window: it stays at `R`'s first or last child. If the window edge shifts the modal, DRAG-7.16 governs the fresh cursor reading. The QA Engineer adds the ghost assertion for the within-reach padding variant. Wiki board-drag-interaction §7.3 supplies both outcomes.
+5. **DRAG-7.18 r1.** A single reopen demonstrates reopening once, but the wiki's "as often as the drag needs" also covers another cycle in the same drag. The case now names two exits and two reopens, with no write before the final release. Extend the test to a second reopen; no count beyond that is fixed by the rule.
+6. **DRAG-7.27 r3.** `T` is an attached child of `Q` in the suite's tree, so it leaves every list when `Q` is carried, as `R` does. The case now names `T`'s row alongside `R` and `R`'s overflow row. Extend the `Q`-carried assertion to `T`; DRAG-8.1 keeps the generic branch rule in its own setup.
+
+**For the PO:** none.
+
+### Standing entries
 
 - **For the QA Engineer / Test Reviewer, before 4d's freeze — DRAG-6.5 response-order evidence (checkpoint audit, 2026-11-10):** `tests/ui/drag-preview-reconciliation.spec.ts:61–88` delays the first response by 2,500 ms, sends a second move, and waits another 3,000 ms before its final assertions. The cold audit pass asks whether this establishes that the second answer actually arrived first, independently of elapsed time. The baseline reconciliation's DRAG-6.5/E489 row records the scenario as complete, but does not address this specific ordering-observation question. Have the Test Reviewer assess it under the new workflow and record the verdict; if a correction is needed, establish the response ordering explicitly. This is a review question, not an audit coverage verdict, a new case, or a status change.
 

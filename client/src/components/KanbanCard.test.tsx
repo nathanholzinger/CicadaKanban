@@ -284,6 +284,27 @@ describe('a Card whose section holds the branch of a carried item', () => {
   });
 });
 
+// The carried copy is as wide as dnd-kit holds it, the row it was picked up from, unless the drag gives it
+// a width: a row's for the Stub form, a Card's for a Stub's drag drawn as a shortCard.
+describe('the carried copy’s width', () => {
+  const copy = (props: CardProps) =>
+    renderCard({ item: CARRIED, isOverlay: true, ...props }).getByRole('article', { name: CARRIED.title });
+
+  it.each(['stub', 'short-card'] as const)('is the width the drag gives its %s form', form => {
+    expect(copy({ overlayForm: form, overlayWidthPx: 272 }).style.width).toBe('272px');
+  });
+
+  it.each(['stub', 'short-card'] as const)('is left to the picked-up row’s in its %s form with none given', form => {
+    expect(copy({ overlayForm: form, overlayWidthPx: null }).style.width).toBe('');
+  });
+
+  it('is never set on the in-list row', () => {
+    const { getByRole } = renderCard({ item: CARRIED, overlayWidthPx: 272 });
+
+    expect(getByRole('article', { name: CARRIED.title }).style.width).toBe('');
+  });
+});
+
 // The carried copy says what its branch holds on a second line, in either form: hung from its box so the
 // box the drag measures stays what it is, and, as a Stub, stepping with the box to the depth the ghost
 // would land at.

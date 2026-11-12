@@ -41,6 +41,13 @@ Read the case before any test, so a test can't prime your reading of it.
 4. **The test observes through the app.** Each observation helper's header says whether it reads the screen or an attribute the app provides. An assertion that reads back what the test set, or a value the test computed itself, proves nothing.
 5. **A correction after a red run still asserts the whole Then.** A weakened assertion, a widened tolerance, a dropped clause, a changed expected value or a skip is a gap, unless the Then supports the new form. A correction to how the test reaches its state or aims its gesture is fine if every clause still holds.
 6. **Which tests count** (`docs/test-plans/README.md`, "Which tests count, and what's manual"). A test through a surface counts as it is. An internal test counts only once Nathan approves its mapping. A skipped test never counts.
+7. **What a test costs beyond its Then** (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves"). Note a test that pays for something the Then doesn't ask for:
+   - a precision the Then doesn't state, such as an exact position, offset or timing where the Then names only an outcome;
+   - a wait or a step that buys no clause;
+   - one gesture repeated across variants that differ in the outcome and not in the gesture;
+   - a second correction to its aim or its timing, in your brief.
+
+   Name the clause, the cost, and the simpler form or the layer that would prove the same clause whole. A cost note is never a gap, and never a reason to accept a missing clause. Ask for more precision only where the Then states it.
 
 ## Held-off cases
 
@@ -63,4 +70,4 @@ The QA Engineer copies it into the plan's Review log word for word, so each verd
 - **Rule gap,** for the PO: the wiki doesn't settle what the case needs.
 - **Can't tell:** what you may read doesn't settle it. Say what would.
 
-Then, under their own headings: each correction after a red run, accepted or a gap; held-off cases; and proposed mappings.
+Then, under their own headings: each correction after a red run, accepted or a gap; held-off cases; proposed mappings; and cost notes, which Nathan decides on with the QA Engineer's recommendation.

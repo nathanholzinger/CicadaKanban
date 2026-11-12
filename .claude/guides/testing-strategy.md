@@ -41,6 +41,26 @@ There's no CI; everything runs locally.
 - Logic whose correctness doesn't depend on the surface gets a unit test next to it.
 - A shape-only check (a required field, an enum) is cheapest as a route test.
 
+**When a surface test costs more than it proves.** The surface is the default layer, not a verdict on every clause. These are signals to weigh a test, not limits:
+- it runs for more than about 4 seconds on one worker, or waits out more than two of the app's clocks in a row;
+- it needs a complicated setup, a very precise action, or a very precise expectation;
+- it has needed two corrections to its aim or its timing;
+- it repeats one gesture across a matrix of variants;
+- its failure needs a precision only a robot has, such as a cursor held perfectly still.
+
+A test that shows one gets three questions:
+1. Which clause of the case's *Then* does each wait, and each precise step, buy?
+2. Would its failure tell you something a cheaper test wouldn't?
+3. Is the precision in the *Then*, or only in the test?
+
+When the answers go against the test as written, the options are:
+- **Simplify it.** Drop the steps and waits that buy no clause, and seed a state instead of reaching it by gesture.
+- **One gesture, and the matrix inside.** One surface test shows that the gesture reaches the rule and makes the right write. The variants that change the outcome and not the gesture are tested in the module that decides them. Whether those tests count toward a case is the catalog's rule (`docs/test-plans/README.md`, "Which tests count, and what's manual").
+- **Split the case.** The part a test can pin stays automated, and the part that needs a person's eye or hand is checked manually (What stays manual).
+- **Keep it.** A failure only a robot can produce can still happen. That's worth a test while the test is cheap and steady, and worth less as it gets slower or flakier.
+
+The QA Engineer flags the signal and recommends an option before it writes the test, and Nathan decides (`.claude/personas/qa-engineer.md`, "Weighing a Surface Test"). A change to a case is the Test Planner's. An option changes which test proves a clause, never what the clause says: none of this lets a test drop part of its *Then*.
+
 **Two writing rules make a test cheap to review:**
 - **A test asserts its Given before its When,** so it can't pass from the wrong starting state.
 - **Each observation helper's header says** whether it reads the screen or an attribute the app provides. A reviewer can then tell a test that observes the app from one that reads back what it set.

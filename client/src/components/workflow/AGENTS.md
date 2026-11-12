@@ -272,6 +272,14 @@ the carried copy's second line and its wording).
     copy is measured from `useBoardDnd.ts::pickupRectRef`, which `reanchorOverlayTransform`
     takes as its `pickupRect`. Never from `activeNodeRect`, the source's live rect: it moves
     once a Free Card's row becomes the ghost row in a section.
+  - **And at the source row's width, unless the drag sets one.** A Stub's row is narrower than a
+    Card in its Card's section and far wider in the hierarchy modal, so a Stub's drag draws its
+    shortCard at its containing Card's width, read once at pickup
+    (`dragStructure.ts::cardWidthOf`, through `dragOverlayGeometry.ts::overlayShapeFor`); the Stub
+    form is a row's width in the layer it is in. The re-anchor keeps the pointer on a copy
+    narrower than the row it was picked up as, in either form, and the clamp reads the width
+    drawn (`overlayClampRect`), never dnd-kit's measured one, which for a tilted shortCard is
+    its bounding width.
 - **The dragged subtree, out of the placement math:** `dragClassification.ts`'s
   `subtreeIds`, read by the projection's exclusion (`descendantsProjection.ts`). Never
   re-derive it by filtering for cycle-forming states.
@@ -322,6 +330,11 @@ the carried copy's second line and its wording).
   `useBoardManagement.ts`'s active board. Guarded, so blocked or full storage never throws
   into a handler or stops the app mounting.
 - **The latest value of a prop or callback in a ref:** `useLatest.ts::useLatest`.
+- **A surface's Escape:** `components/useEscapeKey.ts::useEscapeKey`, which the Sheet and every
+  modal (`ModalShell.tsx`) close by. One document listener for the surface's lifetime, never one
+  added again per render: dnd-kit's pointer sensor keeps its own keydown listener on the document
+  for a moment after any press on a row, a click included, and a listener re-added while that one
+  handles an Escape misses the keypress.
 - **Starting and ending a drag:** `useBoardDnd.ts::beginDragAt` starts a Card's drag
   and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`
   is the one end.
@@ -368,7 +381,8 @@ the carried copy's second line and its wording).
   `data-drop-state`, `data-drop-tier`, `data-pending` while their write is in flight, and
   `data-placement-valid` on the active row while over cap. The live drop line is drawn on
   the row the side highlight names, an overflow row included, and carries `data-drop-side`
-  (`before`/`after`). An overflow row carries
+  (`before`/`after`). A hold's cue, a Card's zoom-in or an overflow row's modal hold, carries
+  `data-drag-cue` on its fill bar, inside the Card or the row it is drawn on. An overflow row carries
   `data-overflow-row` (its owner's id) and no `data-item-id`. The hierarchy modal is a
   `role=dialog` named `Hierarchy of <title>`, whose rows carry `data-item-id` (the section's
   rows under it draw with none). The carried copy carries

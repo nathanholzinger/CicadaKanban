@@ -1,9 +1,18 @@
 import { settledWrites, watchWrites } from '../helpers/requestHarness';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem, moveItem } from '../helpers/seed';
 import {
+  seedTemplatedWorkflow,
+  pickWorkphases,
+  seedItem,
+  fetchDefaultBoard,
+  fetchItem,
+  moveItem,
+} from '../helpers/seed';
+import {
+  awaitDragContext,
   awaitProjection,
+  bottomQuarter,
   boxOf,
   cancel,
   center,
@@ -13,13 +22,15 @@ import {
   pickUpAt,
   release,
   seedDragTuning,
+  clocksMargin,
   topQuarter,
   NO_POP,
 } from '../helpers/dragGesture';
 import { article, dragOverlay, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
-import { dropLineOn, holdAt, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
+import { dropLineOn, holdAt, sectionRows, seedGivenTree, seedOverflowTree } from '../helpers/overflowTree';
 
-import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
+import { descendantsIndentPx } from '../../client/src/components/cardMetrics';
+import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
 // A Card's section shows a set number of levels, and an overflow row stands for the hidden
@@ -356,44 +367,170 @@ test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carri
   expect(await settledWrites(page, writes)).toEqual([]);
 });
 
-// Skipped until the drag specs are reworked: from above, X's top quarter now reads the gap after X, as the ghost is drawn; the aim relied on a move event naming the row before it.
-test.skip('DRAG-7.27: a dragged R carries its overflow row, which is never a neighbor, and at the first level its children show', async ({
+// The carried item's overflow row and its branch's (DRAG-7.27), on the case's own tree, where B is P's last
+// attached child. `T1`, an attached child of T, gives T an overflow row that is unrelated to the carried item.
+const ORIGINAL_ROWS = (t: { a: string; q: string; r: string; t: string; b: string }) => [
+  t.a,
+  t.q,
+  t.r,
+  `overflow:${t.r}`,
+  t.t,
+  t.b,
+];
+
+test('DRAG-7.27: a dragged R carries its overflow row and its branch, which are never a neighbor; an unrelated overflow row stays; released as B’s next sibling, its children show at level 2', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Overflow Row Carried Project';
-  const { p, a, q, r, t, r1, r1a, r2, b, x } = await seedOverflowTree(request, name);
+  const { p, a, q, r, t, r1, r1a, r2, b } = await seedGivenTree(request, name);
+  await seedItem(request, { title: 'T1', parentId: t.id });
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
 
-  // R is picked up in the section and held over its own row. Every gap reads as though its
-  // overflow row weren't there: the gap after Q runs to T, R's own gap, and the line is never
-  // drawn on the overflow row.
-  const aim = await holdAt(page, r, p, () => center(itemRow(page, r.id)), 0);
+  // The Given: R's overflow row reads "2 children", and T's, which is unrelated to R, "1 child".
+  await expect(overflowRow(page, r.id)).toHaveText('2 children');
+  await expect(overflowRow(page, t.id)).toHaveText('1 child');
+  const writes = watchWrites(page);
+
+  // R is picked up in the section and held over its own row: its ghost is in its own slot, between Q and T.
+  let target = () => center(itemRow(page, r.id));
+  const aim = await holdAt(page, r, p, () => target(), 0);
   await awaitProjection(page, `${2}:${L - 1}:true`);
+
+  // R's overflow row and its branch are absent for the whole drag, the gap after Q runs to T, and T's
+  // overflow row is drawn with its ordinary count. The line is never drawn on R's overflow row.
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
+  for (const gone of [r1, r1a, r2]) await expect(itemRow(page, gone.id)).toHaveCount(0);
+  await expect(overflowRow(page, t.id)).toHaveText('1 child');
+  await expect.poll(() => sectionRows(page, p.id)).toEqual([a.id, q.id, r.id, t.id, `overflow:${t.id}`, b.id]);
   await expect.poll(() => dropLineOn(page)).not.toBeNull();
   expect((await dropLineOn(page))?.row).not.toBe(`overflow:${r.id}`);
 
-  // Aimed at X, level 1 is B's next sibling.
-  const home = aim.at();
-  const x0 = home.x - (L - 1) * DESCENDANTS_INDENT_PX;
-  await hoverTo(page, { x: x0, y: (await topQuarter(itemRow(page, x.id))).y });
-  await hoverTo(page, { x: x0, y: (await topQuarter(itemRow(page, x.id))).y });
-  await awaitProjection(page, `${4}:0:true`);
+  // Aimed below B, at level 1, the ghost is B's next sibling: after A, Q, T, T1 and B, so gap 5.
+  target = () => bottomQuarter(itemRow(page, b.id));
+  await aim(-(L - 1));
+  await aim(-(L - 1));
+  await awaitProjection(page, '5:0:true');
   expect((await dropLineOn(page))?.row).not.toBe(`overflow:${r.id}`);
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
   await release(page);
 
-  // R is P's child after B, with its children still its own. At the first level its children
-  // are at levels 2 and 3, within the section, and nothing is hidden.
+  // R is P's child after B, with R1 and R2 still its children. R is at level 1, so it has no overflow row, and
+  // its children show in the section below it, R1a under R1.
   await expect.poll(async () => (await fetchItem(request, r.id)).parentId).toBe(p.id);
   const moved = await fetchItem(request, r.id);
+  expect(moved.isAttached).toBe(1);
   expect(moved.position).toBeGreaterThan((await fetchItem(request, b.id)).position);
-  expect(moved.position).toBeLessThan((await fetchItem(request, x.id)).position);
   for (const child of [r1, r2]) expect((await fetchItem(request, child.id)).parentId).toBe(r.id);
-  await expect.poll(() => sectionRows(page, p.id)).toEqual([a.id, q.id, t.id, b.id, r.id, r1.id, r1a.id, r2.id, x.id]);
+  await expect
+    .poll(() => sectionRows(page, p.id))
+    .toEqual([a.id, q.id, t.id, `overflow:${t.id}`, b.id, r.id, r1.id, r1a.id, r2.id]);
+  // R1 and R2 are at level 2, one indent in.
+  for (const child of [r1, r2])
+    await expect(itemRow(page, child.id)).toHaveCSS('padding-left', `${descendantsIndentPx(1)}px`);
   await expect(overflowRow(page, r.id)).toHaveCount(0);
+  await expect(overflowRow(page, t.id)).toHaveText('1 child');
+  expect((await settledWrites(page, writes)).length).toBe(1);
+});
+
+test('DRAG-7.27: cancelling a drag of R brings its overflow row back, reading “2 children”', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Overflow Row Carried Cancel Project';
+  const { p, a, q, r, t, b } = await seedGivenTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const original = ORIGINAL_ROWS({ a: a.id, q: q.id, r: r.id, t: t.id, b: b.id });
+  await expect.poll(() => sectionRows(page, p.id)).toEqual(original);
+  const writes = watchWrites(page);
+
+  await holdAt(page, r, p, () => center(itemRow(page, r.id)), 0);
+  await awaitProjection(page, `${2}:${L - 1}:true`);
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
+  await cancel(page);
+
+  // The original section and its overflow row return, nothing written.
+  await expect.poll(() => sectionRows(page, p.id)).toEqual(original);
+  await expect(overflowRow(page, r.id)).toHaveText('2 children');
+  expect(await settledWrites(page, writes)).toEqual([]);
+});
+
+test('DRAG-7.27: a dragged Q carries R, so R’s row and R’s overflow row are both absent', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Overflow Row Branch Carried Project';
+  const { p, q, r, r1 } = await seedGivenTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+
+  // The Given: R is in Q's attached branch and has its overflow row.
+  expect((await fetchItem(request, r.id)).parentId).toBe(q.id);
+  await expect(overflowRow(page, r.id)).toHaveText('2 children');
+
+  await holdAt(page, q, p, () => center(itemRow(page, q.id)), 0);
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await expect(itemRow(page, r.id)).toHaveCount(0);
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
+  await expect(itemRow(page, r1.id)).toHaveCount(0);
+  await cancel(page);
+  await expect(overflowRow(page, r.id)).toHaveText('2 children');
+});
+
+test('DRAG-7.27: P carried and zoomed into another Card’s section draws no overflow row of P or of its branch there', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Overflow Row Card Carried Project';
+  await page.setViewportSize({ width: 1800, height: 1100 });
+  const { project, workflow, todo, r, t } = await seedGivenTree(request, name);
+  await seedItem(request, { title: 'T1', parentId: t.id });
+  // The Given: P's tree, six levels deep, fits under another Card.
+  const cap: number = (await fetchDefaultBoard(request, workflow.id)).itemDepthCap;
+  expect(cap, 'the depth cap').toBeGreaterThanOrEqual(7);
+  // Another Card with an attached child, for P to zoom into.
+  const other = await seedItem(request, { title: 'Other', projectId: project.id, workphaseId: todo.id });
+  await seedItem(request, { title: 'OtherChild', parentId: other.id });
+  const tuning = await seedDragTuning(page, { ...NO_POP, cardZoomDwellMs: 650, cardPopInDelayMs: 350, popSnapMs: 0 });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+
+  // The Given: P's section draws R's and T's overflow rows.
+  await expect(overflowRow(page, r.id)).toBeVisible();
+  await expect(overflowRow(page, t.id)).toBeVisible();
+
+  // P is picked up by the indent of an overflow row, which is the Card's, and held over the other Card, its ghost last in the column so that the line names it, until
+  // the full zoom-in hold has run.
+  const box = await boxOf(overflowRow(page, r.id));
+  await pickUpAt(page, { x: box.x + 6, y: box.y + box.height / 2 });
+  await expect(dragOverlay(page)).toHaveAttribute('aria-label', 'P');
+  // P's tall Card collapses as it is carried, so the Cards below it move: the aim is taken again after each pass.
+  await expect
+    .poll(async () => {
+      await hoverTo(page, await bottomQuarter(article(page, 'Other')));
+      return (await dropLineOn(page))?.row;
+    })
+    .toBe(other.id);
+  await awaitDragContext(
+    page,
+    descendantsRegionKey(other.id),
+    clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+  );
+
+  // In the other section, none of P's overflow rows or its branch's: only the other Card's own rows.
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
+  await expect(overflowRow(page, t.id)).toHaveCount(0);
+  expect((await sectionRows(page, other.id)).filter(row => row.startsWith('overflow:'))).toEqual([]);
+  await cancel(page);
 });
 
 test('DRAG-7.29: the side highlight can name an overflow row, and a release still places by gap and depth', async ({

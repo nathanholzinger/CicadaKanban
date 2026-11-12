@@ -59,6 +59,7 @@ import { sendItemMove, toRequest } from './dragRequest';
 import {
   clampToCurrentContext,
   overlayShapeFor,
+  overlayClampRect,
   reanchorOverlayTransform,
   type OverlayRect,
 } from './dragOverlayGeometry';
@@ -75,6 +76,7 @@ import {
   type Point,
 } from './dragRegions';
 import {
+  cardWidthOf,
   hasDetachedElements,
   hasNewRegionElements,
   measureRegions,
@@ -217,6 +219,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // know whether the *current* form differs from the one the pointer's
   // original offset was measured against. Set by `beginDragAt`.
   const pickupFormRef = useRef<OverlayForm>('short-card');
+  // How wide a Stub's drag draws its shortCard: its containing Card's width, read once at
+  // pickup (`dragOverlayGeometry.ts::overlayShapeFor`). Null for a Free Card's drag, and for
+  // a Card the board doesn't draw. Set by `beginDragAt`.
+  const stubDragCardWidthRef = useRef<number | null>(null);
   // The carried copy's rect at pickup: where dnd-kit holds the DragOverlay for
   // the whole drag (fixed at the source's first measured rect, moved only by
   // the modifiers' transform), and the Card's width the pointer's grab is
@@ -533,16 +539,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
   //
   // `reanchorOverlayTransform` runs first, before the clamp — the carried
   // copy's own form switch (shortCard -> Stub, at the zoom into a Card's
-  // Descendants layer)
-  // shrinks the box out from under dnd-kit's own pointer-glued transform
+  // Descendants layer), and a Stub's drag out of the hierarchy modal's wide
+  // row, shrink the box out from under dnd-kit's own pointer-glued transform
   // (dnd-kit tracks the *pickup* point, not a fraction of the box, so a box
   // that shrinks leaves the pointer beside it, not on it). Targets the
   // overlay shape's width and `STUB_ROW_HEIGHT_PX` — the same numbers
-  // the render side already uses to size the Stub — rather than dnd-kit's
+  // the render side already uses to size the copy — rather than dnd-kit's
   // own `draggingNodeRect`: that measurement's width and height catch up with
   // the switch a few frames late (its ResizeObserver, bound at the
   // DragOverlay's first mount), and its top and left stay where it was first
-  // measured.
+  // measured. The clamp takes the shape's width for the same reason
+  // (`overlayClampRect`).
   // The transform is measured from `pickupRectRef`, where dnd-kit holds the
   // overlay, and never from the source's live rect (`activeNodeRect`): once a
   // Free Card zooms into a section, its row there is the ghost's, which sits
@@ -559,7 +566,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     ({ transform, draggingNodeRect, activatorEvent }) => {
       if (!pickupRectRef.current) pickupRectRef.current = draggingNodeRect;
       const pop = sessionRef.current?.pop ?? null;
-      const shape = overlayShapeFor(pop, regionsRef.current);
+      const shape = overlayShapeFor(pop, regionsRef.current, stubDragCardWidthRef.current);
       const reanchored = reanchorOverlayTransform(
         transform,
         pickupRectRef.current,
@@ -569,7 +576,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
         shape.form,
         shape.widthPx,
       );
-      return drawSnapped(clampToCurrentContext(reanchored, draggingNodeRect, pop, regionsRef.current));
+      const clampRect = overlayClampRect(draggingNodeRect, shape);
+      return drawSnapped(clampToCurrentContext(reanchored, clampRect, pop, regionsRef.current));
     },
     [drawSnapped],
   );
@@ -605,6 +613,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
       ? pickupSlot(containingCardId, classification.activeId, latest.current.getAttachedChildren)
       : null;
     pickupFormRef.current = containingCardId ? 'stub' : 'short-card';
+    stubDragCardWidthRef.current = containingCardId
+      ? cardWidthOf(latest.current.rootRef.current ?? document, containingCardId)
+      : null;
     resolveStructure(classification);
     const pointer = pointerRef.current;
     const startContextKey = containingCardId
@@ -921,8 +932,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // read at render time here: every call site that changes `session`
   // (`beginDragAt`, `evaluatePop`'s hop loop) samples regions into it first,
   // in the same synchronous pass, so it already reflects this exact
-  // `session` by the time React re-renders.
-  const overlayShape = session ? overlayShapeFor(session.pop, regionsRef.current) : null;
+  // `session` by the time React re-renders. The Card's width is set in
+  // `beginDragAt`, before the session it belongs to.
+  const overlayShape = session ? overlayShapeFor(session.pop, regionsRef.current, stubDragCardWidthRef.current) : null;
 
   return {
     sensors,

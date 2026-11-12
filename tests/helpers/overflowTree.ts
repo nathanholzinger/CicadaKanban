@@ -1,16 +1,25 @@
 import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
+import { pickWorkphases, seedItem, seedTemplatedWorkflow, type SeededItem } from './seed';
 import { awaitDragContext, boxOf, pickUp, tabBy, type Point } from './dragGesture';
-import { itemRow, dragRegion } from './boardLocators';
+import { zoomIntoCard } from './boardDragSurface';
+import { article, itemRow, dragRegion } from './boardLocators';
 import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { DEFAULT_DRAG_TUNING, type DragTuning } from '../../client/src/components/workflow/dragTuning';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 
 // The tree of the overflow-row and hierarchy-modal cases, with the section at its default of
-// three levels. Card `P` in Todo holds A, then B, then X. A holds Q, which holds R and T; R holds
-// R1 (which holds R1a) and R2, and has a Free child F; T has only a Free child G. So the section's
-// rows are A, Q, R, R's overflow row, T, B and X, and the modal's are A, Q, R, R1, R1a, R2, T, B
-// and X.
-export async function seedOverflowTree(request: APIRequestContext, name: string) {
+// three levels (the tree is built for three, so it checks that the default still is). Card `P` in
+// Todo holds A, then B, then X when `withX`. A holds Q, which holds R and T; R holds R1 (which holds
+// R1a, which holds Y when `withY`) and R2, and has a Free child F; T has only a Free child G. So the
+// section's rows are A, Q, R, R's overflow row, T, B and X, and the modal's are A, Q, R, R1, R1a,
+// R2, T, B and X (Y under R1a), without the X and the Y when they are left out.
+async function seedTree(
+  request: APIRequestContext,
+  name: string,
+  { withX, withY }: { withX: boolean; withY: boolean },
+) {
+  // The depths the cases read follow from three levels, which is the default. A retune fails here.
+  expect(DEFAULT_DRAG_TUNING.sectionLevels, 'the tree is built for a section of three levels').toBe(3);
   const { project, workflow } = await seedTemplatedWorkflow(request, name);
   const [todo] = pickWorkphases(workflow, 'Todo');
   const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
@@ -27,14 +36,32 @@ export async function seedOverflowTree(request: APIRequestContext, name: string)
   const f = await free('F', r);
   const g = await free('G', t);
   const b = await child('B', p);
-  const x = await child('X', p);
-  return { project, workflow, todo, p, a, q, r, t, r1, r2, r1a, f, g, b, x };
+  const x = withX ? await child('X', p) : null;
+  const y = withY ? await child('Y', r1a) : null;
+  return { project, workflow, todo, p, a, q, r, t, r1, r2, r1a, f, g, b, x, y };
+}
+
+// The tree above, with `X` a further Stub of `P`'s after `B`, which a case drags where it says `X`
+// is a Stub of `P`'s outside the tree. `Y`, an attached child of `R1a`, is there when asked for
+// (DRAG-7.12's row).
+export async function seedOverflowTree(request: APIRequestContext, name: string, { withY = false } = {}) {
+  const tree = await seedTree(request, name, { withX: true, withY });
+  return { ...tree, x: tree.x as SeededItem };
+}
+
+// The case's own tree (the DRAG-7 file's Terms), where `B` is `P`'s last attached child: no `X`.
+// A case that drags `R1`, `R2` or `R` out of the modal and back, and reads where the last gap is,
+// is held to this tree (DRAG-7.6).
+export async function seedGivenTree(request: APIRequestContext, name: string, { withY = false } = {}) {
+  return seedTree(request, name, { withX: false, withY });
 }
 
 // Picks `item`, a Stub of `p`, up in its own section, which starts the drag at the Descendants
 // layer with no pop, and aims the carried copy at `target`, `depth` indents right of where the
 // pointer picked the item up (negative for left). Returns the aim, to tab to another depth over
-// the same target; its `at()` is where the cursor was last put.
+// the same target; its `at()` is where the cursor was last put. The rows slide aside as the ghost
+// approaches, so the aim is made twice, the second at where they settle. It waits on the app's
+// `data-drag-context` attribute for the drag to be at P's Descendants layer.
 export async function holdAt(
   page: Page,
   item: { id: string; title: string },
@@ -50,6 +77,30 @@ export async function holdAt(
     last = await tabBy(page, { x: from.x, y: point.y }, levels);
   };
   // The rows slide aside as the ghost approaches, so the second pass aims at where they settle.
+  await aim(depth);
+  await aim(depth);
+  return Object.assign(aim, { at: () => last });
+}
+
+// `holdAt` for a Free Card: picks `item` up in its column, zooms it into `p` by the full zoom-in hold over
+// the middle of Card `P`, and aims its carried copy at `target`, `depth` indents right of where the cursor
+// rested for the zoom (the zoom seeds the ghost at the first level, so that x is depth 0). Returns the
+// aim, as `holdAt` does, with the same two passes. It reads the layer from the app's
+// `data-drag-context` attribute, and finds Card `p` by its title.
+export async function holdFreeAt(
+  page: Page,
+  item: { id: string },
+  p: { id: string; title: string },
+  tuning: Pick<DragTuning, 'cardZoomDwellMs' | 'cardPopInDelayMs'>,
+  target: () => Promise<Point>,
+  depth: number,
+) {
+  const from = await zoomIntoCard(page, itemRow(page, item.id), article(page, p.title), p.id, tuning);
+  let last: Point = from;
+  const aim = async (levels: number) => {
+    const point = await target();
+    last = await tabBy(page, { x: from.x, y: point.y }, levels);
+  };
   await aim(depth);
   await aim(depth);
   return Object.assign(aim, { at: () => last });
@@ -98,7 +149,23 @@ export async function placementShown(modal: Locator, ghostId: string) {
   };
 }
 
-// The point is inside the box `locator` draws.
+// A point inside `owner`'s box and outside `other`'s, at least `clearPx` from it, found on a grid inside
+// `owner`'s box; null when none lies there. Reads the screen, in layout space (`boxOf`).
+export async function pointOutsideModal(owner: Locator, other: Locator, clearPx: number): Promise<Point | null> {
+  const box = await boxOf(owner);
+  const m = await boxOf(other);
+  for (const fy of [0.08, 0.5, 0.92]) {
+    for (const fx of [0.04, 0.5, 0.96]) {
+      const point = { x: box.x + box.width * fx, y: box.y + box.height * fy };
+      const gapX = Math.max(m.x - point.x, 0, point.x - (m.x + m.width));
+      const gapY = Math.max(m.y - point.y, 0, point.y - (m.y + m.height));
+      if (Math.hypot(gapX, gapY) >= clearPx) return point;
+    }
+  }
+  return null;
+}
+
+// The point is inside the box `locator` draws. Reads the screen, in layout space (`boxOf`).
 export async function expectInside(locator: Locator, point: Point) {
   const box = await boxOf(locator);
   expect(point.x).toBeGreaterThanOrEqual(box.x);
@@ -107,7 +174,7 @@ export async function expectInside(locator: Locator, point: Point) {
   expect(point.y).toBeLessThanOrEqual(box.y + box.height);
 }
 
-// The modal's middle is the window's, as one a click opens sits (DRAG-7.7).
+// The modal's middle is the window's, as one a click opens sits (DRAG-7.7). Reads the screen.
 export async function expectCentered(page: Page, modal: Locator) {
   const viewport = page.viewportSize()!;
   await expect(modal).toBeVisible();
@@ -123,7 +190,9 @@ export async function expectCentered(page: Page, modal: Locator) {
 }
 
 // The row the live drop line is drawn on right now, as an item's id or `overflow:<owner id>`, and
-// the side of it; null with no line. The line is drawn on the row the side highlight names.
+// the side of it; null with no line. The line is drawn on the row the side highlight names. Reads
+// the app's `data-drop-side` attribute and the `data-item-id` or `data-overflow-row` of the row
+// it sits in.
 export async function dropLineOn(page: Page): Promise<{ row: string; side: string } | null> {
   const lines = await page.locator('[data-drop-side]').evaluateAll(els =>
     els.map(el => {
@@ -137,7 +206,9 @@ export async function dropLineOn(page: Page): Promise<{ row: string; side: strin
   return lines[0] ?? null;
 }
 
-// The ids of the rows drawn in `scope`, in order: an item's id, or `overflow:<owner id>`.
+// The ids of the rows drawn in `scope`, in order: an item's id, or `overflow:<owner id>`. Reads the
+// app's `data-item-id` and `data-overflow-row` attributes in document order, which is the painted
+// order after a drag has ended and for a ghost in its own slot, not while rows slide aside.
 export function rowIds(scope: Locator): Promise<string[]> {
   return scope
     .locator('[data-item-id], [data-overflow-row]')
@@ -152,7 +223,8 @@ export function sectionRows(page: Page, cardId: string): Promise<string[]> {
 }
 
 // What an open hierarchy modal draws and where its list is scrolled: each row's id, title and indent
-// in order, and the list's scroll offset, for a spec that says the modal is as it was.
+// in order, and the list's scroll offset, for a spec that says the modal is as it was. Reads the
+// DOM: the rows' `data-item-id`, their button text and computed indent, and the list's `scrollTop`.
 export interface ModalState {
   rows: Array<{ id: string; title: string; indent: string }>;
   scrollTop: number;

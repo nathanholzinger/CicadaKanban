@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, renderHook, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import type { ReactNode } from 'react';
-import { CarriedBranchLine, NamedAnchorSync, carriedBranchLabel, useItemRow } from './dragChrome';
+import { CarriedBranchLine, NamedAnchorSync, ZoomCue, carriedBranchLabel, useItemRow } from './dragChrome';
 import { DragGhost } from './sidebar/SortableProjectRow';
 import { DragSessionContext, PlacementsContext, type DragSession } from './workflow/DragSessionContext';
 import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
@@ -421,5 +421,15 @@ describe('NamedAnchorSync', () => {
     render(<NamedAnchorSync onSync={onSync} />);
 
     expect(onSync).not.toHaveBeenCalled();
+  });
+});
+
+describe('a hold’s cue', () => {
+  it('marks its fill bar for a test to find, timed by the hold’s cue clock', () => {
+    const { container } = render(<ZoomCue cueMs={650} />);
+
+    const fills = container.querySelectorAll<HTMLElement>('[data-drag-cue]');
+    expect(fills).toHaveLength(1);
+    expect(fills[0].style.animationDuration).toBe('650ms');
   });
 });

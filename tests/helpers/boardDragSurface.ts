@@ -10,8 +10,19 @@ import {
   type SeededBoard,
 } from './seed';
 import { dragOverlay } from './boardLocators';
-import { hoverTo, paintedBoxOf, release, type Point } from './dragGesture';
+import {
+  awaitDragContext,
+  center,
+  clocksMargin,
+  hoverTo,
+  paintedBoxOf,
+  pickUp,
+  release,
+  type Point,
+} from './dragGesture';
 import { successfulWrite, type RecordedWrite } from './requestHarness';
+import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
 
 // Shared fixtures and screen observations for board drags. Screen geometry is
 // measured from the DOM, independently of the app's placement and clamp results.
@@ -36,6 +47,29 @@ export async function setSectionExpanded(card: Locator, expanded: boolean) {
   ).toBeVisible();
 }
 
+// Picks `source`, a Free Card in a column, up and holds it over the middle of `card` until the full
+// zoom-in hold has run, which leaves the drag at `card`'s Descendants layer with `source` a Stub row
+// in its section. It reads the layer from the app's `data-drag-context` attribute, and returns the
+// point the cursor rests at. The tuning is the one `seedDragTuning` returned.
+export async function zoomIntoCard(
+  page: Page,
+  source: Locator,
+  card: Locator,
+  cardId: string,
+  tuning: Pick<DragTuning, 'cardZoomDwellMs' | 'cardPopInDelayMs'>,
+): Promise<Point> {
+  await pickUp(page, source);
+  const rest = await center(card);
+  await hoverTo(page, rest);
+  await awaitDragContext(
+    page,
+    descendantsRegionKey(cardId),
+    clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+  );
+  return rest;
+}
+
+// Releases the drag and waits for the server's answer to the item's move. Reads the network answer.
 export async function releaseMove(page: Page, id: string) {
   const answered = successfulWrite(page, 'PATCH', `/api/items/${id}/move`);
   await release(page);
@@ -75,20 +109,23 @@ export async function leanAtGhost(
   return point;
 }
 
+// How far `copy`'s painted box lies outside `context`'s, in px: the largest overhang on the axes asked
+// for, negative when it lies inside. Reads the screen.
+export async function withinExcess(copy: Locator, context: Locator, axes: 'x' | 'both' = 'both') {
+  const a = await dragBoxOf(copy);
+  const b = await dragBoxOf(context);
+  return Math.max(
+    b.x - a.x,
+    a.x + a.width - b.x - b.width,
+    ...(axes === 'both' ? [b.y - a.y, a.y + a.height - b.y - b.height] : []),
+  );
+}
+
 export async function expectWithin(copy: Locator, context: Locator, axes: 'x' | 'both' = 'both') {
   await expect
-    .poll(
-      async () => {
-        const a = await dragBoxOf(copy);
-        const b = await dragBoxOf(context);
-        return Math.max(
-          b.x - a.x,
-          a.x + a.width - b.x - b.width,
-          ...(axes === 'both' ? [b.y - a.y, a.y + a.height - b.y - b.height] : []),
-        );
-      },
-      { message: 'the observed drag box stays inside the rendered context' },
-    )
+    .poll(() => withinExcess(copy, context, axes), {
+      message: 'the observed drag box stays inside the rendered context',
+    })
     .toBeLessThanOrEqual(2);
 }
 
@@ -106,6 +143,8 @@ export async function expectFollowing(page: Page, from: Point, to: Point) {
     .toBeLessThan(2);
 }
 
+// The Cards in `scope` by their painted order, top to bottom. Reads each Card's `aria-label` and
+// its painted box.
 export async function paintedCardOrder(scope: Locator): Promise<string[]> {
   const cards = scope.getByRole('article');
   const rows = await Promise.all(
@@ -129,6 +168,7 @@ export async function paintedItemIds(scope: Locator): Promise<string[]> {
   return observed.sort((a, b) => a.y - b.y).map(row => row.id ?? '');
 }
 
+// Exactly one move request, for item `id`, with `body`. Reads the requests `watchWrites` recorded.
 export function expectOneMove(writes: readonly RecordedWrite[], id: string, body: Record<string, unknown>) {
   expect(writes).toEqual([{ method: 'PATCH', url: expect.stringMatching(new RegExp(`/api/items/${id}/move$`)), body }]);
 }

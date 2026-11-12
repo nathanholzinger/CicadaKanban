@@ -157,6 +157,13 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
   return regions;
 }
 
+// How wide the board draws a Card, read off its own element (`DRAG_CARD_ATTR`), which is there
+// whether or not its hierarchy modal holds its rows. Null for a Card the board doesn't draw.
+export function cardWidthOf(root: ParentNode, cardId: string): number | null {
+  const width = root.querySelector<HTMLElement>(`[${DRAG_CARD_ATTR}="${cardId}"]`)?.getBoundingClientRect().width;
+  return width ? width : null;
+}
+
 // Every element registered as a drag region under `root` — the one query
 // `resolveDragStructure` reads and `hasNewRegionElements` compares against.
 export function regionElements(root: ParentNode): HTMLElement[] {

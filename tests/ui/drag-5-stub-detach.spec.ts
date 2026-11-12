@@ -27,8 +27,10 @@ import {
   center,
   topQuarter,
   gapBetween,
+  awaitDragState,
   awaitPoppedOut,
   dragMachine,
+  moveOnce,
   cancel,
   awaitDragContext,
   awaitProjection,
@@ -274,6 +276,35 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
     expect(updated.workphaseId).toBe(todo.id);
   });
 
+  // The same one-sample distance term at the sub-row layer: a Free Card locked in an expanded sub-row pops
+  // out to Board at once, with every clock off, so only the distance can have popped it.
+  test('DRAG-1.14: a yank past the pop-out distance from an expanded sub-row, with every clock off, pops it to Board', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const name = 'Sub-row Distance Pop Project';
+    const s = await seedBoardFixture(request, name);
+    const x = await seedItem(request, { title: 'X', projectId: s.project.id, workphaseId: s.todo.id });
+    const col = await mergeRange(request, s.board, s.todo.id, s.doing.id, 'expanded');
+    const tuning = await seedDragTuning(page, { ...NO_POP, popSnapMs: 0, popDistancePx: 24 });
+    await projectSidebar.openBoard(name);
+
+    // The Given: the Card is locked in its sub-row, with the distance on and every clock off.
+    expect(tuning.popDistancePx).toBe(24);
+    await pickUp(page, itemRow(page, x.id));
+    const key = subrowRegionKey(col, s.todo.id);
+    await awaitDragContext(page, key);
+    await expect(dragMachine(page)).toHaveAttribute('data-drag-state', 'locked');
+
+    // One pointer sample, further outside the sub-row than the distance.
+    const box = await boxOf(dragRegion(page, key));
+    await moveOnce(page, { x: box.x + box.width + tuning.popDistancePx * 4, y: box.y + box.height / 2 });
+    await awaitDragState(page, 'popped-out');
+    await awaitDragContext(page, null);
+    await cancel(page);
+  });
+
   for (const freeChildren of [false, true]) {
     for (const moved of [false, true]) {
       test(`DRAG-5.4, DRAG-4.12: B03 ${freeChildren ? 'Free-children-only' : 'empty'} target has one child placement after ${moved ? 'movement' : 'immediate release'}`, async ({
@@ -400,7 +431,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
 });
 
 for (const place of ['title', 'padding'] as const) {
-  test(`DRAG-5.15: B25 ${place} is inside the whole Card and releases the first-child gap`, async ({
+  test(`DRAG-5.15, DRAG-1.14: B25 ${place} is inside the whole Card and releases the first-child gap`, async ({
     page,
     request,
     projectSidebar,

@@ -286,3 +286,68 @@ describe('the Sheet’s add-child control at the depth cap', () => {
     expect(fetchItem).not.toHaveBeenCalled();
   });
 });
+
+// Escape closes the Sheet whatever else is listening on the document. dnd-kit's pointer sensor keeps a
+// keydown listener there for a moment after a press on a row, and its Escape sets state, so React
+// re-renders, and runs the Sheet's effects, part-way through the keypress.
+describe('the Sheet’s Escape', () => {
+  const sheet = (onClose: () => void) => (
+    <ItemDetailPanel
+      itemId="X"
+      items={boardItems}
+      itemTypes={[]}
+      itemDepthCap={12}
+      onClose={onClose}
+      onUpdate={() => {}}
+      onDelete={() => {}}
+      onNavigate={() => {}}
+      onChildCreated={() => {}}
+    />
+  );
+  // A real keypress, outside `act`: what a listener does during it is all that flushes React.
+  const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+  beforeEach(() => {
+    vi.mocked(fetchItem).mockResolvedValue(detail);
+  });
+
+  it('closes the Sheet', async () => {
+    const onClose = vi.fn();
+    render(sheet(onClose));
+    await screen.findByRole('heading', { name: detail.title });
+
+    pressEscape();
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes it when a listener added to the document before its own re-renders it during the keypress', async () => {
+    const closed: string[] = [];
+    let duringKeypress = () => {};
+    const earlier = () => duringKeypress();
+    document.addEventListener('keydown', earlier);
+    try {
+      const { rerender } = render(sheet(() => closed.push('as first rendered')));
+      await screen.findByRole('heading', { name: detail.title });
+      duringKeypress = () => act(() => rerender(sheet(() => closed.push('as rendered during the keypress'))));
+
+      pressEscape();
+
+      expect(closed).toEqual(['as rendered during the keypress']);
+    } finally {
+      document.removeEventListener('keydown', earlier);
+    }
+  });
+
+  it('leaves the Sheet open and ends a title edit instead', async () => {
+    const onClose = vi.fn();
+    render(sheet(onClose));
+    await userEvent.click(await screen.findByRole('heading', { name: detail.title }));
+    expect(screen.getByRole('textbox')).toHaveValue(detail.title);
+
+    act(() => void pressEscape());
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: detail.title })).toBeInTheDocument();
+  });
+});

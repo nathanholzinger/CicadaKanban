@@ -178,6 +178,30 @@ describe('locked', () => {
     expect(step(away, overBackdropCard, OUT, board).contextKey).toBe(A.key);
   });
 
+  // The modal's layer keeps the clock every layer has: a return into the dialog, its header
+  // included, restarts it, so two short excursions never add up to a pop.
+  it('two excursions out of the hierarchy modal’s box, each shorter than popDelayMs, pop nothing: a return restarts the clock', () => {
+    const list = descendantsRegion('card-m', rect(300, 100, 200, 300), A.key, { boundsRect: rect(300, 0, 200, 400) });
+    const board = [A, list];
+    const outside = { x: 50, y: 300 }; // in A, outside the dialog
+    const inHeader = { x: 400, y: 40 };
+    const locked = startPopSession(list.key);
+
+    const away = step(locked, outside, 0, board);
+    expect(away.outsideSince).toBe(0);
+    const back = step(away, inHeader, OUT - 1, board);
+    expect(back).toEqual(locked);
+
+    // The second excursion runs its own clock: the two together outlast popDelayMs, and nothing pops
+    // until the second alone has.
+    const awayAgain = step(back, outside, OUT, board);
+    expect(awayAgain.outsideSince).toBe(OUT);
+    const late = step(awayAgain, outside, 2 * OUT - 1, board);
+    expect(late.contextKey).toBe(list.key);
+    expect(late.outsideSince).toBe(OUT);
+    expect(step(late, outside, 2 * OUT, board).contextKey).toBe(A.key);
+  });
+
   it("DRAG-3.21: at Board layer the band reads the region's live rect on every sample, not one frozen at entry", () => {
     const entered = step(startPopSession(null), { x: 170, y: 110 }, 0, regions);
     expect(entered.hover?.band).toBe('middle'); // 110 is within B's original 96..304 middle band
@@ -658,6 +682,29 @@ describe('the hierarchy modal hold', () => {
     }
     // Anywhere else ends it.
     expect(hold(cue, null, DWELL_M + 20).modalHold).toBeNull();
+  });
+
+  // The layer is the Card's whole box, so its title and padding are inside it. Each sample is the
+  // machine's and then the hold's, on the ghost's spot while the cursor is inside, as the board runs them.
+  it('DRAG-7.14: runs on from the same start while the cursor moves into the Card’s title or padding, through the dwell and the cue, and completes there', () => {
+    const inPadding = { x: 12, y: 12 }; // just inside P's box, at its corner
+    const sample = (session: typeof locked, pointer: typeof inP, now: number) => {
+      const moved = step(session, pointer, now, [A, P]);
+      return hold(moved, moved.outsideSince === null ? above : null, now);
+    };
+    const started = sample(locked, inP, 0);
+    expect(started.modalHold).toMatchObject({ since: 0, phase: 'dwell' });
+
+    // Into the padding during the dwell: the same hold, and the dwell ends when it would have.
+    expect(sample(started, inPadding, DWELL_M - 1)).toBe(started);
+    const cue = sample(started, inPadding, DWELL_M);
+    expect(cue.modalHold).toEqual({ ...started.modalHold, phase: 'cue' });
+
+    // Back over the rows and into the padding again during the cue: still the same hold.
+    const inCue = sample(sample(cue, inP, DWELL_M + 1), inPadding, DWELL_M + 2);
+    expect(inCue).toBe(cue);
+    expect(modalHoldElapsed(inCue.modalHold!, tuning, DWELL_M + CUE_M - 1)).toBe(false);
+    expect(modalHoldElapsed(inCue.modalHold!, tuning, DWELL_M + CUE_M)).toBe(true);
   });
 
   it('DRAG-7.14: the hold starts over after it ended, with a fresh dwell', () => {

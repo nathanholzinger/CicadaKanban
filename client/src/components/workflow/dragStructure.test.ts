@@ -11,6 +11,7 @@ import {
   type Rect,
 } from './dragRegions';
 import {
+  cardWidthOf,
   clipToVisible,
   hasDetachedElements,
   hasNewRegionElements,
@@ -405,6 +406,36 @@ describe('measureRegions over a DOMRect', () => {
     const measured = { top: 50, bottom: 250, left: 10, right: 90, width: 80, height: 200 };
     expect(region.rect).toEqual(measured);
     expect(region.contentRect).toEqual(measured);
+  });
+});
+
+describe('cardWidthOf', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  function cardEl(cardId: string, r: Rect) {
+    const card = document.createElement('div');
+    card.setAttribute(DRAG_CARD_ATTR, cardId);
+    mockRect(card, r);
+    return card;
+  }
+
+  it('is the width of the Card’s own element, whether or not that element is the region', () => {
+    document.body.append(cardEl('card-p', rect(8, 40, 272, 180)), cardEl('card-q', rect(300, 40, 240, 90)));
+    const list = regionEl(descendantsRegionKey('card-p'), rect(500, 0, 574, 300));
+    list.setAttribute(DRAG_PARENT_CARD_ATTR, 'card-p');
+    document.body.append(list);
+
+    expect(cardWidthOf(document, 'card-p')).toBe(272);
+    expect(cardWidthOf(document, 'card-q')).toBe(240);
+  });
+
+  it('is null for a Card the board does not draw, and for one with no box', () => {
+    document.body.append(cardEl('card-p', rect(0, 0, 0, 0)));
+
+    expect(cardWidthOf(document, 'card-x')).toBeNull();
+    expect(cardWidthOf(document, 'card-p')).toBeNull();
   });
 });
 

@@ -1,8 +1,9 @@
 // Shared modal chrome (backdrop, header, footer, Esc) — every modal wraps this. It centers the
 // dialog unless given a `position`.
 
-import { useEffect, type ReactNode, type Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { XIcon } from './icons';
+import { useEscapeKey } from './useEscapeKey';
 
 interface ModalShellProps {
   onClose: () => void;
@@ -43,13 +44,7 @@ export default function ModalShell({
   dialogProps,
   children,
 }: ModalShellProps) {
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   return (
     <div className={`fixed inset-0 z-50 ${position ? '' : 'flex items-center justify-center'}`}>

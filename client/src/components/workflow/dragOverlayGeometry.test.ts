@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   clampAxis,
   clampToCurrentContext,
+  overlayClampRect,
   overlayShapeFor,
   overlayWidthFor,
   reanchorOverlayTransform,
@@ -117,13 +118,52 @@ describe('overlayShapeFor', () => {
 
   it("DRAG-3.22: locked at a Card's Descendants layer, or the modal that holds it: the Stub, at a row's width", () => {
     const cardWidth = 240 - 2 * CARD_CONTENT_INSET_PX;
-    expect(overlayShapeFor(startPopSession(cardP.key), [cardP])).toEqual({ form: 'stub', widthPx: cardWidth });
-    expect(overlayShapeFor(startPopSession(modalList.key), [modalList])).toEqual({ form: 'stub', widthPx: 240 });
+    expect(overlayShapeFor(startPopSession(cardP.key), [cardP], null)).toEqual({ form: 'stub', widthPx: cardWidth });
+    expect(overlayShapeFor(startPopSession(modalList.key), [modalList], null)).toEqual({ form: 'stub', widthPx: 240 });
   });
 
   it('anywhere else, or with no drag: the shortCard, with no width', () => {
-    expect(overlayShapeFor(startPopSession(columnC1.key), [columnC1])).toEqual({ form: 'short-card', widthPx: null });
-    expect(overlayShapeFor(null, [columnC1])).toEqual({ form: 'short-card', widthPx: null });
+    const noWidth = { form: 'short-card', widthPx: null };
+    expect(overlayShapeFor(startPopSession(columnC1.key), [columnC1], null)).toEqual(noWidth);
+    expect(overlayShapeFor(null, [columnC1], null)).toEqual(noWidth);
+  });
+
+  it("gives a Stub's drag its containing Card's width as a shortCard, in a card list and at Board", () => {
+    const shortCard = { form: 'short-card', widthPx: 272 };
+    expect(overlayShapeFor(startPopSession(columnC1.key), [columnC1], 272)).toEqual(shortCard);
+    expect(overlayShapeFor(startPopSession(null), [columnC1], 272)).toEqual(shortCard);
+  });
+
+  it("keeps a row's width for the Stub form, whatever the containing Card's is", () => {
+    expect(overlayShapeFor(startPopSession(modalList.key), [modalList], 272)).toEqual({ form: 'stub', widthPx: 240 });
+  });
+});
+
+describe('overlayClampRect', () => {
+  // dnd-kit's measurement of a shortCard a Stub's drag draws: the left of the row it mounted as, and
+  // the tilted copy's bounding width.
+  const measured = rect(100, 200, 275, 105);
+
+  it('takes the width the copy is drawn at, and keeps the rest of the measurement', () => {
+    expect(overlayClampRect(measured, { form: 'short-card', widthPx: 272 })).toEqual({
+      ...measured,
+      width: 272,
+      right: 372,
+    });
+  });
+
+  it('holds a copy as wide as its card list to the list’s own edges', () => {
+    const list = region('column:c1', rect(100, 0, 272, 400));
+    const pop = startPopSession(list.key);
+    const clampRect = overlayClampRect(measured, { form: 'short-card', widthPx: 272 });
+    for (const x of [-40, 0, 40]) {
+      expect(clampToCurrentContext(transform(x, 0), clampRect, pop, [list]).x).toBe(0);
+    }
+  });
+
+  it('is the measurement itself when the drag sets no width, and null with none', () => {
+    expect(overlayClampRect(measured, { form: 'short-card', widthPx: null })).toBe(measured);
+    expect(overlayClampRect(null, { form: 'short-card', widthPx: 272 })).toBeNull();
   });
 });
 
@@ -182,11 +222,53 @@ describe('reanchorOverlayTransform', () => {
 
   it.each([
     ['the copy is not a Stub now', 'short-card', 'short-card'],
-    ["the drag started as a Stub (a Stub's own drag)", 'stub', 'stub'],
+    ["the drag started as a Stub and is one of the same width (a Stub's own drag in its section)", 'stub', 'stub'],
   ] as const)('returns the transform unchanged when %s', (_, pickupForm, currentForm) => {
+    const width = pickupRect.width;
     expect(
-      reanchorOverlayTransform(incoming, pickupRect, pickupPointer, pointerNow, pickupForm, currentForm, stubWidth),
+      reanchorOverlayTransform(incoming, pickupRect, pickupPointer, pointerNow, pickupForm, currentForm, width),
     ).toBe(incoming);
+  });
+
+  describe("a Stub's drag drawn as a shortCard", () => {
+    // Picked up three quarters of the way across a 574px-wide row of the hierarchy modal.
+    const modalRow = rect(100, 200, 574, 24);
+    const grab = new MouseEvent('pointerdown', { clientX: 100 + 0.75 * 574, clientY: 210 });
+
+    it('keeps the pointer at the same fraction across a copy narrower than the row, and leaves y alone', () => {
+      const result = reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'short-card', 272);
+      expect(modalRow.left + result.x + 0.75 * 272).toBe(pointerNow.x);
+      expect(result.y).toBe(incoming.y);
+    });
+
+    it('gives the same answer on its own output', () => {
+      const once = reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'short-card', 272);
+      expect(reanchorOverlayTransform(once, modalRow, grab, pointerNow, 'stub', 'short-card', 272)).toEqual(once);
+    });
+
+    it.each([
+      ['as wide as the row', 574],
+      ['wider than the row', 600],
+    ])('returns the transform unchanged for a copy %s', (_, width) => {
+      expect(reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'short-card', width)).toBe(
+        incoming,
+      );
+    });
+
+    // Back into a Card's own section, where a row is narrower than the modal's.
+    it('keeps the pointer at the same fraction across a Stub narrower than the row it was picked up as', () => {
+      const result = reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'stub', 246);
+      expect(modalRow.left + result.x + 0.75 * 246).toBe(pointerNow.x);
+      expect(result.y).toBe(incoming.y);
+    });
+
+    it('returns the transform unchanged for a Stub as wide as the row it was picked up as', () => {
+      expect(reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'stub', 574)).toBe(incoming);
+    });
+
+    it('returns the transform unchanged with no width', () => {
+      expect(reanchorOverlayTransform(incoming, modalRow, grab, pointerNow, 'stub', 'short-card', null)).toBe(incoming);
+    });
   });
 
   it.each([

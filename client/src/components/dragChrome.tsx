@@ -258,7 +258,8 @@ export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'chi
 // runtime duration. No explicit `key`/reset is needed: this element only
 // exists while the caller's phase is `'cue'`, so a reset unmounts it and the
 // *next* cue mounts a fresh instance, which is what restarts the CSS
-// animation from empty.
+// animation from empty. The fill bar carries `data-drag-cue`, for a test to find
+// the cue by: its look is free to change.
 const ZOOM_CUE_OUTLINE = 'pointer-events-none absolute inset-0 rounded-lg border-2 border-dashed border-blue-500/70';
 const ZOOM_CUE_TRACK =
   'pointer-events-none absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-lg bg-blue-500/20';
@@ -269,6 +270,7 @@ export function ZoomCue({ cueMs }: { cueMs: number }) {
       <div className={ZOOM_CUE_OUTLINE} />
       <div className={ZOOM_CUE_TRACK}>
         <div
+          data-drag-cue
           className="h-full bg-blue-500"
           style={{
             animationName: 'cue-fill',

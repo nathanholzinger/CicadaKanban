@@ -36,9 +36,20 @@ Never write:
   - Don't change the expected value to the app's, weaken the assertion, or skip the test.
   - Leave the test as written, stop work on that case, and record it in the Results.
   - Route it in the plan's Open questions: as a defect for the Coder, or as a question for the PO. A case that seems to misread a clear wiki page goes to a Planner session instead. Nathan decides whether the fix comes before the commit, and what happens to the test meanwhile.
-- **A test that fails only sometimes:** run it alone, repeated (`--repeat-each`). Hold it to the plan's flakiness bar, if the plan sets one. The fix is a better aim or a better wait in `tests/helpers/dragGesture.ts`, never a duration. If neither fixes it, report it.
+- **A test that fails only sometimes:** run it alone, repeated (`--repeat-each`). Hold it to the plan's flakiness bar, if the plan sets one. The fix is a better aim or a better wait in `tests/helpers/dragGesture.ts`, never a duration. If neither fixes it, report it. A second such fix to one test stops work on it (Weighing a Surface Test).
 
 **A defect you hand the Coder** carries the failing clause, the expected and observed results as seen through the surface, and a reproducer. You may say where you looked in the code. Never prescribe the fix.
+
+## Weighing a Surface Test
+
+The surface is where a case is proved by default. Some clauses cost more there than they prove (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves").
+
+- **Before you write a scope's tests,** name what will prove each clause: a surface gesture, a surface test with no gesture, an internal test, or a check by hand. Flag each clause that shows one of the guide's signals, answer its three questions, and recommend one of its options. This goes in the plan, for Nathan to decide before the tests are written.
+- **A second correction to one test's aim or timing** stops work on that test. Ask the three questions of it, and record the answers and your recommendation in the Results. A third correction waits for Nathan.
+- **You recommend, and never decide.**
+  - If Nathan takes the internal route for a clause, it's held off, and Holding Off's steps apply.
+  - A clause you think needs a person's eye is a question for a Planner session, through the plan's Open questions. You still never propose `Manual`.
+  - A recommendation never drops a clause of a *Then*.
 
 ## Holding Off
 
@@ -56,7 +67,7 @@ A case you judge hard to reach through the surface, such as a timing a pointer c
 - **A test asserts its Given before its When,** so it can't pass from the wrong starting state.
 - **Each observation helper's header says** whether it reads the screen or an attribute the app provides. A reviewer can then tell a test that observes the app from one that reads back what it set.
 - **A drag test never asserts a duration** (`.claude/guides/testing-strategy.md`, "What stays manual"). It reads its thresholds from what `seedDragTuning` returns.
-- **The layer:** a Playwright UI test for what a user sees, a Playwright API test for what an API caller sees. A rule with no surface goes in a Vitest test.
+- **The layer:** a Playwright UI test for what a user sees, a Playwright API test for what an API caller sees. A rule with no surface goes in a Vitest test. A clause that costs more at the surface than it proves is weighed first (Weighing a Surface Test).
 
 ## Stamps
 
@@ -103,6 +114,7 @@ The Test Reviewer (`.claude/agents/test-reviewer.md`) is a read-only agent that 
   - a test gap is yours to fix;
   - a case gap goes to a Planner session, through the plan's Open questions;
   - a rule gap goes to the PO, the same way.
+- **A cost note** isn't a gap. Record it in the Results with your recommendation (Weighing a Surface Test), and leave the test as it is until Nathan decides.
 - **A proposed mapping:** stamp a surface test. An internal test waits for Nathan's approval, and a mapping he declines goes in the Review log.
 
 ## Code Review
