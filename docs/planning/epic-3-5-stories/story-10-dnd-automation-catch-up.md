@@ -175,9 +175,16 @@ Nathan takes this as the starting point (2026-11-04). It's revisited at the chec
 - from 4c on, the repeats and each batch's final full run use the runner's adopted worker count, so the repeats also run under load;
 - if no worker count passes the runner's acceptance, the suite stays on one worker and this bar is unchanged.
 
-**Adopted count and exception (Nathan, 2026-11-10): five workers.** After the extended trial, Nathan selects five for its measured full-suite speed gain with no newly observed failing test identity or mode. Re-evaluate with the smoke suite, when E2E execution should occupy less of each story and capacity for simultaneous work may weigh more heavily; revisit sooner if failures or contention change. Nathan accepts the runner trial with the recorded DRAG-7.10 and DRAG-3.16 failures so the suite runs faster during this story. DRAG-7.10 remains active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4h alongside the six legacy skips. The runner's raw stability/contention failures remain recorded; this adoption exception does not lower D2's repeat or batch-final-run requirements for the cases those batches add or change.
+**Adopted count and exception (Nathan, 2026-11-10): five workers.** After the extended trial, Nathan selects five for its measured full-suite speed gain with no newly observed failing test identity or mode. Re-evaluate with the smoke suite, when E2E execution should occupy less of each story and capacity for simultaneous work may weigh more heavily; revisit sooner if failures or contention change. Nathan accepts the runner trial with the recorded DRAG-7.10 and DRAG-3.16 failures so the suite runs faster during this story. DRAG-7.10 remains active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4i, a batch of returned cases (2026-11-12). The runner's raw stability/contention failures remain recorded; this adoption exception does not lower D2's repeat or batch-final-run requirements for the cases those batches add or change.
 
 **Ten repeats, from 4c on (Nathan, 2026-11-11).** The [flake investigation](../../audits/story-10-drag-flake-investigation.md) found that the count is a weak detector at either size: a test that fails one run in fifty passes twenty repeats two times in three. Most of the recorded flakes also needed load, which the one-worker repeats never applied. Ten repeats at five workers still catch a test that fails often, at half the cost. 4a and 4b's twenty-repeat evidence stands. The order of remedies above is unchanged.
+
+**A failing test during a batch (Nathan, 2026-11-12).** For the rest of this story, in place of D2's order of remedies for a test that existed before the batch:
+
+- **A test that existed before the batch's work, and fails flakily** (it passes on its own or on a rerun): skip it and move it to batch 4i. The skip carries a comment that states the reason. The batch's Results and 4i record it, and the batch doesn't investigate or repair it. A skipped test never counts, so its case's status and Automation line are the Reconciler's to reflect.
+- **A test the batch added or changed, when it fails:** the QA Engineer may investigate. If it finds the failure is false, a problem in how the test was written, it may fix the test, up to two attempts. If the test still fails after the second attempt, the QA Engineer stops and reports that the test is failing, with everything it has learned about why, and doesn't keep trying. A failure that is real, where the app doesn't do what the case says, follows the existing route: a defect handoff, with the test left as written.
+- **Within a frozen Stop 4,** a fix is a test change, and it ends the frozen pass as before. The second attempt is also the persona's second correction, so its three questions are answered in Results.
+- **What stays as it was:** the bar itself (ten repeats at five workers, and the file's pass in the batch's final full run). A test the two attempts don't settle gets D2's remedies in their order, by Nathan's decision.
 
 The bar is this story's, set for its flaky drag specs. It isn't a process for other stories.
 
@@ -220,7 +227,7 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - lists unresolved held-off cases, proposed Manual calls and internal mappings at its stop, for Nathan;
 - ends with the gate and its spec files green, then a stop for review and commit.
 
-**For 4c–4h, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
+**For 4c–4j, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
 
 **D6. Case IDs settle before any test is written** (Phase 2). The Planner's end-of-epic pass may revise, retire, move or renumber cases, and a test titled before it would need re-titling after (epic-done checklist, Tests).
 
@@ -492,7 +499,9 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **4e.** DRAG-8, the carried branch.
 - **4f.** DRAG-2 and ATT-4.9.
 - **4g.** TREE, with TREE-9.4 and TREE-11.7.
-- **4h.** Item 3's six legacy skips, plus the temporarily skipped DRAG-3.16 pair returned from 4a after the runner trial's setup connection reset.
+- **4h.** Item 3's six legacy skips.
+- **4i.** Work returned after its tests were skipped: DRAG-3.16 (from 4a, after the runner trial's setup connection reset), DRAG-5.3 and DRAG-5.10's B21 test (from 4b) and DRAG-7.18 (from 4c), and any later flaky test that predates its batch. DRAG-7.18 is also a case study in weighing a surface test's cost.
+- **4j.** Deferred from 4c's close: the weak hold-opened distance variants of DRAG-7.10 and DRAG-1.14, and three candidate new cases (two for a Planner session, one for the PO).
 
 #### Batch 4a results — 2026-11-08
 
@@ -648,6 +657,12 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-11 — D2's repeats drop to ten (Nathan).** From 4c's Stop 4 on, an added or changed drag test passes ten repeats, not twenty, at the adopted five workers. The batch-final full run and the order of remedies are unchanged, and 4a and 4b's twenty-repeat evidence stands. The reason is in D2, from the [flake investigation](../../audits/story-10-drag-flake-investigation.md). Recorded in D2, in the batches doc's execution boundary and Stop 4, and in the 4c proof plan's decision 3 (61 variants, 610 passes). The batches doc's Results carries a note for the paused 4c session.
 
+- **2026-11-12 — Batch 4i added (Nathan).** DRAG-3.16 moves from 4h to a new batch 4i, and DRAG-5.3 and DRAG-7.18 join it. Their tests are skipped: DRAG-5.3's eight B18 variants after the locked-after-A variant failed once in each form at five workers during 4c's Stop 4, and DRAG-7.18's two for their cost, about 24 s a pair, which Nathan wants kept as a cost and benefit study. A skipped test never counts, so the three cases' statuses and Automation lines are the Reconciler's to reflect. No decision changes: D2's bar and the order of remedies stand, and 4i applies them. The batches doc's 4i has the detail.
+
+- **2026-11-12 — Failing tests in a batch (Nathan).** DRAG-5.10's B21 test joins 4i, skipped after one failure at five workers. D2 gains a rule for the rest of the story: a flaky test that predates the batch is skipped and moved to 4i, and a batch's own failing test gets up to two fix attempts when the failure is false, then a report instead of more attempts. The bar, the order of remedies for a test the attempts don't settle, and the five stops stand. The batches doc's stops point at it.
+
+- **2026-11-12 — Batch 4j added (Nathan).** The Reconciler's report on 4c found a weak test (the hold-opened Stub distance variants of DRAG-7.10 and DRAG-1.14 don't show their rest point lies in P's box) and three candidate new cases. All four are deferred to a new batch 4j, after 4i. 4c closes without them. No decision changes. The batches doc's 4j has the detail.
+
 ## Open questions
 
 - **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
@@ -663,7 +678,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 ## Living-docs handoff
 
-- **Catalog owner — temporary DRAG-3.16 proof gap:** both parameterized Playwright tests are skipped under Nathan's runner-adoption decision. Reconcile the existing Automated status/pointer with that temporary gap, and restore whole-Then certification when 4h fixes/re-enables them. The QA Engineer records the handoff without editing catalog fields. This does not convert the case to Manual or revise the frozen 4a evidence.
+- **Catalog owner — temporary DRAG-3.16 proof gap:** both parameterized Playwright tests are skipped under Nathan's runner-adoption decision. Reconcile the existing Automated status/pointer with that temporary gap, and restore whole-Then certification when 4i fixes/re-enables them. The QA Engineer records the handoff without editing catalog fields. This does not convert the case to Manual or revise the frozen 4a evidence.
 
 - **Test retirement (Nathan), applied:** DRAG-4.35 and its dedicated B14 Playwright test are deleted, keeping Next ID DRAG-4.36 and reusing no ID. The Coder removed the retired ID stamp from the existing internal projection regression; Nathan accepted that return, and the generic regression body remains unchanged. The Automator also removed B09's disputed line-place guard; DRAG-4.30's other assertions remain. No active automation claims the retired case. Future fresh cases belong to the deferred highlight-cue story; no wiki change is made in this retirement.
 

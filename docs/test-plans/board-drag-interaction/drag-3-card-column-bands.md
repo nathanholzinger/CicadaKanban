@@ -19,7 +19,7 @@
 | DRAG-3.11 | The ghost's placement is ordinal and follows the band's meaning                                                    | P1       | Automated |
 | DRAG-3.12 | Middle band, item already in this region → nothing is written                                                      | P0       | Automated |
 | DRAG-3.15 | Exactly one card: the divider halves, so the card keeps a middle band                                              | P1       | Automated |
-| DRAG-3.16 | Bands are measured against the real content, not the visible slice                                                 | P1       | Automated |
+| DRAG-3.16 | Bands are measured against the real content, not the visible slice                                                 | P1       | Open      |
 | DRAG-3.17 | The reservation is exact: a region's height never changes with hovering, and the reservation collapses when locked | P2       | Automated |
 | DRAG-3.18 | Band labels name the within-action: "Move Top", "Move Bottom", "Move to {name}"                                    | P2       | Automated |
 | DRAG-3.19 | At Board and Column layers, both copies of a dragged Card are shortCard, and its attached children are unrendered  | P2       | Automated |
@@ -28,7 +28,7 @@
 | DRAG-3.22 | At the Descendants layer, both copies of the dragged item are Stub rows                                            | P2       | Automated |
 | DRAG-3.23 | A Card popped into a done column is released as a workphase change with no anchor                                  | P0       | Automated |
 | DRAG-3.24 | A card set back down inside its own done column: the ghost stays in its slot, and nothing is written               | P1       | Automated |
-| DRAG-3.25 | Every Stub-sized row has one fixed height, with a type pill or without                                             | P1       | Open      |
+| DRAG-3.25 | Every Stub-sized row has one fixed height, with a type pill or without                                             | P1       | Automated |
 
 ---
 
@@ -140,11 +140,11 @@
 
 ## DRAG-3.16 — Bands are measured against the real content, not the visible slice
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
 *Given* a long region `R` whose content overflows its scroll box, scrolled so that the content's top edge, and the top divider with it, is out of view above, *when* Card `X` at Board layer is released at the very top of the visible slice, *then* it resolves by the **middle** band. The top divider sits `h` below the content's top edge, which is out of view, and the top band is neither drawn nor reachable until the region scrolls to it. *When* the region scrolls so that the content's top edge is in view, *then* a release within `h` of it resolves by the top band ([DRAG-3.1](drag-3-card-column-bands.md)). Whether the cursor is in `R` at all is [DRAG-1.10](drag-1-contexts-and-popping.md)'s rule.
 
-**Automation test:** `tests/ui/drag-band-contracts.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.17 — The reservation is exact: a region's height never changes with hovering, and the reservation collapses when locked
 
@@ -229,7 +229,7 @@ The held shadow's painted appearance is checked in [DRAG-1.27](drag-1-contexts-a
 
 ## DRAG-3.25 — Every Stub-sized row has one fixed height, with a type pill or without
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5a, wiki hierarchy-placement §8
 
 *Given* a Card's expanded descendants section with typed and untyped Stubs, and an overflow row for hidden children, let `s` be the fixed Stub-row height. *When* those rows are drawn, *then* each typed row, each untyped row and the overflow row has total height `s`. A type pill fits within the title's line, so it is no taller than that line and does not grow its row. Longer titles and other row content do not change the fixed height.
 
@@ -237,4 +237,4 @@ The held shadow's painted appearance is checked in [DRAG-1.27](drag-1-contexts-a
 
 The case asserts one shared fixed height, without fixing its pixel value. The representation switch and pointer position when a Card zooms into Descendants remain [DRAG-3.22](drag-3-card-column-bands.md)'s assertions.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-stub-row-height.spec.ts`

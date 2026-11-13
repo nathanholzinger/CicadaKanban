@@ -378,7 +378,7 @@ const ORIGINAL_ROWS = (t: { a: string; q: string; r: string; t: string; b: strin
   t.b,
 ];
 
-test('DRAG-7.27: a dragged R carries its overflow row and its branch, which are never a neighbor; an unrelated overflow row stays; released as B’s next sibling, its children show at level 2', async ({
+test('DRAG-7.27, DRAG-2.22: a dragged R carries its overflow row and its branch, which are never a neighbor; an unrelated overflow row stays; released as B’s next sibling, its children show at level 2', async ({
   page,
   request,
   projectSidebar,
@@ -461,7 +461,7 @@ test('DRAG-7.27: cancelling a drag of R brings its overflow row back, reading �
   expect(await settledWrites(page, writes)).toEqual([]);
 });
 
-test('DRAG-7.27: a dragged Q carries R and T, so their rows and R’s overflow row are all absent', async ({
+test('DRAG-7.27, DRAG-2.22: a dragged Q carries R and T, so their rows and R’s overflow row are all absent', async ({
   page,
   request,
   projectSidebar,

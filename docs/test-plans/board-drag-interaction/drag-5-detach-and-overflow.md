@@ -8,11 +8,11 @@
 |---|---|---|---|
 | DRAG-5.1 | A Stub popped out to the column becomes Free, and is placed by the column's within-action | P0 | Automated |
 | DRAG-5.2 | Detaching in place keeps the inherited workphase, even a merged column's non-entry workphase | P0 | Automated |
-| DRAG-5.3 | Detaching into a different column goes through Board and takes that column's workphase by its band | P0 | Automated |
+| DRAG-5.3 | Detaching into a different column goes through Board and takes that column's workphase by its band | P0 | Open |
 | DRAG-5.4 | A Stub zoomed into a different Card is reparented, as that Card's last child | P0 | Automated |
 | DRAG-5.5 | A momentary excursion out of the Card's box doesn't detach | P0 | Automated |
 | DRAG-5.9 | A Stub drag's within-action is hierarchy placement: reorder and reparent inside the Card need no detach | P0 | Automated |
-| DRAG-5.10 | A detached Stub is shown as a Card from the column layer on | P1 | Automated |
+| DRAG-5.10 | A detached Stub is shown as a Card from the column layer on | P1 | Open |
 | DRAG-5.13 | A nested Stub starts in its containing Card's Descendants and pops to that Card's column | P1 | Automated |
 | DRAG-5.14 | A Stub detached in place inside a done column becomes a done Free item | P1 | Automated |
 | DRAG-5.15 | Title and padding stay inside Descendants, and a release there commits gap and depth | P0 | Automated |
@@ -38,11 +38,11 @@
 
 ## DRAG-5.3 — Detaching into a different column goes through Board and takes that column's workphase by its band
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §8, wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8, wiki board-drag-interaction §5
 
 *Given* Stub `X` attached to `P` in column `C1`, and a different column `C2` whose covered set doesn't include `X`'s inherited workphase, *when* `X` pops out to `C1` ([DRAG-5.1](drag-5-detach-and-overflow.md)), then out of `C1` to Board ([DRAG-1.3](drag-1-contexts-and-popping.md)), and is released in one of `C2`'s bands, *then* the commit is a detach plus that band's meaning in `C2` ([DRAG-3.1](drag-3-card-column-bands.md), [DRAG-3.2](drag-3-card-column-bands.md), [DRAG-3.3](drag-3-card-column-bands.md)): `C2`'s entry workphase (or the sub-row's own workphase in an expanded column), with the band's anchor and side, or no anchor for the middle band. `X.parentId` is still `P`. *When* the cursor instead stays in `C2`'s middle band for `popInDelayMs` before the release, *then* `X` is locked in `C2`, and the release is `C2`'s reposition.
 
-**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`
+**Automation test:** —
 
 ## DRAG-5.4 — A Stub zoomed into a different Card is reparented, as that Card's last child
 
@@ -79,11 +79,11 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-5.10 — A detached Stub is shown as a Card from the column layer on
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5a, wiki board-drag-interaction §8
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a, wiki board-drag-interaction §8
 
 *Given* Stub `X` attached to `P`, *when* `X` pops out to `P`'s column ([DRAG-5.1](drag-5-detach-and-overflow.md)), *then* from that moment both its carried copy and its ghost are shortCard in the column's list, no longer Stub rows, and `X` is absent from `P`'s descendants section while outside `P`. *When* `X` then zooms into a Card `Q` ([DRAG-5.4](drag-5-detach-and-overflow.md)), *then* both copies are Stub rows again, inside `Q` ([DRAG-3.22](drag-3-card-column-bands.md)). This also holds on zooming back into `P` during the same drag. *When* the drag is cancelled, or released where nothing is written ([DRAG-1.9](drag-1-contexts-and-popping.md)), after `X` has popped out, *then* `X` renders back as `P`'s Stub, unchanged.
 
-**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`, `tests/ui/drag-descendants-placement.spec.ts`
+**Automation test:** —
 
 ## DRAG-5.13 — A nested Stub starts in its containing Card's Descendants and pops to that Card's column
 
