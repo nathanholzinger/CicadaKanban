@@ -180,7 +180,7 @@ describe('locked', () => {
 
   // The modal's layer keeps the clock every layer has: a return into the dialog, its header
   // included, restarts it, so two short excursions never add up to a pop.
-  it('two excursions out of the hierarchy modal’s box, each shorter than popDelayMs, pop nothing: a return restarts the clock', () => {
+  it('DRAG-7.10: two excursions out of the hierarchy modal’s box, each shorter than popDelayMs, pop nothing: a return restarts the clock', () => {
     const list = descendantsRegion('card-m', rect(300, 100, 200, 300), A.key, { boundsRect: rect(300, 0, 200, 400) });
     const board = [A, list];
     const outside = { x: 50, y: 300 }; // in A, outside the dialog

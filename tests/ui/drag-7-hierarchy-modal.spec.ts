@@ -887,7 +887,7 @@ test('DRAG-7.31: a hidden Stub returned to its pickup slot after reopening the m
     .toBe('5:3:true');
   await release(page);
 
-  // No request was sent, from the pickup through the release. R2 is as it was.
+  // No item write request was sent, from the pickup through the release (a read isn't one). R2 is as it was.
   expect(await settledWrites(page, writes)).toEqual([]);
   const after = await fetchItem(request, r2.id);
   expect([after.parentId, after.isAttached, after.position, after.workphaseId]).toEqual([
@@ -1273,9 +1273,8 @@ const SCROLLED_BY = 30;
 
 // Closing the Sheet over the hierarchy modal (DRAG-7.32), each way from a fresh state: only the Sheet closes,
 // and the same modal is left where it was, with the same rows at the same indents and the same scroll
-// offset, and nothing written. The next Escape then closes the modal. The Sheet is taken as open once it
-// is in place: it slides in, and an Escape pressed in its first moments was lost in 4 of 40 runs. That is
-// an adjacent finding about the app, recorded in Results and the Open questions, not a case gap.
+// offset, and nothing written. The next Escape then closes the modal. These wait for the Sheet to be in place;
+// the test after them presses Escape while it is still sliding in.
 const CLOSE_WAYS = ['Escape', 'its X', 'its backdrop', 'its backdrop over the modal’s own X'] as const;
 
 for (const way of CLOSE_WAYS) {
@@ -1334,6 +1333,55 @@ for (const way of CLOSE_WAYS) {
     await expect(modal).toHaveCount(0);
   });
 }
+
+// Escape while the Sheet is still sliding in (DRAG-7.32): the Sheet has begun opening and is visible above the
+// modal, so that keypress closes only the Sheet. The page's animations are slowed through the browser's own
+// animation timeline, so that the Sheet is shown to be mid-entrance when Escape is pressed, which a fast
+// slide can't be relied on for.
+test('DRAG-7.32: Escape pressed while the Sheet is still sliding in over the hierarchy modal closes only the Sheet', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Sheet Early Escape Project';
+  const { p, r, r1 } = await seedOverflowTree(request, name);
+  await page.setViewportSize(SCROLLING_WINDOW);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  await dragRegion(modal, descendantsRegionKey(p.id)).evaluate((list, by) => (list.scrollTop = by), SCROLLED_BY);
+  const before = await modalState(modal, p.id);
+  expect(before.scrollTop, 'the modal’s list scrolls').toBe(SCROLLED_BY);
+  const placed = await boxOf(modal);
+  const writes = watchWrites(page);
+
+  // The Given: the Sheet is visible above the modal and not yet in place.
+  const animations = await page.context().newCDPSession(page);
+  await animations.send('Animation.setPlaybackRate', { playbackRate: 0.05 });
+  const sheet = itemPanel(page);
+  await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
+  await expect(sheetHeading(page, 'R1')).toBeVisible();
+  const entering = await paintedBoxOf(sheet);
+  expect(entering.x + entering.width, 'the Sheet is still sliding in').toBeGreaterThan(SCROLLING_WINDOW.width);
+  expect(entering.x, 'and is on the screen').toBeLessThan(SCROLLING_WINDOW.width);
+
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveClass(/translate-x-full/);
+  await animations.send('Animation.setPlaybackRate', { playbackRate: 1 });
+
+  // Only the Sheet closed: the same modal, at its prior place, with the same rows, indents and scroll offset.
+  await expect(modal).toBeVisible();
+  expect(await boxOf(modal)).toEqual(placed);
+  expect(await modalState(modal, p.id)).toEqual(before);
+  expect(await settledWrites(page, writes)).toEqual([]);
+
+  // With the Sheet gone, the next Escape closes the modal.
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
+});
 
 test('DRAG-7.33: a child link in the Sheet replaces the Sheet over the same modal, down to the last child', async ({
   page,

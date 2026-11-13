@@ -375,9 +375,21 @@ for (const phase of ['dwell', 'cue'] as const) {
     await page.waitForTimeout(100);
     expect(await dragMachine(page).getAttribute('data-drag-modal-hold')).toBe(`${r.id}:${phase}`);
 
-    // Completing it there opens the modal.
-    await expect(hierarchyModal(page, 'P')).toBeVisible(opens(tuning));
+    // Completing it there opens the modal. With room to place it inside the window with the ghost's spot under
+    // the cursor, it opens with the ghost in the same gap, at the same level: R's first child.
+    const modal = hierarchyModal(page, 'P');
+    await expect(modal).toBeVisible(opens(tuning));
     await awaitDragContext(page, descendantsRegionKey(p.id));
+    const viewport = page.viewportSize()!;
+    const box = await boxOf(modal);
+    // The Given: no edge shifted it, so each side is further than the margin from the window's edge.
+    expect(box.x, 'the modal clears the left edge').toBeGreaterThan(MODAL_EDGE_MARGIN_PX + 0.5);
+    expect(viewport.width - (box.x + box.width), 'the right edge').toBeGreaterThan(MODAL_EDGE_MARGIN_PX + 0.5);
+    expect(box.y, 'the top edge').toBeGreaterThan(MODAL_EDGE_MARGIN_PX + 0.5);
+    expect(viewport.height - (box.y + box.height), 'the bottom edge').toBeGreaterThan(MODAL_EDGE_MARGIN_PX + 0.5);
+    await expectInside(modal, padding);
+    await expectGhostUnder(modal, x.id, padding);
+    await awaitProjection(page, '3:3:true');
     await cancel(page);
   });
 }
@@ -919,30 +931,33 @@ for (const kind of ['stub', 'free'] as const) {
     await expect(modal).toBeVisible(opens(tuning));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
-    // Out of it: one pop, to P's column, and the modal closes.
-    const rest = await pointOutsideModal(itemRow(page, f.id), modal, 1);
-    if (!rest) throw new Error('no point in the column lies outside the modal');
-    await hoverTo(page, rest);
-    await awaitDragContext(page, columnRegionKey(column.id), clocksMargin(tuning.popDelayMs));
-    await expect(modal).toHaveCount(0);
+    // Twice over, in the same drag: out of the modal by one pop, to P's column, and back in by the full zoom-in
+    // hold, a hold beside the overflow row again, and the modal opens again at the same layer.
+    for (const reopening of ['second', 'third']) {
+      const rest = await pointOutsideModal(itemRow(page, f.id), modal, 1);
+      if (!rest) throw new Error('no point in the column lies outside the modal');
+      await hoverTo(page, rest);
+      await awaitDragContext(page, columnRegionKey(column.id), clocksMargin(tuning.popDelayMs));
+      await expect(modal).toHaveCount(0);
 
-    // Back in: the side highlight names P for the full zoom-in hold.
-    const middle = await center(article(page, 'P'));
-    await hoverTo(page, middle);
-    await awaitDragContext(
-      page,
-      descendantsRegionKey(p.id),
-      clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
-    );
+      // Back in: the side highlight names P for the full zoom-in hold.
+      const middle = await center(article(page, 'P'));
+      await hoverTo(page, middle);
+      await awaitDragContext(
+        page,
+        descendantsRegionKey(p.id),
+        clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+      );
 
-    // A hold beside the overflow row again: the modal opens again, at the same layer.
-    const aim = async () => tabBy(page, { x: middle.x, y: (await beside()).y }, 0);
-    await aim();
-    await aim();
-    await awaitProjection(page, '3:3:true');
-    await expect(modal).toBeVisible(opens(tuning));
-    await awaitDragContext(page, descendantsRegionKey(p.id));
-    expect(writes, 'nothing is written on the way out, back in or on opening').toEqual([]);
+      // A hold beside the overflow row again: the modal opens again, at the same layer.
+      const aim = async () => tabBy(page, { x: middle.x, y: (await beside()).y }, 0);
+      await aim();
+      await aim();
+      await awaitProjection(page, '3:3:true');
+      await expect(modal, `the modal opens a ${reopening} time`).toBeVisible(opens(tuning));
+      await awaitDragContext(page, descendantsRegionKey(p.id));
+      expect(writes, 'nothing is written on the way out, back in or on opening').toEqual([]);
+    }
 
     // A release in it places by gap and depth: R's first child.
     await release(page);

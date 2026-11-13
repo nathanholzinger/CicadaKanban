@@ -315,42 +315,51 @@ The decision is recorded here, and a change to a decision is amended in the plan
 
 ## Results
 
-**Current packet: batch 4c, Stop 3 returned, ready for Stop 4 (2026-11-12).** All 15 cases have tests, all green, and the Test Reviewer's third pass leaves no gap. It replaces the Stop 2 packet; Git holds that one. Plan: [story-10-batch-4c-proof-plan.md](story-10-batch-4c-proof-plan.md).
+**Current packet: batch 4c, Stop 4 complete, at Nathan's check-in (2026-11-12).** The frozen selection met D2 for every added or changed test, and the final full E2E run and the root gate are green, with one failed attempt disclosed below. Stop 5, the Reconciler, is next and not started. It replaces the Stop 3 packet; Git holds that one. Plan: [story-10-batch-4c-proof-plan.md](story-10-batch-4c-proof-plan.md).
 
-- **Trees:** baseline `16fe9e07637a66f797a82fb3c2d5c8b01c9e5aed` (HEAD's). End of Stop 2: `5b0f5c79bc84b1098bd5b2b94468eead5b20972f`. The Coder's return as found: `bf09a5a757da1b2622b227151cada89f1780e9c5`. Now, and at the reviewer's third pass: `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`. These are the QA Engineer's snapshots. This doc holds no Coder return with its own start and end trees.
-- **The Coder's return, as seen in the tree** (`git diff 5b0f5c79 bf09a5a7`): app files `ItemDetailPanel.tsx`, `KanbanCard.tsx`, `ModalShell.tsx`, `dragChrome.tsx`, `dragOverlayGeometry.ts`, `dragStructure.ts`, `useBoardDnd.ts`, new `useEscapeKey.ts`, and `workflow/AGENTS.md`. Vitest: `ItemDetailPanel.test.tsx`, `KanbanCard.test.tsx`, new `ModalShell.test.tsx`, `dragChrome.test.tsx`, `dragOverlayGeometry.test.ts`, `dragStructure.test.ts`, `popSession.test.ts`. No test file of this batch changed.
-  - **The original failing surface tests, rerun unchanged first:** `batch4c-coder-return-full.json`, the five files at five workers on `bf09a5a7`, **134 passed, 0 failed**. That includes the five DRAG-7.10 tests that were red at "bounded by `K`".
+- **What came after Stop 3.** Nathan committed the Stop 3 tree as `61a0df4b` (tree `65898343e75afe99ab22faf58116fc56ad6d95f5`); that commit holds the tree the reviewer's third pass read, plus the Planner's rewording of eight cases. It did not hold a Stop 4. The QA Engineer then extended the tests for the new text, with Nathan's go-ahead (2026-11-12), and ran Stop 4 on the result:
+  - DRAG-7.10: the Coder's two-excursion clock test in `popSession.test.ts` is stamped DRAG-7.10 (title only; the clock category, so no approval);
+  - DRAG-7.14: the two padding tests assert the ghost's gap and level after the modal opens (X's row under the cursor, `3:3:true`), and that the modal is inside the window by more than its margin on each side;
+  - DRAG-7.18: each test runs the pop-out, zoom-back and reopening twice in one drag;
+  - DRAG-7.27: the Q-carried test asserts `T` in its Given, absent while carried, and back after the cancel;
+  - DRAG-7.32: a new test presses Escape while the Sheet is mid-entrance, with the page's animations slowed through the browser's animation timeline so the Given (heading visible, Sheet's right edge beyond the window) is asserted;
+  - DRAG-7.31: comment only ("no item write request");
+  - DRAG-7.9 and 7.17: no change; the reviewer judged the existing tests against the new text.
+- **Reviewer passes:** four, each word for word in the Review log. The fourth, on `d5a17972…` against the reworded cases: no gap, no correction after a red run. It made two optional suggestions, both taken before the freeze (the margin check above, and the early-Escape test asserting the list's scroll offset first), and the changed tests ran 9 of 9 afterwards. The reviewer hasn't seen those two edits.
+- **The frozen selection.** Tree `75b654edb0aca33df7c4c194277e629494617950`, subtrees `tests` `932eaf7c836c634b1e2b8a21e220e5783f0b7675`, `client` `2a7390e8df90d5bf73797af43468069a932a512a`, `server` `9afce5ff3395c2b08caa1400e6ba21883122b7d4`. At the end of Stop 4 those three subtrees are unchanged (tree `836cf84a0f2bd77aeb6fa79becbca2dc1c93ee3b`, which differs only by another session's epic-4 planning docs). Selection: the five files whole, **131 tests**: `drag-7-hierarchy-modal.spec.ts` 44, `drag-7-modal-hold.spec.ts` 31, `drag-7-overflow-row.spec.ts` 17, `drag-5-stub-detach.spec.ts` 29, `drag-stub-row-height.spec.ts` 10. **70 of them are added or changed** against the baseline commit `175943d7` (2, 29, 24, 5 and 10 by file), by a diff of each test's own source block. That misses a test changed only through a helper in its file, which is why the whole files were repeated.
+  - **Stamps:** the one new stamp is the clock test's title, a title-only diff; `check:docs` 454 files, 0 hits.
+- **D2: ten repeats at five workers, retries 0** (`tests/output/batch4c-d2-repeat10.json`, 950 s). 1,310 attempts: **1,309 passed, 1 failed.** All 70 added or changed tests passed 10 of 10 (700 passes). The failure is in an unchanged test, a batch 4b one:
+  - **`DRAG-5.3: B18 expanded sub-row locked-after-A detach uses the destination meaning`, repeat 4, 9 of 10.** A 30 s timeout in `locator.evaluate`, waiting for the sub-row region's bottom carve divider (`[data-carve-divider="bottom"]`). The page snapshot is in `tests/output/artifacts/ui-drag-5-stub-detach-DRAG-82914-ses-the-destination-meaning-chromium-repeat4/error-context.md`. No cause is established.
+- **Final full E2E suite, five workers.** Two runs, both disclosed:
+  - `batch4c-final-full-e2e.json`: 450 passed, 10 skipped, **1 failed**: `DRAG-5.3: B18 merged column locked-after-A detach uses the destination meaning`, 6.2 s in, `apiRequestContext.get: read ECONNRESET` on `GET /api/items/:id` (worker 3, port 3013, at `drag-5-stub-detach.spec.ts:608`). It is the signature of the flake investigation's cause D, a connection reset between a test's API calls when a gesture leaves about five seconds idle.
+  - `batch4c-final-full-e2e-rerun.json`, the same tree: **451 passed, 10 skipped, 0 failed.** None of the 10 skips is in the five files (they ran 0 skipped).
+  - **Evidence only, nothing changed:** `batch4c-b18-after.json`, the eight DRAG-5.3 B18 tests repeated 20 times at five workers: 160 of 160 passed.
+- **Root gate** `npm run check` on the frozen tree: exit 0, 444 server, 1,105 client and 327 script tests. `tests/output/batch4c-final-gate.log`.
 - **Each case's state:**
 
   | Case | State |
   | --- | --- |
-  | DRAG-7.6, 7.9, 7.10, 7.12, 7.13, 7.14, 7.15, 7.17, 7.18, 7.27, 7.28, 7.31, 7.32, DRAG-1.14, DRAG-3.25 | Authored, green. The reviewer's third pass: Proves the case (DRAG-7.14 with the Coder's clock test, in the approved category) |
+  | DRAG-7.6, 7.9, 7.10, 7.12, 7.13, 7.14, 7.15, 7.17, 7.18, 7.27, 7.28, 7.31, 7.32, DRAG-1.14, DRAG-3.25 | Authored, green on the frozen tree, D2 met. The fourth pass: Proves the case |
 
-  None held off, none unauthored. The two Open cases outside the batch that the reviewer widened to, DRAG-2.22 and DRAG-6.15, keep their gaps.
-- **Changes after the Coder's return** (Nathan's decisions, 2026-11-12):
-  - the DRAG-7.10 matrix cut from twelve variants to eight: every arrival leaves on the clock, and P's own Stub also on one sample of the distance;
-  - `cueOn` in `drag-7-modal-hold.spec.ts` reads the new `data-drag-cue`;
-  - `tests/helpers/dragGesture.ts::awaitProjection`'s header: the gap counts every row of the Card's hierarchy, those behind an overflow row included.
-
-  `batch4c-prefreeze-full.json`, the five files at five workers on `77c65790`: **130 passed, 0 failed**, 149 s.
-- **Counts:** the five files hold 130 runnable tests (hierarchy-modal 43, modal-hold 31, overflow-row 17, stub-detach 29, stub-row-height 10). 69 are added or changed against the baseline (28, 24, 5, 2 and 10), by a diff of each test's own source block. The proof plan expected 61.
-- **Reviewer passes:** three, each word for word in the Review log. The third was on `77c65790`, and nothing has changed since. Its record: it read part of an app file's body (`dragOverlayGeometry.ts`, lines 33 to 60) past the header it meant to read, and says no verdict rests on it.
-- **Cost notes:** decided. The reviewer repeats notes 2 and 3 (DRAG-7.17's gap-above test, DRAG-7.18's zoom hold) as open; Nathan decided both stay as they are.
-- **`/code-review` at `medium`,** Stop 2, on `tests/helpers/overflowTree.ts` and `boardDragSurface.ts`: seven findings. Fixed, three: `holdFreeAt` hard-coded Card `P`'s title; two comments that said the wrong thing. Added for a fourth: `seedTree` fails if the section's levels aren't the three its depths assume. Noted, not acted on: the cast on `x`, the nine-point grid in `pointOutsideModal`, an import cycle between the two helpers. One, a mix of coordinate spaces, judged not a real problem. Since then the one shared-infrastructure change is `dragGesture.ts`'s header comment, which `/code-review` doesn't need.
-- **Checks:** root gate `npm run check` on `77c65790`: exit 0, 444 server, 1,105 client and 327 script tests, `check:docs` 454 files and 0 hits. Log: `tests/output/batch4c-postcoder-gate.log`.
+  None held off, none unauthored. DRAG-2.22 and DRAG-6.15, which the reviewer widened to, keep their gaps and aren't 4c's.
+- **Adjacent findings, not 4c's** (Nathan routes them):
+  - **DRAG-5.3's B18 locked-after-A detach, merged and expanded variants, at five workers:** one failed attempt each, one in the ten repeats and one in the first full run. The merged one carries cause D's signature. The expanded one is a 30 s wait for a carve divider, and the flake investigation recorded a 30 s timeout for the merged variant too, as unexplained. Both passed 20 of 20 on their own and on the rerun. The investigation's D1 (a longer keep-alive timeout on the server, for the Coder) isn't in the tree.
+- **Cost notes:** the reviewer repeats DRAG-7.17's gap-above test and DRAG-7.31 as keep, and weighs DRAG-7.18 afresh, because the second reopening doubled its clock chain (about 12 s a variant on one worker, `ZOOM_BACK` 1500 + 800 ms twice over). Both variants, P's own Stub and a Free Card, run the same chain. **Recommendation:** keep both for this batch, and decide at the Reconciler's close whether the Free Card variant carries a clause the Stub one doesn't; nothing about it failed in the ten repeats.
+- **`/code-review` at `medium`,** Stop 2, on `tests/helpers/overflowTree.ts` and `boardDragSurface.ts`: seven findings. Fixed, three: `holdFreeAt` hard-coded Card `P`'s title; two comments that said the wrong thing. Added for a fourth: `seedTree` fails if the section's levels aren't the three its depths assume. Noted, not acted on: the cast on `x`, the nine-point grid in `pointOutsideModal`, an import cycle between the two helpers. One, a mix of coordinate spaces, judged not a real problem. No shared test infrastructure has changed since, apart from `dragGesture.ts`'s header comment.
+- **The Coder's return,** as recorded at Stop 3 and unchanged: app files `ItemDetailPanel.tsx`, `KanbanCard.tsx`, `ModalShell.tsx`, `dragChrome.tsx`, `dragOverlayGeometry.ts`, `dragStructure.ts`, `useBoardDnd.ts`, new `useEscapeKey.ts` and `workflow/AGENTS.md`; Vitest `ItemDetailPanel.test.tsx`, `KanbanCard.test.tsx`, new `ModalShell.test.tsx`, `dragChrome.test.tsx`, `dragOverlayGeometry.test.ts`, `dragStructure.test.ts`, `popSession.test.ts`. The original five red DRAG-7.10 tests passed unchanged on it (`batch4c-coder-return-full.json`, 134 of 134).
 - **Living-docs handoff** (for the story plan's list; that file isn't on this stop's list):
   - the skipped test "DRAG-7.2: R's only attached child dragged…" is deleted; `descendantsSection.test.ts` holds that rule;
   - DRAG-7.11 is dropped from the old pop-out test's title, and DRAG-7.10 from the old DRAG-7.18 test's, as those tests were replaced;
   - four DRAG-7.10 matrix variants are deleted, by Nathan's decision on the cost note: the click-opened and hold-free arrivals on one sample of the distance, each to the column and to the expanded sub-row. Two of them carried DRAG-1.14;
   - DRAG-1.14 is stamped on the two B25 tests in `drag-5-stub-detach.spec.ts`, title only;
-  - for the Reconciler: the reviewer's two DRAG-2.22 mappings onto DRAG-7.27's and DRAG-7.13's tests (DRAG-2.22 isn't a 4c case, so they aren't stamped); and the Coder's two-excursion clock test in `popSession.test.ts`, which takes an ID once a Planner session answers Stop 1 question 1.
-- **Open questions:** the six Stop 1 questions and three Stop 2 questions for a Planner session. None blocks Stop 4.
-- **Files in scope:** Stop 2's list (Nathan, 2026-11-11), with `tests/helpers/dragGesture.ts` added for its header (Nathan, 2026-11-12).
-- **Stop 4, the frozen selection** (next session): the five files whole, 130 tests, ten repeats at five workers (D2), 1,300 passes, about 25 minutes; then the full E2E suite and the root gate, sequentially. Freeze on the tree at the session's start. Its tests and app source should be as on `77c65790`: since then only this doc has changed (`c21c95dac4338a2d9afa1da72d84f4b75af99dbb` with this packet). Repeats: `npm run test:e2e -- tests/ui/drag-7-hierarchy-modal.spec.ts tests/ui/drag-7-modal-hold.spec.ts tests/ui/drag-7-overflow-row.spec.ts tests/ui/drag-5-stub-detach.spec.ts tests/ui/drag-stub-row-height.spec.ts --repeat-each=10 --retries=0`, from PowerShell, in the background, with `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a named report.
-- **Next owner and action:** Nathan, the check-in after Stop 3; then a QA Engineer session for Stop 4.
-- **JSON report paths** (`tests/output/`): traces `batch4c-trace-alone.json`, `batch4c-trace-contention.json`, `batch4c-trace-t3-diag.json`; five-file runs `batch4c-files-full.json`, `-full2` (interrupted by a machine suspend), `-full3`, `-full4`, `-full5` (each 129 passed, 5 failed at "bounded by `K`"), `batch4c-coder-return-full.json`, `batch4c-prefreeze-full.json`; per family `batch4c-c01-focus.json`, `batch4c-c02-all1.json`, `batch4c-c02-free.json`, `batch4c-c02-rest.json`, `batch4c-c02-flaky.json`, `batch4c-c02-rep1.json`, `batch4c-c03.json`, `batch4c-c04.json`, `batch4c-c05c06.json`, `batch4c-c05b.json`, `batch4c-c07.json`, `batch4c-c08c09c14.json`, `batch4c-c08-rework.json`, `batch4c-c10.json`, `batch4c-c10d.json`, `batch4c-c11.json`, `batch4c-c11c12.json`, `batch4c-c13.json`, `batch4c-c728.json`, `batch4c-pass2-fixes.json`.
-- **Last reviewer tree:** `77c65790bd2285eaa6d4f34d927697bf9e7f5a9b`.
-- **Not run:** the trace's early-Escape sequence on the Coder's return; D2's repeats, the full E2E suite and the Reconciler (Stops 4 and 5).
+  - DRAG-7.10 is stamped on the Coder's two-excursion test in `popSession.test.ts`, title only;
+  - for the Reconciler: the reviewer's two DRAG-2.22 mappings onto DRAG-7.27's Q-carried and R-carried tests and DRAG-7.13's first test (DRAG-2.22 isn't a 4c case, so they aren't stamped).
+- **Open questions:** the Planner has answered the Stop 1 and Stop 2 questions (Open questions). Open: the adjacent finding above, and the cost note.
+- **Files in scope:** Stop 2's list (Nathan, 2026-11-11), `tests/helpers/dragGesture.ts` (2026-11-12) and, for the one title stamp, `client/src/components/workflow/popSession.test.ts` (Nathan's choice of option, 2026-11-12).
+- **Next owner and action:** Nathan, the check-in after Stop 4: route the adjacent finding, and open Stop 5. Then the QA Engineer, Stop 5: `npm run report:catalog` on the frozen tree, and the Reconciler, spawned once, cold, with the brief `.claude/agents/test-reconciler.md` names (the plan's Scope and Review log; the coverage report; the record of this green run, its tree IDs and report paths; the range's test and catalog diffs from `175943d7`).
+- **JSON report paths** (`tests/output/`): the frozen run's `batch4c-d2-repeat10.json`, `batch4c-final-full-e2e.json` and `batch4c-final-full-e2e-rerun.json`, `batch4c-b18-after.json`, `batch4c-after-planner-full.json` (131 of 131, on `d5a17972…`), `batch4c-tighten.json`, `batch4c-planner-changes.json`; before the commit `batch4c-coder-return-full.json`, `batch4c-prefreeze-full.json`, `batch4c-files-full.json` to `batch4c-files-full5.json` (`-full2` interrupted by a machine suspend), the traces `batch4c-trace-alone.json`, `batch4c-trace-contention.json` and `batch4c-trace-t3-diag.json`, and one per family `batch4c-c01-focus.json` to `batch4c-c728.json`, `batch4c-c08-rework.json`, `batch4c-pass2-fixes.json`. Gate logs: `batch4c-final-gate.log`, `batch4c-planner-changes-gate.log`, `batch4c-postcoder-gate.log`, `batch4c-stop2-gate.log`.
+- **Last reviewer tree:** `d5a179720838b34f3143f5d0059dd1151a983ba9`; the frozen tree adds the two optional suggestions above.
+- **Not run:** the Reconciler and `npm run report:catalog` (Stop 5); the T3 trace's early-Escape sequence at real speed (the new test covers it under slowed animation).
 
 ## Review log
 
@@ -1390,6 +1399,169 @@ None of this pass's changes adds a cost:
 - c:\Users\natha\Dev\KanbanApp\tests\helpers\dragGesture.ts
 ```
 
+### Batch 4c, after the Planner's rewording — the Test Reviewer's fourth pass (2026-11-12)
+
+The same reviewer agent, continued, on tree `d5a179720838b34f3143f5d0059dd1151a983ba9`. The Planner had reworded DRAG-7.9, 7.10, 7.14, 7.17, 7.18, 7.27, 7.31 and 7.32 after the third pass, and the QA Engineer extended the tests for them (the clock test's DRAG-7.10 stamp, T in the Q-carried test, the ghost's gap and level in DRAG-7.14's padding tests, a second reopening in DRAG-7.18, a new early-Escape test for DRAG-7.32). The brief gave each as before and after. The report is word for word.
+
+```text
+Test Reviewer, Story 10 batch 4c, fourth pass, 2026-11-12
+
+**Inputs.** I read the files and the catalog on disk, which the coordinator gives as tree `d5a179720838b34f3143f5d0059dd1151a983ba9`. I have no shell, so I couldn't check the tree or diff it.
+- I re-read the whole DRAG-7 file. DRAG-7.9, 7.10, 7.14, 7.17, 7.18, 7.27, 7.31 and 7.32 have new text, and I judged every case the four changed files carry against its current Then.
+- The other DRAG-7 cases read as they did in my first pass, so their earlier verdicts stand.
+- No app source was read. Only playwright.config.ts, to see which browsers run.
+
+**Form.** The brief gives the changes as before-and-after with no reasons, so it's in form. It notes that the five spec files haven't been rerun as wholes on this tree. That's run state, not a verdict input.
+
+---
+
+## Verdicts: cases with new text
+
+### DRAG-7.9: Proves the case
+- **"its drag starts at P's Descendants layer, with no pop"**, and **"in the gap between R1 and R1a → one state, R1's first child: R2.parentId = R1, attached, before R1a"**: `tests/ui/drag-7-hierarchy-modal.spec.ts` "DRAG-7.9, DRAG-7.28: a drag in the modal starts at the Descendants layer, and between R1 and R1a the one state is R1's first child". Offsets of −3, +3 and 0 levels each read `4:4:true`. The saved item has parent R1, is attached, is in Todo, and sits before R1a.
+- **"in the gap between R1a and T … aligned with R1a at level L + 2 → R2.parentId = R1, attached, after R1a"**: "DRAG-7.9: in the gap R2 sits in, one tab right of its own depth, it is R1's last child, after R1a". Its Given is asserted first.
+- **"its own gap and depth → nothing is written"**: "DRAG-7.9, DRAG-7.19: set back down in its own gap and depth…".
+- **"a tab state whose resulting depth exceeds CAP → marked invalid, and a release writes nothing"**: "DRAG-7.9, DRAG-7.12: a tab state past the depth cap…". CAP is read from the board.
+- **"each saved placement leaves R2 attached, with P's workphase"**: all four tests assert isAttached 1 and Todo on the saved item, for the two writes and for the two set-downs that write nothing.
+- **"The first two gaps place R2 among rows hidden by the section's overflow row"** describes where those placements land, not a separate outcome. Both place R2 under R1. `drag-7-overflow-row.spec.ts`'s DRAG-7.1 test shows, on the same tree helper, that R1, R2 and R1a are hidden in the section.
+
+### DRAG-7.10: Proves the case
+Clauses the matrix proves, in "DRAG-7.10[, DRAG-1.14]: … pops once to … on …, Free, and a release after Card Q writes that placement" (eight variants):
+- **"opened by a click or by a hold"**: the click, hold-stub and hold-free arrivals.
+- **"satisfies popDelayMs or the enabled popDistancePx"**: the clock in every arrival; the distance in the two hold-stub variants.
+- **"exactly one pop … directly to K, Free, bounded by K and shown as shortCard"**:
+  - the modal is gone, the state is locked, and the context is K;
+  - the item's row in K is an article, and the saved item has isAttached 0;
+  - `withinExcess` is at most 2 px;
+  - the carried copy's form is short-card, and the ghost's height equals the copy's.
+- **"{anchorId: Q, side: after}"**: one request, no parentId.
+  - "a Stub picked up attached has isAttached: false with its original parentId": the click and hold-stub arrivals.
+  - "an item brought in Free stays Free with its original parentId": the hold-free arrival.
+- **"No attach into P"**.
+
+Clauses other tests prove:
+- **"No further exit from P's box is required"**: the click variants, which assert owner P, plus "DRAG-7.10: in an expanded sub-row, reaching Board takes another pop out of the sub-row" and "…the sibling sub-row beside it is not reached…".
+- **"From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of K"**: the same two sub-row tests.
+- **One excursion that satisfies neither threshold**: "DRAG-7.10, DRAG-1.14: with the distance off, an excursion…" and "DRAG-7.10: an excursion out of the modal shorter than the pop-out distance…".
+- **The new sentence, two excursions, "returning to the box restarts the pop-out clock from zero"**: `client/src/components/workflow/popSession.test.ts` "DRAG-7.10: two excursions out of the hierarchy modal's box, each shorter than popDelayMs, pop nothing: a return restarts the clock".
+  - A return into the modal's header restores the locked session.
+  - The second excursion's clock starts at its own time.
+  - Nothing pops until that second excursion alone reaches `popDelayMs`.
+  - It is in the approved clock category, so it counts.
+  - The surface single-excursion tests tie "no pop" to "the modal stays open".
+- **The header**: "DRAG-7.10: the modal's header is part of the modal…".
+
+### DRAG-7.14: Proves the case
+- **Bullet 1 (another gap)**: `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.14: the hold starts over when the ghost changes level or gap". The hold reads null, the cue count is 0, the drag is still at P's Descendants, and a projection is present that isn't gap 6.
+- **Bullet 2 (a tab from L+1 to L resets; tabbing back starts a fresh dwell)**: the same test.
+- **Bullet 3 (leaving the whole Card's box)**: "DRAG-7.14: the cursor leaving the whole Card's box ends the hold…".
+- **Bullet 4, "the dwell or cue runs on without restarting; completing the hold there opens the modal"**:
+  - the two surface tests "…moving into the Card's title or padding during the dwell|cue…";
+  - the clock test `popSession.test.ts` "DRAG-7.14: runs on from the same start while the cursor moves into the Card's title or padding, through the dwell and the cue, and completes there".
+- **Bullet 4's new sentence, "it opens with the ghost in that same gap and at that same level, as R's first or last child"**: the same two surface tests now assert that the padding point is inside the modal's box, that X's row is painted under that point, and that the projection reads `3:3:true`, which is R's first child, the gap and level held before.
+- **Bullet 5**: "DRAG-7.14: the carried copy moving within the gap…".
+
+**Note on bullet 4's Given, not a gap.** "Given room to place the modal inside the window with the ghost's spot under the cursor" is checked as "the modal lies inside the window by `MODAL_EDGE_MARGIN_PX` on all four sides". A modal shifted by an edge also lies inside by that margin, so this check can't tell the Given's case from DRAG-7.16's. The test still can't pass for the wrong reason: a shift large enough to change the reading would break the `3:3:true` and ghost-under-cursor assertions. To confirm the Given itself, assert that each side lies more than the margin from its edge.
+
+### DRAG-7.17: Proves the case
+- **"the modal's list is scrolled so that the spot sits under the cursor, and a release without moving the cursor commits it … last among them"**: "DRAG-7.17: when R's children run longer than the modal…". The list is scrolled and the spot is under the cursor. The release saves X under R, attached, after E19.
+- **"From the gap above it … the release commits X first among R's attached children"**: "DRAG-7.17: from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too". The projection reads `24:3:true` before and after the modal opens, the list is scrolled, and the spot is under the cursor. The release saves W under R, attached, before R1.
+- **The new Given, "within the modal list's scroll reach beneath the cursor"**: shown by the outcome. Outside that reach, DRAG-7.16 would govern, and the spot-under-cursor and saved-placement assertions would fail rather than pass.
+
+### DRAG-7.18: Proves the case
+In the two "DRAG-7.18: after leaving a modal a hold opened, P's own Stub | a Free Card zoomed in held beside an overflow row opens it again in the same drag" tests:
+- **The Given**: the first opening is by a hold, at P's Descendants.
+- **"the modal opens again at the same Descendants layer"** and **"opens a second time, still at P's Descendants layer"**: the cycle runs twice. Each time:
+  - one pop to P's column, asserted by the column context, and the modal is gone;
+  - the full zoom-in hold back into P;
+  - a hold beside the overflow row, at `3:3:true`;
+  - the modal visible again at P's Descendants.
+  That gives a second and a third opening. Either way of counting "a second time" is covered.
+- **"No write occurs during either exit, re-entry or modal opening"**: no writes after each opening.
+- **"only a release in the final opening commits X at the selected gap and depth"**: the saved item is R's first child, before R1.
+- **"The number of earlier openings does not limit a later one"**: shown as far as a finite test can show it.
+
+### DRAG-7.27: Proves the case
+- **R carried**: "DRAG-7.27: a dragged R carries its overflow row and its branch…". As before, and R1 and R2 are at indent 1 after the release.
+- **The cancel, "On a cancel, the original section and its overflow rows return, with R's overflow reading '2 children'"**: "…cancelling a drag of R…".
+- **"Given instead Q is picked up, then R and T are in its attached branch: both rows and R's overflow row are absent"**: "DRAG-7.27: a dragged Q carries R and T, so their rows and R's overflow row are all absent".
+  - The Given is asserted first: R and T saved under Q, attached; R's overflow row reads "2 children"; T's row is drawn.
+  - While Q is carried, R's row, T's row, R's overflow row and R1's row are all absent.
+  - After the cancel, R's overflow row reads "2 children" and T's row is back.
+- **P carried into another Card**: "…P carried and zoomed into another Card's section…".
+
+### DRAG-7.31: Proves the case
+In "DRAG-7.31: a hidden Stub returned to its pickup slot after reopening the modal writes nothing…":
+- **"no item write request is sent from pickup through release"**: `watchWrites` records every non-GET request from before the pickup to after the release, and it is empty. That is stricter than "item write".
+- **The When**: the pop to the column, the zoom back with the ghost at `7:0:true`, the reopening by a hold, and the return to `5:3:true`.
+- **"R2.parentId = R, it remains attached with position p and P's workphase, and the modal stays open showing it in that original slot"**: the saved item, and the row order and indent in the open modal.
+
+### DRAG-7.32: Proves the case
+- **The three close ways, "only the Sheet closes", and "After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal."**: the four "DRAG-7.32: closing the Sheet over the hierarchy modal by Escape | its X | its backdrop | its backdrop over the modal's own X…" tests. Their Given asserts the list scrolled to 30.
+- **The new paragraph, an Escape "once the Sheet has begun opening and is visible above the modal, before its entrance motion finishes: that keypress closes only the Sheet, leaving the modal open"**: the new "DRAG-7.32: Escape pressed while the Sheet is still sliding in over the hierarchy modal closes only the Sheet".
+  - The page's animations are slowed through CDP, and `playwright.config.ts` runs only Chromium, so that's sound.
+  - The Given is read from the screen: R1's heading is visible, the Sheet's painted right edge lies beyond the window's width, and its left edge is inside it.
+  - After Escape, the Sheet reaches its closed class and the modal stays visible at its prior box, with the same rows, indents and scroll offset. No non-GET request is sent, and the next Escape closes the modal.
+  - Note: unlike the four close-way tests, this test doesn't first assert that the list's scroll offset is 30. If the scroll never took, the scroll comparison would compare 0 with 0. The four tests already prove the scroll clause, so this isn't a gap; adding `expect(before.scrollTop).toBe(SCROLLED_BY)` would make the new test stand on its own.
+- My second-pass record note about the lost Escape is settled: the case now states the rule.
+
+## Verdicts: other cases the changed files carry
+- **DRAG-1.14**: Proves the case, unchanged. The modal's box by one sample is shown by the hold-stub distance variants; the sub-row and the Card's box by the `drag-5-stub-detach.spec.ts` tests; the whole Card's box by the two B25 tests; and the excursion with the distance off by "DRAG-7.10, DRAG-1.14: with the distance off…".
+- **DRAG-7.6, 7.12, 7.13, 7.15, 7.28**: Proves the case. Their text and tests are as I judged in the second and third passes.
+- **DRAG-7.1 to 7.5, 7.7, 7.8, 7.11, 7.16, 7.19, 7.21 to 7.26, 7.29, 7.33 to 7.35, and DRAG-7.2's internal pointer**: Proves the case. Text unchanged, tests unchanged.
+- **DRAG-2.22** (Open, not assigned to 4c): Test gap, unchanged. Only its Depth-capped owner clause is carried, by "DRAG-7.21, DRAG-2.22: …".
+- **DRAG-6.15** (Open, not assigned to 4c): Test gap, unchanged. One cause in one context is carried, by "DRAG-7.23, DRAG-6.15: …".
+- **`popSession.test.ts`'s other IDs**: DRAG-1.1, 1.3, 1.4, 1.7, 1.11, 1.19, 1.25, 1.30, 1.35, 1.37, 3.15, 3.21, 4.19, 4.20, 4.22, 4.23, 5.1, 5.5, 7.11 and 7.13. Their text is unchanged, and the internal tests carrying them are unchanged in this pass. No verdict changes from that file beyond DRAG-7.10 and DRAG-7.14 above.
+
+---
+
+## Changes since the third pass
+1. **`popSession.test.ts`: the two-excursion test's title now starts "DRAG-7.10: …".** Accepted. It's a title-only stamp, so it needs a `check:docs` run. It carries the new DRAG-7.10 sentence, and as a clock-logic test it counts without approval.
+2. **DRAG-7.27, the Q-carried test.** Accepted. It now confirms its Given, asserts T's row absent while Q is carried, and asserts T's row returns after the cancel.
+3. **DRAG-7.14, the two padding tests.** Accepted. They now prove bullet 4's new sentence (same gap and level, ghost under the cursor). See the note under DRAG-7.14 on the margin check.
+4. **DRAG-7.18, two reopening cycles in the same drag.** Accepted. This proves "opens a second time" and the no-write clause across both cycles.
+5. **The new DRAG-7.32 early-Escape test.** Accepted. See the note under DRAG-7.32 on the scroll offset.
+
+The two comments in `drag-7-hierarchy-modal.spec.ts` (on the DRAG-7.31 test, and above the four close-way tests): accepted. They change no assertion.
+
+## Corrections after a red run
+None since the third pass.
+
+## Held-off cases
+None.
+
+## Proposed mappings
+1. **The two-excursion test to DRAG-7.10**: done (change 1).
+2. **DRAG-2.22**, still open. These are surface tests, so no approval is needed, and the case isn't assigned to 4c:
+   - "An overflow row belonging to the carried branch is absent": onto `tests/ui/drag-7-overflow-row.spec.ts` "DRAG-7.27: a dragged R carries its overflow row and its branch…" and "DRAG-7.27: a dragged Q carries R and T…".
+   - "A Full overflow row with a Valid owner retains the ordinary valid hold behavior": onto `tests/ui/drag-7-modal-hold.spec.ts` "DRAG-7.13: a hold above R's overflow row is a silent dwell…".
+
+## Cost notes
+Nathan decides on these, with the QA Engineer's recommendation. None of them is a gap.
+
+1. **DRAG-7.18: the zoom hold.** This replaces my earlier note 3, and now weighs more.
+   - **Clauses**: "opens again" and "opens a second time", and no write before the final release.
+   - **Cost**: each variant now chains the first hold and then two cycles, each a pop (300 ms), a zoom (`ZOOM_BACK` 1500 + 800) and a hold (200 + 300). That's about 6 s of clocks alone, more for the Free Card's first zoom, well past 4 s and more than two clocks in a row. The second cycle buys a clause the Then now states.
+   - **The 2.3 s zoom buys no clause.** It's long only because each pop rests the cursor on F, a Card in the column, where a short zoom would carry the drag into F. Resting the pop on column space outside any Card would allow a zoom of about 1 s and save about 2.6 to 3.9 s per variant.
+   - **One gesture repeated.** The two variants, P's own Stub and a Free Card, run the same chain to the same outcome. The Terms let a case hold for either kind of X unless it names one, so a single variant would prove the Then.
+2. **DRAG-7.17's gap-above test** (earlier note 2): unchanged. It needed two corrections to its aim and timing. Its difference from the gap-below test is `modalPlacement.ts`'s scroll math, which `modalPlacement.test.ts`'s DRAG-7.17 tests cover; mapping them needs Nathan's approval. Keep it, or move to one gesture with the matrix inside.
+3. **DRAG-7.31**: keep it as it is. Its clock chain is the When, and the waits are short.
+
+No new cost from this pass's other changes:
+- the CDP slowdown in the new DRAG-7.32 test buys the Then's own precision, "before its entrance motion finishes";
+- the added DRAG-7.14 and DRAG-7.27 assertions add no waits.
+
+## Files
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-7-overflow-and-hierarchy-modal.md
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-hierarchy-modal.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-modal-hold.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-7-overflow-row.spec.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\popSession.test.ts
+- c:\Users\natha\Dev\KanbanApp\playwright.config.ts
+```
+
+**After this pass** (the QA Engineer): both optional tightenings are taken. DRAG-7.14's padding tests now assert each side of the modal is further than the margin from the window's edge, and the early-Escape test asserts the list's scroll offset first. The five changed tests ran 9 of 9 afterwards.
+
 ## Amendments
 
 - **2026-11-11 — DRAG-7.10's "bounded by `K`" ruled: the wiki stands, and the width is a defect (PO, a deduction for Nathan to overrule).** A Stub picked up in a click-opened modal and popped out to its column is carried at the modal row's width, 574 px in a 272 px column. Wiki board-drag-interaction already settles it in three places, and none excepts a modal a click opened:
@@ -1465,6 +1637,8 @@ None of this pass's changes adds a cost:
 4. **The cue hook:** `data-drag-cue` on the fill bar. `cueOn` now reads it.
 
 **Decided by Nathan (2026-11-12):** the reviewer's cost notes as recommended (DRAG-7.10's matrix cut to eight; DRAG-7.17, 7.18 and 7.31 kept); Stop 4 repeats the five files whole; `awaitProjection`'s header reworded.
+
+**Found at Stop 4 (2026-11-12), adjacent and not 4c's:** `DRAG-5.3: B18 … locked-after-A detach uses the destination meaning` failed once in each of its two variants at five workers, in unchanged batch 4b tests. The merged variant: `read ECONNRESET` on a `GET /api/items/:id` about six seconds into the test, the flake investigation's cause D. The expanded variant: a 30 s wait for the sub-row's bottom carve divider, cause not established. Both passed 20 of 20 on their own. For Nathan to route: the investigation's D1, a longer keep-alive timeout on the server, is a Coder change that isn't in the tree.
 
 **Answered by the Planner (2026-11-12),** besides the six Stop 1 answers below. The numbers remain for Review log references:
 

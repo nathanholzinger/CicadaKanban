@@ -461,28 +461,34 @@ test('DRAG-7.27: cancelling a drag of R brings its overflow row back, reading �
   expect(await settledWrites(page, writes)).toEqual([]);
 });
 
-test('DRAG-7.27: a dragged Q carries R, so R’s row and R’s overflow row are both absent', async ({
+test('DRAG-7.27: a dragged Q carries R and T, so their rows and R’s overflow row are all absent', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Overflow Row Branch Carried Project';
-  const { p, q, r, r1 } = await seedGivenTree(request, name);
+  const { p, q, r, r1, t } = await seedGivenTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
 
-  // The Given: R is in Q's attached branch and has its overflow row.
-  expect((await fetchItem(request, r.id)).parentId).toBe(q.id);
+  // The Given: R and T are in Q's attached branch, and R has its overflow row.
+  for (const child of [r, t]) {
+    const saved = await fetchItem(request, child.id);
+    expect([saved.parentId, saved.isAttached]).toEqual([q.id, 1]);
+  }
   await expect(overflowRow(page, r.id)).toHaveText('2 children');
+  await expect(itemRow(page, t.id)).toHaveCount(1);
 
   await holdAt(page, q, p, () => center(itemRow(page, q.id)), 0);
   await awaitDragContext(page, descendantsRegionKey(p.id));
   await expect(itemRow(page, r.id)).toHaveCount(0);
+  await expect(itemRow(page, t.id)).toHaveCount(0);
   await expect(overflowRow(page, r.id)).toHaveCount(0);
   await expect(itemRow(page, r1.id)).toHaveCount(0);
   await cancel(page);
   await expect(overflowRow(page, r.id)).toHaveText('2 children');
+  await expect(itemRow(page, t.id)).toHaveCount(1);
 });
 
 test('DRAG-7.27: P carried and zoomed into another Card’s section draws no overflow row of P or of its branch there', async ({
