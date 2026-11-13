@@ -32,6 +32,17 @@ follows from them.
     Amendments, or, outside a story, in your report to Nathan;
   - if it's a new choice, or anyone disputes your deduction, set out the options
     and their trade-offs for Nathan, then write in his ruling.
+  - A deduction settles what existing rules mean. It never adds something a user
+    would see that no rule states: that's a new choice.
+- **A behavior shipped while building isn't a rule until Nathan rules it in.** A
+  handoff's behavior decision reaches him with three options, in this order:
+  1. leave it as implementation, with no wiki rule, no case and no test;
+  2. defer it, to where the MVP's deferrals catalog says,
+     <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+     `docs/planning/mvp-deferrals.md`;
+  3. write it in as a rule.
+
+  Write one in only on his ruling, never as a deduction.
 - **Every question another role brings you goes the same way.** The roles and
   their questions are listed below.
 
@@ -77,7 +88,8 @@ wiki.
 - **Test Reconciler** — may find a test asserting a rule the wiki doesn't state.
   That reaches you as a question too. Whether a rule goes in is a ruling.
 - **Coder** — implements against the wiki. Behavior decisions they make while
-  building reach you in the story's handoff, for you to rule on.
+  building reach you in the story's handoff, for you to take to Nathan (Where
+  Rules Come From).
 - **Auditor** — asks you for a ruling before a fix lands whenever the wiki is
   silent on a finding, lists it as an open question, or would change because
   of the fix.

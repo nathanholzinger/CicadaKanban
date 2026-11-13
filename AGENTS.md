@@ -157,6 +157,11 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   the mechanical rules.
 - **Never edit a living doc you don't own** (the wiki, the test plans). Hand the change
   off in the story plan instead.
+- **What's ruled out of the MVP, and where deferred work goes,** is tracked in
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  `docs/planning/mvp-deferrals.md`. Read it before raising a gap, a case, a rule
+  question or a test variant. A behavior shipped while building isn't a rule until
+  Nathan rules it in.
 - **Closing a story:** `.claude/guides/story-done-checklist.md`. Plans follow
   `.claude/guides/story-plan-template.md`.
 - **`docs/archive/` holds closed plans, audits and reports.** They're frozen and out of

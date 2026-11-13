@@ -2,12 +2,12 @@
 
 **Type:** test-planning handoff · **Written:** 2026-11-08 by the Test Planner, with a read-only Test Automator review · **Status:** batch 4b is complete for review: all 26 scoped cases are Automated. All 70 variants pass twenty repeats, final E2E is 394 passed / 21 existing skips / zero failed and root gate is green. The batch Results and confirming report hold final mappings and acceptance. Conditional DRAG-3.12 stays separate and nonblocking; no next batch or commit starts here.
 
-This is the Stop 1 deliverable under [the five stops](story-10-batches.md#the-five-stops-for-each-remaining-batch). It defines the proof before implementation. The current catalog and wiki remain the authorities for expected outcomes; the Automator reads implementation only to propose how to drive and observe them. This review claims no new automated coverage or runtime result.
+This is the Stop 1 deliverable under [the five stops](story-10-batch-4a-4d-log.md#the-five-stops-for-each-remaining-batch). It defines the proof before implementation. The current catalog and wiki remain the authorities for expected outcomes; the Automator reads implementation only to propose how to drive and observe them. This review claims no new automated coverage or runtime result.
 
 ## Inputs and scope
 
 - **Source/test snapshot:** `421ca5a7c648bb846f293f2d9f1c74de4bd0bc7c`, the committed 4a result. The working tree was clean at entry. App and test implementation remain unchanged throughout Stop 1.
-- **Assigned cases:** the 26 in [batch 4b](story-10-batches.md#4b-drag-4-and-drag-5): four Extend, 20 New and two Rework. All were Open for the proof review; the [confirming report](../../audits/test-reconciliation-story-10-batch-4b.md) now makes all 26 Automated. This proof contract allocates no IDs and does not itself set coverage fields.
+- **Assigned cases:** the 26 in [batch 4b](story-10-batch-4a-4d-log.md#4b-drag-4-and-drag-5): four Extend, 20 New and two Rework. All were Open for the proof review; the [confirming report](../../audits/test-reconciliation-story-10-batch-4b.md) now makes all 26 Automated. This proof contract allocates no IDs and does not itself set coverage fields.
 - **Cases:** [DRAG-4](../../test-plans/board-drag-interaction/drag-4-attach-and-stub-placement.md) and [DRAG-5](../../test-plans/board-drag-interaction/drag-5-detach-and-overflow.md), read in full. References to existing attachment and placement cases supply their stated consequences without adding those cases to this batch's closure scope.
 - **Rules:** wiki board-drag-interaction §1.1–§3, §5–§8 and §10; wiki hierarchy-placement §1–§6; the attachment/positioning rules cited by each case.
 - **Existing gaps:** the DRAG-4 and DRAG-5 rows in the [baseline reconciliation](../../audits/test-reconciliation-story-10-baseline.md). The baseline is frozen; current case wording governs where it is more specific.

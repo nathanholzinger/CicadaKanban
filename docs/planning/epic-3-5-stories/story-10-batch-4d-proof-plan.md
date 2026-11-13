@@ -2,7 +2,7 @@
 
 **Type:** Stop 1 deliverable (proof/variant plan) · **Written:** 2026-11-12 by the QA Engineer · **Status:** complete, with Nathan's rulings recorded below and the Planner's catalog pass of 2026-11-12 applied (DRAG-6.17 retired). Nothing is authored, no test has run, and no app, test, helper, Vitest, catalog or wiki file has been edited. Stop 2 starts when Nathan opens its session.
 
-This is the Stop 1 deliverable under [the five stops](story-10-batches.md#the-five-stops-for-each-remaining-batch). It says what batch 4d must prove before any test is written, and what proves each clause. Every expected value below comes from the case's Then and the wiki rule it cites. The specs and helpers were read only for how to reach and observe a state. The desk's questions and replies, with its corrections, are in the [Review log](story-10-batches.md#batch-4d-stop-1--the-desks-questions-and-replies-2026-11-12), word for word.
+This is the Stop 1 deliverable under [the five stops](story-10-batch-4a-4d-log.md#the-five-stops-for-each-remaining-batch). It says what batch 4d must prove before any test is written, and what proves each clause. Every expected value below comes from the case's Then and the wiki rule it cites. The specs and helpers were read only for how to reach and observe a state. The desk's questions and replies, with its corrections, are in the [Review log](story-10-batch-4a-4d-log.md#batch-4d-stop-1--the-desks-questions-and-replies-2026-11-12), word for word.
 
 ## Inputs and scope
 
@@ -121,7 +121,7 @@ The guide's signals ("When a surface test costs more than it proves") fire here 
 **New spec:** `tests/ui/drag-forced-stop.spec.ts` (D04 to D09, D12, D13), the surface spec D9 asks for with DRAG-6.22 and 6.25.
 **Helpers:** `tests/helpers/forcedStopCause.ts` (edit: a stop run that composes the cause, the pickup in a context, the held reload and the trigger), a new `tests/helpers/stopRun.ts` (named `forcedStop.ts` when approved; the app has a `forcedStop.ts` of its own, which `check:docs` read as an ambiguous reference) (the page-side recorder of the banner and flash, and the clock steps for `T` and `F`), `tests/helpers/overflowTree.ts` (used as it is), `tests/helpers/boardLocators.ts` only if a locator is missing (the banner, "Loading board…", a column's drag handle). `tests/helpers/dragGesture.ts` and `requestHarness.ts` are used as they are.
 **Not mine:** app source, Vitest suites, test routes, hooks and the catalog.
-**Documents:** the Results and Review log in [story-10-batches.md](story-10-batches.md), and this plan.
+**Documents:** the Results and Review log in [the 4a to 4d log](story-10-batch-4a-4d-log.md), and this plan.
 
 The new helpers are shared test infrastructure: each header says whether it reads the screen or an app attribute (`data-forced-stop`, `data-stop-flash` and `data-pending` are what the app provides), and they get `/code-review` at `medium` before the Stop 2 check-in.
 

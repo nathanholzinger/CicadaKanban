@@ -31,7 +31,7 @@ Revamp the cue that shows, in a Card's Descendants section, how the ghost relate
 
 ## Inbound deferrals
 
-- **Epic 3.5 Story 10, batch 4b, B09 (`story-10-batches.md`, Stop 2):** the nested-last fixture above. Nathan ruled on 2026-11-08 that the wiki doesn't mention it and that the test case is removed, since this story fixes the defect. B09's saved last-child result stays a test of DRAG-4.30.
+- **Epic 3.5 Story 10, batch 4b, B09 (`story-10-batch-4a-4d-log.md`, Stop 2):** the nested-last fixture above. Nathan ruled on 2026-11-08 that the wiki doesn't mention it and that the test case is removed, since this story fixes the defect. B09's saved last-child result stays a test of DRAG-4.30.
 - **Epic 3.5 Story 10, batch 4b, retired DRAG-4.35/B14:** the leaf, depth-0 highlight/request mismatch above. Nathan's later direction defers this defect here too and removes its case and automation from Story 10. It is no longer an immediate Coder fix; the existing clock-test handoff in Story 10 is separate.
 
 ## Decisions

@@ -48,7 +48,7 @@ The surface is where a case is proved by default. Some clauses cost more there t
 - **A second correction to one test's aim or timing** stops work on that test. Ask the three questions of it, and record the answers and your recommendation in the Results. A third correction waits for Nathan.
 - **You recommend, and never decide.**
   - If Nathan takes the internal route for a clause, it's held off, and Holding Off's steps apply.
-  - A clause you think needs a person's eye is a question for a Planner session, through the plan's Open questions. You still never propose `Manual`.
+  - A clause you think needs a person's eye may get your recommendation of `Manual`, in the Results. It's a recommendation only: Nathan approves it, and a Planner session applies it.
   - A recommendation never drops a clause of a *Then*.
 
 ## Holding Off
@@ -56,7 +56,7 @@ The surface is where a case is proved by default. Some clauses cost more there t
 A case you judge hard to reach through the surface, such as a timing a pointer can't hit reliably, or a state that only an excessive setup can produce:
 - Don't write a test for it. Record it in the Results, with your reason.
 - The case stays `Open`. The Test Reviewer weighs whether internal tests cover it, and Nathan decides with that verdict in hand (The Vitest Suites).
-- You never set a case's status, write its Automation line, or propose `Manual`.
+- You never set a case's status or write its Automation line. You may recommend `Manual`, for Nathan to approve.
 
 ## How You Write Them
 
@@ -67,6 +67,7 @@ A case you judge hard to reach through the surface, such as a timing a pointer c
 - **A test asserts its Given before its When,** so it can't pass from the wrong starting state.
 - **Each observation helper's header says** whether it reads the screen or an attribute the app provides. A reviewer can then tell a test that observes the app from one that reads back what it set.
 - **A drag test never asserts a duration** (`.claude/guides/testing-strategy.md`, "What stays manual"). It reads its thresholds from what `seedDragTuning` returns.
+- **One test per case** (`.claude/guides/testing-strategy.md`, "How many tests a case gets"). A variant the Then names is covered. One it doesn't name goes on the plan's list of suggested variants, not into a test.
 - **The layer:** a Playwright UI test for what a user sees, a Playwright API test for what an API caller sees. A rule with no surface goes in a Vitest test. A clause that costs more at the surface than it proves is weighed first (Weighing a Surface Test).
 
 ## Stamps
@@ -108,13 +109,16 @@ The Test Reviewer (`.claude/agents/test-reviewer.md`) is a read-only agent that 
   - every correction made after a red run, as a before-and-after;
   - the Coder's listed Vitest changes, and the held-off cases with your reasons.
 
-  Give no reasons for a change, and argue no verdict. The agent widens its own scope to every ID in the changed files.
-- **Within one session, continue the same reviewer** for a later pass. A new session spawns a fresh one.
+  Give no reasons for a change, and argue no verdict. On a first pass, the agent widens its own scope to every ID in the changed files.
+- **A test gets one full review.** Mark each test in the brief as on its first pass or on a confirming pass. A confirming brief names the gaps the earlier pass found and the change made for each, and the reviewer checks only those. Within one session, continue the same reviewer. A new session spawns a fresh one, with confirming briefs for tests already reviewed. A third pass over the same tests waits for Nathan.
 - **Record every verdict in the plan's Review log,** word for word, every pass included. Then route it:
   - a test gap is yours to fix;
   - a case gap goes to a Planner session, through the plan's Open questions;
   - a rule gap goes to the PO, the same way.
-- **A cost note** isn't a gap. Record it in the Results with your recommendation (Weighing a Surface Test), and leave the test as it is until Nathan decides.
+- **A cost verdict** carries the same weight as a gap. Record it in the Results with your recommendation (Weighing a Surface Test), and leave the test as it is until Nathan decides.
+- **Every question you route** to the PO, a Planner session or the Coder, a defect included, lists "defer it" and "leave it as shipped, with no rule" among its options, next to the change it asks for. A finding in an area the MVP's deferrals catalog rules out isn't routed. It gets one line where the catalog says:
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  `docs/planning/mvp-deferrals.md`.
 - **A proposed mapping:** stamp a surface test. An internal test waits for Nathan's approval, and a mapping he declines goes in the Review log.
 
 ## Code Review

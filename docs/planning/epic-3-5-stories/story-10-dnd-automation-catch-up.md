@@ -1,12 +1,12 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batches 4a–4b are committed; 4b is `857720b9`. All 26 cases in 4b are Automated, with 1,400 repeat passes, final E2E 394 passed / 21 existing skips / zero failed and root gate green. [Story 10's second part](story-10-batches.md) holds the current resume packet and Review log; 91 active story assignments remain Open. Batch 4c has not started and waits for the catalog coverage report and parallel-runner work. The remaining work uses the new testing roles. Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batches 4a–4d are committed; 4d is `e4f34b9a`. [Story 10's second part](story-10-batches.md) is the index for the remaining batches, 4e to 4h, each with a file of its own, and [the 4a to 4d log](story-10-batch-4a-4d-log.md) holds the closed batches' history and Review log. The story closes after 4h. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) (D10, amended 2026-11-13). Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
 
 ## Goal
 
 Bring the drag automation up to the test-plan catalogs once, now that the gesture has stopped moving, and decide case by case what the suite is for (roadmap, Story 10). It ends with:
 
-- no `test.skip` or `test.fixme` in `tests/`, and no skipped unit test;
+- no `test.skip` or `test.fixme` in `tests/`, and no skipped unit test, except the skips 4i and 4j hold, which D10 routes to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) (amended 2026-11-13);
 - every case in `docs/test-plans/` `Automated` or `Manual`, or named in the close with why it's still open and the plan that holds it (D10);
 - `npm run check` and `npm run test:e2e` green;
 - the epic-done checklist's Tests items checkable.
@@ -188,6 +188,8 @@ Nathan takes this as the starting point (2026-11-04). It's revisited at the chec
 
 The bar is this story's, set for its flaky drag specs. It isn't a process for other stories.
 
+**Where "moved to 4i" goes, from 4e (Nathan, 2026-11-13).** 4i and 4j are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) now (D10), so a flaky test that predates its batch is skipped and recorded there, in its catalog, with the same reason comment as before.
+
 **D3. A skipped spec is never unskipped as it stands.** Each one is:
 
 - reworked to its case as it now reads;
@@ -228,6 +230,8 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - ends with the gate and its spec files green, then a stop for review and commit.
 
 **For 4c–4j, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
+
+**From 4e, four stops (Nathan, 2026-11-13; the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s D6).** Stops 4 and 5 merge into "Frozen validation and closure": if the freeze holds, the same session spawns the Reconciler. The four stops are in [Story 10's second part](story-10-batches.md), and the five that 4c and 4d ran under are in [the 4a to 4d log](story-10-batch-4a-4d-log.md). After 4e, Nathan decides whether Stops 1 and 2 merge too, by how often he overrules the Stop 1 proposal.
 
 **D6. Case IDs settle before any test is written** (Phase 2). The Planner's end-of-epic pass may revise, retire, move or renumber cases, and a test titled before it would need re-titling after (epic-done checklist, Tests).
 
@@ -275,6 +279,8 @@ This story takes the open cases outside the drag work too, rather than leaving t
 
 **A case this story finds it can't close,** with no later plan that fits, gets a tech-debt story. The Architect writes its plan in `docs/planning/tech-debt-stories/` before this story closes, and the close names that plan.
 
+**4i and 4j leave the story (Nathan, 2026-11-13).** The story closes after 4h. 4i's and 4j's cases, skips and questions are held by [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), sequenced after the smoke suite, which names each case by ID. The close's list names that plan for each of them. It keeps their catalogs raw, so its grooming can look for common themes.
+
 **D11. The Unknown-status probe** (Nathan, 2026-11-06). A Correctness worker in the close-out audit raised this, and the audit left it out unprobed, since the Unknown status was outside its scope (`docs/archive/story-8-close-out-audit.md`, Open questions).
 
 - **The candidate:** filing a parent with attached children out of Unknown status may leave the Unsorted bucket's "needs attention" badge up until a reload.
@@ -304,7 +310,7 @@ This story takes the open cases outside the drag work too, rather than leaving t
 | Phase 5: D13 into the catalog README                                                     | Test Planner                            |
 | Phase 5: this story's audit                                                              | Auditor                                 |
 
-**The remaining automation batches use one session per stop.** Nathan names the file list. The QA Engineer never edits app source, including hooks and test routes; those go through D7's separate Coder session and return check-in. It or the Coder may edit an existing Vitest test, whoever Nathan asks first. It writes a new Vitest test only for a held-off case, after the Test Reviewer's internal-coverage verdict and Nathan's approval, from the Then, never a fix-pinned regression. The Coder lists ID-bearing Vitest assertion/setup changes for review. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze; the Reconciler stamps only what it finds new at the close. Tree IDs replace per-file fingerprints, and the QA Engineer keeps the current Results packet and append-only Review log in [Story 10's second part](story-10-batches.md). D2 and the remaining assignments are unchanged.
+**The remaining automation batches use one session per stop.** Nathan names the file list. The QA Engineer never edits app source, including hooks and test routes; those go through D7's separate Coder session and return check-in. It or the Coder may edit an existing Vitest test, whoever Nathan asks first. It writes a new Vitest test only for a held-off case, after the Test Reviewer's internal-coverage verdict and Nathan's approval, from the Then, never a fix-pinned regression. The Coder lists ID-bearing Vitest assertion/setup changes for review. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze; the Reconciler stamps only what it finds new at the close. Tree IDs replace per-file fingerprints, and the QA Engineer keeps the current Results packet and append-only Review log in each batch's own file, from 4e (through 4d, in [Story 10's second part](story-10-batches.md), now in [the 4a to 4d log](story-10-batch-4a-4d-log.md)). D2 and the remaining assignments are unchanged.
 
 **D13. A case's look is checked by hand; the rest is automated** (Nathan, 2026-11-06). Some cases say how something is drawn: a tier's strength, a pulse, a fade, a tilt, a colour. A test can read the attribute the client sets for it, such as `data-drop-tier`, `data-pending`, `data-stop-flash`, `data-active-context` or `data-drag-overlay-form`. It can't tell whether the result looks right.
 
@@ -321,6 +327,16 @@ This story takes the open cases outside the drag work too, rather than leaving t
 - **The final look is the Dashboard, Navigation & Notifications epic's** (Out of scope). The shared cases check today's configured values, and their *Then*s follow the wiki as it changes.
 
 The Split cases, and the shared looks proposed for them, are listed in [Story 10's second part](story-10-batches.md).
+
+**A standing rule now (Nathan, 2026-11-13; the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s D8).** `.claude/guides/testing-strategy.md`'s "What stays manual" states it, and it's the later word. It extends the look to a measurement that only says how something is drawn, such as an exact height, width, offset or alignment. Relative placement stays automated: the highlight under A rather than above B, or the ghost between two rows. An automated geometry assertion that already exists stays until it's weighed on its cost and stability. Phase 5's D13 item is done for the guide. The catalog README part is the trim plan's handoff to the Planner.
+
+**D14. One test per case, for the remaining batches** (Nathan, 2026-11-13; the trim plan's D7).
+
+- **A variant the case's Then names is part of the Then,** and the test covers it.
+- **A variant it doesn't name gets no test.** The batch file lists it under Suggested variants, and at the close it moves to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), to revisit after the smoke suite.
+- **A missing unnamed variant is never a gap.**
+
+The rule is the testing guide's ("How many tests a case gets"), so it outlives this story.
 
 ### Phase 1: the column stop's banner (item 11, D9)
 
@@ -503,6 +519,8 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **4i.** Work returned after its tests were skipped: DRAG-3.16 (from 4a, after the runner trial's setup connection reset), DRAG-5.3 and DRAG-5.10's B21 test (from 4b), and any later flaky test that predates its batch. DRAG-7.18 came here from 4c and moved to 4j on 2026-11-13.
 - **4j.** Deferred from 4c's close: the weak hold-opened distance variants of DRAG-7.10 and DRAG-1.14, and three candidate new cases (two for a Planner session, one for the PO). Batch 4d adds the three tier variants of DRAG-6.23 and, from 2026-11-13, its skipped ghost test and DRAG-6.24's skipped drop-line test, DRAG-6.7's held-off discard clause, catalogued as an example, and four questions: the stop matrix's four skipped cells, DRAG-6.22's two endings and asserting DRAG-6.16's top edge, to revisit, and whether a section collapsed by hand stays collapsed across a reload, a possible Product Owner gap to resolve. DRAG-7.18 and its cost study moved here from 4i on 2026-11-13.
 
+**From 2026-11-13 (Nathan):** 4e to 4h each have a file of their own, linked from [Story 10's second part](story-10-batches.md). 4a to 4d's history is in [the 4a to 4d log](story-10-batch-4a-4d-log.md). 4i and 4j are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), outside this story (D10).
+
 #### Batch 4a results — 2026-11-08
 
 The [confirming Reconciler report](../../audits/test-reconciliation-story-10-batch-4a.md) makes all 34 scoped cases Automated: 10 Extend, 22 New and two Split. The catalog totals are 352 Automated, 120 Open, 10 Manual, one Planned and two Pending PO; 118 of the original 152 story assignments remain Open. The [batch results](story-10-batches.md) record the per-kind case/test counts, helper contracts, measured cost and six resolved Coder round trips: DRAG-1.26's observation hook, DRAG-3.18's workphase label, DRAG-1.33's expansion preference, DRAG-3.10's title-only route stamp, and DRAG-1.5's saved-intent and visible-gap fixes. No Coder handoff remains open.
@@ -522,7 +540,7 @@ Catalog totals are **378 Automated / 93 Open / 10 Manual / one Planned / two Pen
 ### Phase 5: the close
 
 - D8's attributes.
-- No `test.skip`, `test.fixme` or `.skip(` left in `tests/` or the unit suites.
+- No `test.skip`, `test.fixme` or `.skip(` left in `tests/` or the unit suites, except the skips 4i and 4j hold, which [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) names (D10).
 - `npm run check`, then `npm run test:e2e` green twice in a row.
 - **The one cold Reconciler run, spawned by the QA Engineer** (epic-done checklist), from its fixed inputs: Scope/Review log, green-tree catalog report and run record, and the range's test/catalog diffs. Its report is saved in `docs/audits/`; open reviewer verdicts, quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them. Reconciliation is not repeated inside the audit.
 - **The close's list (D10):** every case in `docs/test-plans/` that isn't `Automated` or `Manual`, each with its status, why it's still open, and the plan that names it. Any tech-debt story D10 calls for is written by now.
@@ -532,6 +550,7 @@ Catalog totals are **378 Automated / 93 Open / 10 Manual / one Planned / two Pen
   - the Planner adds it to `docs/test-plans/README.md`'s "Which tests count, and what's manual", beside "One status per case" (Living-docs handoff).
 
   If a batch has changed the rule by then, its amendment is the later word.
+  - **Done early for the guide (2026-11-13, D13).** The README part is the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s handoff to the Planner.
 
 - A stop for review and commit.
 - **This story's audit** (story-done checklist). Its range starts at `epic-3-5-story-8-13-audited`, the newest `*-audited` tag, since the close-out's end tag has no `-audited`. So it reads:
@@ -681,6 +700,17 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-13 — Batch 4d closed: 12 of its 16 cases `Automated`, four held for 4j (the Reconciler, Nathan's rulings).** DRAG-6.7, 6.16, 6.23 and 6.24 stay `Open` in 4j. No decision changes. The batches doc's Results and the Reconciler's report have the detail.
 
+- **2026-11-13 — The MVP test-process trim (Nathan; [its plan](../tech-debt-stories/mvp-test-process-trim.md)).** Changes for the remaining batches:
+  - **The Goal and D10:** the story closes after 4h, and 4i and 4j, with their skips, move to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md).
+  - **D2:** a flaky test that predates its batch is recorded there.
+  - **D5:** four stops, with Stops 4 and 5 merged.
+  - **D12:** each batch keeps its own Results and Review log.
+  - **D13:** the testing guide's standing rule is the later word, extended to appearance geometry.
+  - **New D14:** one test per case.
+  - **Phases 4 and 5:** amended to match.
+
+  The batch doc is split, word for word, into an index, one file per batch from 4e to 4h, and [the 4a to 4d log](story-10-batch-4a-4d-log.md). The process docs gain confirming reviewer passes, a single Reconciler follow-up, cost verdicts, and [MVP Deferrals](../mvp-deferrals.md).
+
 ## Open questions
 
 - **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
@@ -710,10 +740,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - **Planner applied in Phase 2 step 1:** the column clause is removed, DRAG-6.26 is Open, and DRAG-6.25 points to its banner and no-flash rule.
 - **D13's Split cases and their shared `Manual` cases, for the Planner** (Phase 2 step 5): the 26 cases listed in [Story 10's second part](story-10-batches.md), "The shared looks".
   - **Planner applied:** 24 existing IDs retain their automatable clauses. DRAG-1.27 and TREE-2.8 are reused as shared Manual cases; DRAG-2.24, DRAG-6.30 and DRAG-6.31 are added as Manual. The shared-look table records every source ID and its destination. No ID is retired or moved, and the 152 Open batch assignments exclude the two reused Manual IDs.
-- **D13 as a catalog convention, for the Planner** (Phase 5). The rule goes in `docs/test-plans/README.md`, "Which tests count, and what's manual":
-  - a case's look is checked by hand, in a shared `Manual` case, one per look;
-  - the rest of the case is automated;
-  - only how something is painted goes manual, never what's saved, which row is affected, which tier, form or state a row has, or where it's drawn and how big.
+- **D13 as a catalog convention, for the Planner** (Phase 5; amended 2026-11-13). The rule goes in `docs/test-plans/README.md`, "Which tests count, and what's manual", worded as `.claude/guides/testing-strategy.md`'s "What stays manual" now states it. That version is the later word over this entry's earlier list: a measurement that only says how something is drawn goes manual too, and relative placement stays automated. It's the same item as the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s Handoff, which also carries the one-test-per-case rule. One Planner session applies both.
 - **Weighing a surface test, for the Planner** (Nathan, 2026-11-11; not applied). The testing-strategy guide now says when a surface test costs more than it proves, and what the options are. `docs/test-plans/README.md` needs two things to match:
   - **A pointer,** where "Statuses" says a surface test is preferred for closing a partial gap: the guide's "When a surface test costs more than it proves" is the exception's home.
   - **A third approved category of internal test, if Nathan rules for it:** the variants of a rule that one surface test already reaches. Proposed wording, for "Which tests count, and what's manual": _A third approved category: the variants of a rule a surface test already reaches. One surface test shows that the gesture reaches the rule and makes the right write. The variants that change the outcome and not the gesture, such as the origin, the place or the form, are tested in the pure module that decides them, each from the case's Then. The case is `Automated` when the surface test and those tests together assert all of it._

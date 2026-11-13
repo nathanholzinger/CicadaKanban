@@ -41,12 +41,21 @@ There's no CI; everything runs locally.
 - Logic whose correctness doesn't depend on the surface gets a unit test next to it.
 - A shape-only check (a required field, an enum) is cheapest as a route test.
 
+**How many tests a case gets.** One, by default.
+- **A variant the case's *Then* names is part of the *Then*,** such as each cause or each layer it lists. The test covers each one, usually as a loop over one setup.
+- **A variant the *Then* doesn't name gets no test,** such as another origin, position or form the rule would also hold for. The plan lists it as a suggested variant, and it goes where the MVP's deferrals catalog says:
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  `docs/planning/mvp-deferrals.md`.
+- **A missing unnamed variant is never a gap.** A case is covered once its tests assert the whole *Then*.
+
 **When a surface test costs more than it proves.** The surface is the default layer, not a verdict on every clause. These are signals to weigh a test, not limits:
 - it runs for more than about 4 seconds on one worker, or waits out more than two of the app's clocks in a row;
 - it needs a complicated setup, a very precise action, or a very precise expectation;
 - it has needed two corrections to its aim or its timing;
 - it repeats one gesture across a matrix of variants;
-- its failure needs a precision only a robot has, such as a cursor held perfectly still.
+- its failure needs a precision only a robot has, such as a cursor held perfectly still;
+- it races a held response or one of the app's clocks, where a slow run can change which side wins;
+- it asserts how something looks (What stays manual), not what the user can do with it.
 
 A test that shows one gets three questions:
 1. Which clause of the case's *Then* does each wait, and each precise step, buy?
@@ -59,7 +68,7 @@ When the answers go against the test as written, the options are:
 - **Split the case.** The part a test can pin stays automated, and the part that needs a person's eye or hand is checked manually (What stays manual).
 - **Keep it.** A failure only a robot can produce can still happen. That's worth a test while the test is cheap and steady, and worth less as it gets slower or flakier.
 
-The QA Engineer flags the signal and recommends an option before it writes the test, and Nathan decides (`.claude/personas/qa-engineer.md`, "Weighing a Surface Test"). A change to a case is the Test Planner's. An option changes which test proves a clause, never what the clause says: none of this lets a test drop part of its *Then*.
+The QA Engineer flags the signal and recommends an option before it writes the test, and Nathan decides (`.claude/personas/qa-engineer.md`, "Weighing a Surface Test"). Once a test is written, the Test Reviewer gives each one that shows a signal a cost verdict (`.claude/agents/test-reviewer.md`). A change to a case is the Test Planner's. An option changes which test proves a clause, never what the clause says: none of this lets a test drop part of its *Then*.
 
 **Two writing rules make a test cheap to review:**
 - **A test asserts its Given before its When,** so it can't pass from the wrong starting state.
@@ -96,6 +105,11 @@ idx=$(mktemp -u); GIT_INDEX_FILE="$idx" git -c core.safecrlf=false add -A && GIT
   - It never asserts a duration.
   - **A clock's logic is automated in the pop state machine** (`popSession.ts`): what counts toward a clock, what resets it, and which band fires. The test passes the threshold in as a parameter, so its pass doesn't depend on the tuned value. This is an approved category of internal test (`docs/test-plans/README.md`).
   - A case whose pass depends on the tuned values themselves is manual, and may stay manual once the values settle, since whether they feel right is a judgment.
+- **How something looks.** A test can read the attribute the client sets for a look, such as `data-drop-tier`, `data-pending` or `data-stop-flash`. It can't tell whether the result looks right.
+  - **Manual:** how something is painted (opacity, colour, a pulse, a fade, a tilt, a shadow), and a measurement that only says how it's drawn, such as an exact height, width, offset or alignment.
+  - **Never manual:** what's saved; which row is affected; which tier, form or state a row has; and where something sits relative to the rows around it, which tells the user what a drop will do. The highlight under A rather than above B, the ghost between A and B, and a banner at the top of the window are behavior. They stay automated through `dragGesture.ts::boxOf` and `dragGesture.ts::paintedBoxOf`, and so does any measurement the drag's own logic reads.
+  - **A case that holds both becomes two:** the part a test can pin, and the look, in a shared `Manual` case. There's one shared case per look, since a look checked once holds wherever it's drawn.
+  - **An automated geometry assertion that already exists stays** until it's weighed like any other test, on its cost and its stability (When a surface test costs more than it proves).
 - **Anything else manual** is decided case by case in the test-plan catalog (`docs/test-plans/README.md`).
 
 ## What isn't tested

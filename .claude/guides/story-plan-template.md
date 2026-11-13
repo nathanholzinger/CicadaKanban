@@ -34,9 +34,9 @@ Each section says who fills it in. The skeleton at the end is for copying.
   - Once coding starts, or a decision is approved, a change is made in the section it affects.
   - Then a dated line goes here, saying what changed and why.
   - Lines are appended, never rewritten, so someone working partway through can see what moved.
-- **Open questions** *(anyone)*. Each one is addressed to the role that answers it. The Test Planner's Pending PO cases and an audit's requests for a ruling go here, addressed to the PO. So do the QA Engineer's: a case gap for the Test Planner, a rule gap for the PO, and a defect or a test hook for the Coder.
+- **Open questions** *(anyone)*. Each one is addressed to the role that answers it. The Test Planner's Pending PO cases and an audit's requests for a ruling go here, addressed to the PO. So do the QA Engineer's: a case gap for the Test Planner, a rule gap for the PO, and a defect or a test hook for the Coder. A question that would change the wiki or the code lists "defer it" and "leave it as shipped, with no rule" among its options.
 - **Living-docs handoff** *(written by whoever wrote the code, before close; applied by the owners at close)*:
-  - behavior decisions made while building, for the PO to rule on;
+  - behavior decisions made while building. Each ships as implementation, with no rule, case or test, unless Nathan rules it in, and the PO takes each one to him;
   - Planned passages now built;
   - passages superseded;
   - implementation passages to place in a module header, a site comment or a directory `AGENTS.md`;
@@ -64,7 +64,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
 ## Open questions
 - **For <role>:** …
 ## Living-docs handoff
-- **Behavior decisions made while building, for the PO to rule on:**
+- **Behavior decisions made while building (implementation unless Nathan rules them in):**
 - **Planned passages now built:**
 - **Passages superseded:**
 - **Implementation passages to place:**

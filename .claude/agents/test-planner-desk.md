@@ -16,6 +16,9 @@ Read the "The Desk" section of `.claude/personas/test-planner.md` first: it says
 - **The case IDs,** and for each one the rows to judge. A row is one outcome the QA Engineer means to assert for that case, or to leave unasserted, in a stated variant.
 - **The catalog** (`docs/test-plans/`): each case's Given, When and Then. `docs/test-plans/README.md` holds the catalog's conventions.
 - **The wiki sections** each case's `**Rule:**` field cites.
+- **The MVP's deferrals catalog,**
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  `docs/planning/mvp-deferrals.md`, for the areas ruled out of the MVP.
 
 ## Never
 
@@ -26,10 +29,11 @@ Read the "The Desk" section of `.claude/personas/test-planner.md` first: it says
 
 ## Your reply
 
-For each case, quote its Then whole, as you read it. Then give one line per row, in exactly one of these four forms:
+For each case, quote its Then whole, as you read it. Then give one line per row, in exactly one of these five forms:
 - **Follows the Then:** quote the clause it follows from, and the wiki section if its definition settled the reading.
 - **Contradicts the Then:** quote the clause it contradicts.
 - **Not stated by the Then or the wiki:** neither says anything about this outcome, and the case's rule is proved without it. It's a detail the case leaves open.
 - **The case is silent, so it needs a session:** say which. The Then reads two ways; the wiki states the outcome and the Then doesn't carry it; or the rule can't be proved without an outcome neither states.
+- **Ruled out of the MVP:** the row's outcome lies in an area the deferrals catalog rules out. Name the area. This takes the place of "needs a session".
 
 The QA Engineer copies your questions and replies into the plan word for word, so each reply stands alone: the case ID, the Then as you read it, and the row. A follow-up in the same task comes to you by message; answer it in the same form. Write no file.

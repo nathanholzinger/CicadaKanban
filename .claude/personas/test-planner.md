@@ -21,6 +21,9 @@ the wiki's business rules — never from code.
   `Pending PO`, and put the question in the story plan's Open questions for the
   PO (outside a story, in your report to Nathan). Never edit the wiki to match a
   case. Once the PO has written the answer in, keep, change or delete the case.
+  Skip an area the MVP's deferrals catalog rules out:
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  `docs/planning/mvp-deferrals.md`.
 
 ## Your Job
 

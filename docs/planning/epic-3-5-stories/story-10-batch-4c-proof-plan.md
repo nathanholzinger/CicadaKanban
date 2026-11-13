@@ -2,7 +2,7 @@
 
 **Type:** Stop 1 deliverable (proof/variant plan) · **Written:** 2026-11-11 by the QA Engineer · **Status:** complete. Nathan made the [decisions](#decisions-nathan-2026-11-11) and approved the Stop 2 file list on 2026-11-11. Nothing is authored, no test has run, no app, test, helper, Vitest or catalog file has been edited. Stop 2 starts when Nathan opens its session.
 
-This is the Stop 1 deliverable under [the five stops](story-10-batches.md#the-five-stops-for-each-remaining-batch). It says what batch 4c must prove before any test is written. Every expected value below comes from the case's Then and the wiki rule it cites. The specs and helpers were read only for how to reach and observe a state. The desk's questions and replies are in the [Review log](story-10-batches.md#batch-4c-stop-1--the-desks-questions-and-replies-2026-11-11), word for word.
+This is the Stop 1 deliverable under [the five stops](story-10-batch-4a-4d-log.md#the-five-stops-for-each-remaining-batch). It says what batch 4c must prove before any test is written. Every expected value below comes from the case's Then and the wiki rule it cites. The specs and helpers were read only for how to reach and observe a state. The desk's questions and replies are in the [Review log](story-10-batch-4a-4d-log.md#batch-4c-stop-1--the-desks-questions-and-replies-2026-11-11), word for word.
 
 ## Inputs and scope
 
@@ -127,7 +127,7 @@ Every row starts from fresh fixtures, asserts its Given before its When, and rea
 **New spec:** `tests/ui/drag-stub-row-height.spec.ts` (C13). DRAG-3.25 has no surface test, and it fits none of the three DRAG-7 specs.
 **Helpers (edit):** `tests/helpers/overflowTree.ts` (the Given's tree without `X`; `Y` under `R1a`; tier reads), `tests/helpers/boardDragSurface.ts` (a helper that zooms a Free Card into a Card by the full hold, which C02, C05, C09 and C10 all need, and the 4b specs set up inline), `tests/helpers/boardLocators.ts` only if a locator is missing. `tests/helpers/dragGesture.ts` and `tests/helpers/requestHarness.ts` are used as they are.
 **Not mine:** app source, Vitest suites, test routes, hooks and the catalog.
-**Documents:** the Results and Review log in [story-10-batches.md](story-10-batches.md), and this plan.
+**Documents:** the Results and Review log in [the 4a to 4d log](story-10-batch-4a-4d-log.md), and this plan.
 
 The new helpers are shared test infrastructure: each header says whether it reads the screen or an app attribute (`data-drop-tier` is an attribute the app provides), and they get `/code-review` at `medium` before the Stop 2 check-in.
 

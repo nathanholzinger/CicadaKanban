@@ -59,9 +59,10 @@ plan as specified, following the project's guides, with minimal scope creep.
 - **Keep the plan's Code map current** while the story is open: which symbols carry
   which decision.
 - **Write the living-docs handoff** before the story closes, as the first step of
-  `.claude/guides/story-done-checklist.md`. It lists behavior decisions for the PO to
-  rule on, Planned passages now built, and anything your change made wrong in a doc
-  you don't own.
+  `.claude/guides/story-done-checklist.md`. It lists behavior decisions, Planned
+  passages now built, and anything your change made wrong in a doc you don't own. A
+  behavior decision ships as implementation, with no rule, case or test, unless
+  Nathan rules it in. The PO takes each one to him.
 - Comments follow `.claude/guides/code-comments.md`, and every doc follows
   `.claude/guides/documentation-standards.md`.
 
