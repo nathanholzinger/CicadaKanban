@@ -96,18 +96,18 @@ Each batch's cases are below in run order, which D5 sets: a later batch reuses a
 | 4a. DRAG-1, DRAG-3, TC-6.4, BCU-5.6 and 5.7 |     10 |  22 |      0 |     2 |     0 |    34 |
 | 4b. DRAG-4 and DRAG-5                       |      4 |  20 |      2 |     0 |     0 |    26 |
 | 4c. DRAG-7                                  |      2 |   3 |      9 |     1 |     0 |    15 |
-| 4d. DRAG-6                                  |      0 |  12 |      0 |     5 |     0 |    17 |
+| 4d. DRAG-6                                  |      0 |  11 |      0 |     5 |     0 |    16 |
 | 4e. DRAG-8                                  |      0 |  11 |      0 |     1 |     0 |    12 |
 | 4f. DRAG-2 and ATT-4.9                      |      4 |   1 |      0 |     9 |     0 |    14 |
 | 4g. TREE                                    |      7 |  18 |      1 |     6 |     1 |    33 |
 | 4h. The six legacy skips                    |      — |   — |      — |     — |     — |     0 |
-| 4i. Returned work, and a cost study         |      — |   — |      — |     — |     — |     0 |
+| 4i. Returned work                           |      — |   — |      — |     — |     — |     0 |
 | 4j. Deferred from 4c's close                |      — |   — |      — |     — |     — |     0 |
 | **All**                                     |     27 |  87 |     12 |    24 |     1 |   151 |
 
 The Coder column counts cases closed by Coder work alone. A batch's notes name the Coder halves of other cases. Step 5 assigned 152 Open cases; Nathan's later retirement of DRAG-4.35 leaves 151 active assignments. Batches 4a and 4b close 60 of them (34 and 26), leaving 91 still Open. DRAG-1.27 and TREE-2.8 are now shared Manual cases rather than automation assignments; the three new Manual IDs are listed under The shared looks. The 26 original Split IDs are all retained.
 
-4h, 4i and 4j hold returned or deferred work, not new assignments. 4i, added 2026-11-12, takes DRAG-3.16 from 4h, DRAG-5.3 and DRAG-5.10's B21 test from 4b and DRAG-7.18 from 4c. Those stay counted in their original batches' rows above, which are the historical assignments; 4c's row therefore closes 14 of its 15, and 4b's DRAG-5.3 and DRAG-5.10 wait on 4i.
+4h, 4i and 4j hold returned or deferred work, not new assignments. 4i, added 2026-11-12, takes DRAG-3.16 from 4h and DRAG-5.3 and DRAG-5.10's B21 test from 4b. 4j takes DRAG-7.18 from 4c, which went to 4i on 2026-11-12 and moved to 4j on 2026-11-13. Those stay counted in their original batches' rows above, which are the historical assignments; 4c's row therefore closes 14 of its 15, and 4b's DRAG-5.3 and DRAG-5.10 wait on 4i. 4d's row closes 12 of its 16 (Stop 5, 2026-11-13), and DRAG-6.7, 6.16, 6.23 and 6.24 wait on 4j.
 
 A zero in that historical Coder column does not mean a batch will find no product defect or need no hook. Every such discovery now reaches Nathan through the separate handoff above; the batch table does not authorize production edits.
 
@@ -167,7 +167,7 @@ A zero in that historical Coder column does not mean a batch will find no produc
 | Rework | DRAG-7.6, 7.9, 7.10, 7.14, 7.15, 7.17, 7.18, 7.27, 7.32 |
 | Split  | DRAG-7.12, its skip reworked to the tier attributes     |
 
-- **DRAG-7.18 moved to 4i (Nathan, 2026-11-12).** Its two tests were authored here and passed D2, then skipped for their cost. Batch 4i holds the case and the cost study.
+- **DRAG-7.18 moved to 4i (Nathan, 2026-11-12), then to 4j (Nathan, 2026-11-13).** Its two tests were authored here and passed D2, then skipped for their cost. Batch 4j holds the case and the cost study.
 - **DRAG-7.28:** add its ID to DRAG-7.9's first-child test, which saves `R2` before `R1a` (the report's Proposed Stamps).
 - **DRAG-7.10 (8.13 audit #8):** the Coder moves the two excursions' reset into a `popSession.test.ts` clock test. The Planner's 2026-11-12 answer below adds the reset to DRAG-7.10's Then, so the clock test carries DRAG-7.10. The spec keeps reachability and the write, with thresholds from `seedDragTuning`.
 - **DRAG-7.15 and 7.27's aims:** see the roadmap entry's item 10, "From Story 8.3". The gap below `R`'s overflow row is drawn for an aim in the overflow row's band. The one-step spec aims at `R`'s row center. The overflow-row top-quarter aim's "no hold runs" expectation is dropped by the Planner's 2026-11-12 answer below: the hold runs when the ghost is beside the overflow row at its level.
@@ -181,7 +181,7 @@ A zero in that historical Coder column does not mean a batch will find no produc
 
 | Kind  | Cases                                                                    |
 | ----- | ------------------------------------------------------------------------ |
-| New   | DRAG-6.7, 6.8, 6.9, 6.15, 6.16, 6.17, 6.18, 6.21, 6.22, 6.25, 6.27, 6.28 |
+| New   | DRAG-6.7, 6.8, 6.9, 6.15, 6.16, 6.18, 6.21, 6.22, 6.25, 6.27, 6.28 |
 | Split | DRAG-6.19, 6.20, 6.23, 6.24, 6.26                                        |
 
 - **It comes after 4b and 4c,** since the flash and the hidden-row cases (DRAG-6.20, 6.21 and 6.28) need their Stub, section and modal setups.
@@ -190,6 +190,8 @@ A zero in that historical Coder column does not mean a batch will find no produc
 - **DRAG-6.26:** the new tests cover Phase 1's hook and component candidates, so those mappings aren't needed.
 - **DRAG-6.27:** the flash's window is automated with `data-stop-flash`. DRAG-6.20 holds the target-row state; DRAG-6.30 holds the painted pulses and banner fade. DRAG-6.23 and DRAG-6.24 hold pending-state ownership, with the painted pulse in DRAG-6.31.
 - **None of these cases needs a tuned duration or the final look** (the roadmap entry's item 10, "From Story 8.4").
+- **Stop 1's [proof and variant plan](story-10-batch-4d-proof-plan.md)** (2026-11-12) proposes 13 families and 44 variants, with Playwright's clock for every clock boundary.
+- **DRAG-6.23's three tier variants are deferred to [4j](#4j-deferred-from-4cs-close)** (Nathan, 2026-11-12). 4d keeps the case's no-tier and ghost clauses, so DRAG-6.23 closes `Open` here and 16 of the 17 cases can close `Automated`. **On 2026-11-13 Nathan also skipped DRAG-6.23's ghost test** (it was red) **and deferred it to 4j,** so 4d carries no test titled DRAG-6.23, and the whole case is 4j's. The pending marker after a drop is still asserted by DRAG-6.2's and DRAG-6.5's tests. **Nathan also deferred DRAG-6.24's drop-line test to 4j** (2026-11-13). It passes and is skipped on its value against its cost. The case's three row-ownership tests stay and run, so DRAG-6.24 closes `Open` here, and a skipped test never counts toward it. **DRAG-6.7's held-off clause** (its row for `X` is discarded when the stale response carries pairs) **is deferred to 4j too** (2026-11-13): no internal test is written, its two surface tests stay, and DRAG-6.7 closes `Open` here.
 
 ### 4e. DRAG-8
 
@@ -249,16 +251,15 @@ The six legacy skips carry no catalog IDs. Their separate disposition remains as
 1. re-check the precision problem they were skipped for, since a column drop now lands where the ghost is;
 2. then re-derive each against DRAG-3 and 4b's DRAG-4.5, or delete it where its API twin pins the math.
 
-### 4i. Returned work, and a cost study
+### 4i. Returned work
 
-**Added 2026-11-12 (Nathan).** Three cases and one test come back for automation work after their tests were skipped. This is a return, not a new assignment: DRAG-3.16, DRAG-5.3, DRAG-5.10 and DRAG-7.18 keep the batch counts above, and 4i restores whole-Then proof for each. From now on 4i also takes any test that predates its batch and fails flakily there (D2, amended 2026-11-12): the batch skips it, records it, and doesn't repair it. A skipped test never counts, so each case's catalog status and Automation line must reflect the gap until its test runs again; that is the catalog owner's (the Reconciler's, at each batch's close). 4i's cases run after 4h, and its stops follow the five stops above.
+**Added 2026-11-12 (Nathan).** Two cases and one test come back for automation work after their tests were skipped. This is a return, not a new assignment: DRAG-3.16, DRAG-5.3 and DRAG-5.10 keep the batch counts above, and 4i restores whole-Then proof for each. DRAG-7.18 came here on 2026-11-12 and moved to 4j on 2026-11-13, since its tests were skipped for their cost and not for a failure. From now on 4i also takes any test that predates its batch and fails flakily there (D2, amended 2026-11-12): the batch skips it, records it, and doesn't repair it. A skipped test never counts, so each case's catalog status and Automation line must reflect the gap until its test runs again; that is the catalog owner's (the Reconciler's, at each batch's close). 4i's cases run after 4h, and its stops follow the five stops above.
 
 | Case | Moved from | Skipped | Why |
 | --- | --- | --- | --- |
 | DRAG-3.16 | 4h (its automation is 4a's) | 2026-11-10 | The runner trial's setup connection reset (below) |
 | DRAG-5.3 | 4b | 2026-11-12 | Two failed attempts in the locked-after-A variants at five workers during 4c's Stop 4 (below) |
 | DRAG-5.10's B21 test | 4b | 2026-11-12 | One failed attempt at five workers in 4c's full run (below) |
-| DRAG-7.18 | 4c | 2026-11-12 | The cost of its two tests, which Nathan wants kept as a cost and benefit study (below) |
 
 - **DRAG-3.16.** Both parameterized tests in `tests/ui/drag-band-contracts.spec.ts` are skipped: the clipped-content-top branch and the restored-content-top branch. One of five three-worker contention copies of the clipped branch failed before drag setup with `ECONNRESET` on `POST /api/projects`; its other four copies and five focused one-worker repetitions passed. Investigate that setup/transport failure, restore both variants' whole-Then proof and apply D2 at the adopted five-worker count. Do not treat the connection reset as evidence about the band outcome. Evidence is `tests/output/parallel-workers-batch3/drag-3w-repeat5.json` and `setup-reset-1w-repeat5.json`, with details in the [runner report](../tech-debt-stories/e2e-parallel-workers.md). Its prior 4a certification remains historical evidence, not current passing automation while both tests are skipped.
 - **DRAG-5.3.** The one parameterized test in `tests/ui/drag-5-stub-detach.spec.ts`, "B18 … detach uses the destination meaning", is skipped: eight variants, a merged column and an expanded sub-row, each at the top, middle, bottom and locked-after-A. During 4c's Stop 4 the locked-after-A variant failed once in each form at five workers, in a test 4c did not change:
@@ -267,21 +268,14 @@ The six legacy skips carry no catalog IDs. Their separate disposition remains as
 
   Both variants passed 20 of 20 repeats on their own and passed the rerun of the full suite (`batch4c-b18-after.json`, `batch4c-final-full-e2e-rerun.json`). 4i settles whether the reset is the transport, which is the investigation's D1 (a longer keep-alive timeout on the server, a Coder change not yet made), and what the expanded variant's wait was. Then it restores the eight variants and applies D2 at five workers. The investigation had already recorded one unexplained 30 s timeout in the merged locked-after-A variant (`batch2e-followup-full-e2e.json`).
 - **DRAG-5.10's B21 test.** The parameterized test in `tests/ui/drag-5-stub-detach.spec.ts`, "B21 both copies switch through Q and back to P before … restores the original Stub", is skipped: two variants, the cancel and the nowhere ending. The nowhere variant failed once in 4c's first full run on the tree with the earlier skips (`tests/output/batch4c-after-4i-skips-full-e2e.json`): the carried copy's height read 96 against the ghost row's 24, the copy having switched to its shortCard form before the row followed. It passed 60 of 60 on its own (`batch4c-b21-after.json`), 10 of 10 in D2's repeats and the rerun of the full suite. The test predates 4c, so the rule above skips it. 4i finds what the two boxes disagree on, and whether the Coder's change to a Stub's carried shortCard width touches the moment they agree. DRAG-5.10 is also carried by the B17 test in the same file ("DRAG-5.1, DRAG-5.2, DRAG-5.10: B17 …") and by `drag-descendants-placement.spec.ts`'s B10 ("DRAG-4.30, DRAG-5.10: B10 …"), which keep running; whether they cover the whole case is the Reconciler's to say.
-- **DRAG-7.18.** The two tests in `tests/ui/drag-7-modal-hold.spec.ts` (P's own Stub, and a Free Card zoomed in) are skipped. They were authored in 4c, extended after the Planner's rewording of the case, and passed D2's ten repeats at five workers (20 of 20), so the skip is for their cost, not a failure.
 
-**The DRAG-7.18 cost study.** Nathan's reason: about 24 s of clocks to prove a single case is very costly, so the case is the study for weighing a surface test's cost against what it proves (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves"). The facts it starts from:
-
-- **What the case's Then asks for:** after the modal a hold opened is left by a pop to `P`'s column and the drag zooms back into `P`, a hold beside an overflow row opens the modal again at the same Descendants layer; the drag does it twice more in the same drag (two exits, two reopens); no write occurs during any exit, re-entry or opening; only a release in the final opening commits `X` at the selected gap and depth; earlier openings don't limit a later one.
-- **What the tests cost,** from D2's report (`batch4c-d2-repeat10.json`), mean per run at five workers: **10.1 s** for P's own Stub and **13.0 s** for the Free Card zoomed in, **23 s** for the pair, so 231 s of test time over ten repeats. Each run chains a first hold, then two cycles of a pop (300 ms), the full zoom-in hold (1,500 + 800 ms) and a modal hold (200 + 300 ms).
-- **What the waits buy:** each cycle is a step of the When. The zoom's length buys no clause: it is long because the pop rests the cursor on a Card in the column, where a short zoom would carry the drag into that Card.
-- **What the history was:** no correction to the aim or the timing after the first authoring, and no failed attempt in 20. The Test Reviewer's fourth pass proves the case against the current Then and raises the cost as a note, never as a gap; it counts the two variants as one gesture repeated across two kinds of `X`, which the Terms let a case hold for either.
-- **The options the guide gives, for the study to weigh:** simplify (rest the pop on column space outside any Card, so the zoom can be about a second, which the reviewer puts at 2.6 to 3.9 s a variant; one variant in place of two); one gesture with the matrix inside (the second and later reopenings in the pure module that decides them, with the surface test showing the gesture reaches it); split the case; or keep it as it was. The study is the 4i session's to write, with the three questions answered and a recommendation. It decides nothing.
-
-**When 4i runs.** After 4h. Its stops are the five above: Stop 1 asks the three questions of DRAG-7.18 and proposes what proves each clause of the three cases, for Nathan to decide.
+**When 4i runs.** After 4h. Its stops are the five above: Stop 1 proposes what proves each clause of DRAG-3.16, DRAG-5.3 and DRAG-5.10, for Nathan to decide.
 
 ### 4j. Deferred from 4c's close
 
 **Added 2026-11-12 (Nathan).** The Reconciler's [report on 4c](../../audits/test-reconciliation-story-10-batch-4c.md) raised one weak test and three candidate new cases. 4c closes without them, and they are deferred here. 4j runs after 4i and follows the five stops above.
+
+**What 4j holds (Nathan, 2026-11-13).** Test suggestions that are one of two kinds: scope creep we would rather record and defer to a hardening story after the MVP, or tests to re-evaluate on their value against their cost or flakiness risk. 4i is different: it takes tests that have shown failures in a test run, to evaluate whether a failure was a one-off under 1% or a flakiness concern to address. During the MVP phase the work favours new features over hardening, so a test that checks an edge case beyond what the feature needs goes to 4j.
 
 - **A weak test: the hold-opened distance variants of DRAG-7.10 and DRAG-1.14.** In `tests/ui/drag-7-hierarchy-modal.spec.ts`, the matrix "DRAG-7.10, DRAG-1.14: P’s own Stub carried into a modal a hold opened pops once to its column | its expanded sub-row on one sample of the distance, Free, and a release after Card Q writes that placement" has two variants. Their helper `expectLeavesOnce` rests the cursor in P's box when part of it lies outside the modal, and otherwise on Card Q beside it; it asserts the rest point's owner for the click arrival only. With a hold-opened modal the point probably lies on Card Q, so the two variants would pass the same if the distance were measured from the Card's box in place of the modal's box, which wiki board-drag-interaction §3.1 and §7.3 give as the box the modal holds the drag to. The four click-opened and hold-free distance variants cut for cost on 2026-11-12 were the ones that told the two apart. The Reconciler counts DRAG-1.14 and DRAG-7.10 as covered, since the tests assert the Then's positive statement. The work is a QA Engineer's, and the Reconciler names two ways: assert where the rest point lies, or seed a `popDistancePx` small enough that a point in P's box clears the modal. Either way the Test Reviewer weighs it, D2 applies to the changed variants, and the two cases are confirmed again at 4j's close.
 - **Three candidate new cases, each a ruling before it is a test:**
@@ -290,6 +284,34 @@ The six legacy skips carry no catalog IDs. Their separate disposition remains as
   3. **In the Sheet, Escape ends a title edit before it closes the Sheet** (the PO). The Coder's return makes it so, with a test in `ItemDetailPanel.test.tsx`, and the wiki doesn't say.
 
   If a ruling adds a case, 4j writes its test (a New), and the Reconciler confirms it at the close. If the Planner or the PO declines a candidate, 4j drops it. The cases, if any, take the IDs the Planner gives them; they are not an original assignment.
+
+- **DRAG-6.23's three tier variants (from batch 4d's plan, 2026-11-12).** Nathan deferred them when 4d's Stop 1 plan weighed them (D10 in the plan). The case asks that a pending `X` stays pending when another item's drag draws it Full, Mid or Low, and that the response clears the marker with the tier still applying. A drag holds one tier for its whole length, so each tier is its own variant (the desk's reading of DRAG-6.23 r2). The setup is the cost: `X` has a write held in flight and lies where the drag draws it at the tier under test, which wiki board-drag-interaction §4.1 gives as a Valid Card or Stub for Full; a Free Card that isn't Valid, or a Stub that isn't Valid whose parent is, for Mid; and a Stub inside a Mid Card, or an overflow row whose owner isn't Valid, for Low. 4d keeps the case's no-tier and ghost clauses, so DRAG-6.23 closes `Open` there. 4j writes the three variants, builds one tier's setup first, weighs the cost with the guide's three questions, applies D2 to the new variants, and the Reconciler confirms the case at 4j's close. The painted pulse at each strength stays DRAG-6.31's.
+
+- **DRAG-6.23's ghost test, skipped (from batch 4d's Stop 2, 2026-11-13).** Nathan skipped it as scope creep: the case is an edge of pending state, and the MVP phase moves faster without it. The test is "DRAG-6.23: a pending item picked up again has a pending ghost that is no target, and the other rows have tiers" in `tests/ui/drag-preview-reconciliation.spec.ts`. It was red on the case's third clause: with `X`'s write in flight and `X` picked up again, `X`'s own row has no `data-pending`, where the case says its ghost keeps the pending state. The app's `useIsPending` (`client/src/components/workflow/DragSessionContext.ts`) leaves the carried item unmarked until it's released, and the marker returns when the re-drag is cancelled. Wiki board-drag-interaction §10 ("a ghost pulses down from its own value") and DRAG-6.31 both expect a pending ghost, so the app's reading may be the defect. 4j weighs the clause's value against its cost (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves") and rules among a Coder fix with the test restored, a Planner or PO ruling that rewrites the clause and the test, and dropping the clause as hardening. The facts and the reproducer are in Open questions, "Batch 4d Stop 2" item 1. DRAG-6.31 (`Manual`) holds the pulse and has no test, so there is nothing of it to skip. It is listed here because it names the ghost's pulse, and 4j's ruling on the ghost settles it too.
+
+- **DRAG-6.24's drop-line test, skipped (from batch 4d's Stop 2, 2026-11-13).** The test passes. Nathan skipped it on its value against its cost: it is the slowest of the case's four tests (4.6 s), and what it asserts is close to vacuous at the surface, since a drop line isn't a row and has no pending marker to lose, while the pulse itself is DRAG-6.31's manual check. The test is "DRAG-6.24: a drop line naming a pending Mid Card or a pending Stub has no pending state of its own" in `tests/ui/drag-preview-reconciliation.spec.ts`. It reads the line's `data-pending` attribute and any animation running on it, beside a pending Free Card that is a Mid Card to the drag (tier `anchor`) and beside a pending Stub. The case's other three tests (a pending Card with its Stub, a pending Stub with its Card, and both pending) stay and run. 4j weighs the clause: keep the test, or drop the clause as hardening. It also asks a Planner session which the case's "beside a Mid Card or Stub" means, "a Mid Card or any Stub" or "a Mid Card or a Mid Stub". The test covers the first, and the second needs a pending Stub too deep to take the carried item. Open questions, "Batch 4d Stop 2" item 2, has the facts.
+
+- **DRAG-6.7's discard clause, held off (from batch 4d's Stop 2, 2026-11-13).** Nathan deferred it to 4j as another catalogued example of feature hardening whose implementation grew past the roadmap's intended scope. The case says a stale response that carries reindex pairs has its row for `X` discarded and the board resynced "instead of applying the pairs". Its two surface tests in `tests/ui/drag-preview-reconciliation.spec.ts` pass and stay. They prove the resync (one board reload, ending in the server's order with every reindexed item included) and, without pairs, the discard (`X` stays in write 2's slot). The discard with pairs can't be seen at the surface: the board shows "Loading board…" during the resync and the server's state after it, so a row wrongly applied before the reload would be overwritten. The code that decides is `writes.complete` in `client/src/components/workflow/useItemManagement.ts`, which the two DRAG-6.7 tests in `dragRequest.test.ts` mock, so they assert the resync call and not the discard. A test that closes it is a short Vitest in `useItemManagement.test.ts`: begin two writes for `X`, complete the second, complete the first with `reindexed` pairs, and assert `{applied: false, needsResync: true}` with no row's position changed, and `needsResync: false` when the first carries no pairs. It tests a hook, so it needs Nathan's approval or a ruling that the response-reconciliation category covers it. 4j rules whether to write it or to leave DRAG-6.7 `Open` as a recorded example. Open questions, "Batch 4d Stop 2" item 3, has the facts.
+
+- **The stop matrix's four skipped cells, a question to revisit (from batch 4d's Stop 2, 2026-11-13).** DRAG-6.15, 6.16 and 6.20 name three causes (a failed item drop, a stale response, a failed column reorder) and three places (a Free Card in a column, a Stub in a Card's section, a row in the hierarchy modal). Nathan ruled all nine pairs on 2026-11-12 and, after a cost-benefit on 2026-11-13, cut to five (Option C): a column under each cause, and a Stub's section and the modal under the stale response. The four skipped cells are in `tests/ui/drag-forced-stop.spec.ts`, titled "DRAG-6.15, DRAG-6.16, DRAG-6.20: a failed item drop | a failed column reorder stops a Stub's drag in a Card's descendants section | a row's drag in the hierarchy modal", and they pass. The facts for the question: they cost 7.8 s a pass serial (2.3, 1.6, 2.2 and 1.7 s), 40 of the 480 passes that D2's ten repeats would have run with all nine cells; no cell failed for a product reason while the tests were written; a cause changes the banner sentence and which code calls the resync, a place changes how the drag was running and which row flashes, and the path after the resync call is shared; the Test Reviewer reads the Then as five tests, and the test-planner desk reads it as nine outcomes where which to run is "a coverage judgment". 4j decides whether to restore the four, keep five, or drop them.
+
+- **DRAG-6.22's two endings, a question to revisit (from batch 4d's Stop 2, 2026-11-13).** The case covers a failed item drop, a failed column reorder and a stale response resyncing the board with no drag running, "including when the preceding drag has already been released or cancelled". Six tests run each cause after a released drag and after a cancelled one, 9.7 s a pass serial, about 4.9 s for one ending's half. Nathan kept all six for now (Option A, 2026-11-13). The Test Reviewer asked for the cancelled form so that a defect specific to a resync right after a release stays visible, and itself suggested keeping the cancel in some causes only. Both endings end a drag through `endSession`, and a cancel also calls `restorePriorPlacement`. No test has found a defect. 4j decides whether to run one ending per cause, mixed so that each ending and each cause appears once (about 4.9 s less a pass), or to keep all six.
+
+- **DRAG-6.16's top-edge clause, a question to revisit (from batch 4d's Stop 2, 2026-11-13).** The case's Then says the banner appears "along the window's top edge", and wiki board-drag-interaction §10 says it too. Nathan ruled on 2026-11-12 that for now the banner is verified by its correct text being visible, with no placement, width, status-region or focus assertion, and that its placement waits for the [UI message banners](../tech-debt-stories/ui-message-banners.md) story. On 2026-11-13 he kept it unasserted and asked 4j to reconsider asserting it. The facts: the text check is `expectBannerSays` in `tests/helpers/stopRun.ts`, which every stop test uses, so one placement assertion there would run in all of them; a spec never reads `boundingBox()` itself, so the box would come through the drag helpers; it would pin a look that the banners story may change. The Test Reviewer reads the text-only test as short of the Then's top-edge clause, and the Reconciler may hold DRAG-6.16 `Open` while it stays unasserted. 4j decides whether to assert it now (in the shared helper or in one stop test), to wait for the banners story's own case, or to move the clause out of DRAG-6.16 in a Planner session.
+
+- **DRAG-7.18, moved here from 4i (Nathan, 2026-11-13).** The two tests in `tests/ui/drag-7-modal-hold.spec.ts` (P's own Stub, and a Free Card zoomed in) are skipped. They were authored in 4c, extended after the Planner's rewording of the case, and passed D2's ten repeats at five workers (20 of 20), so the skip is for their cost, not a failure. That is 4j's kind of work and not 4i's, which takes tests that have failed in a run. 4j's Stop 1 asks the study's three questions of it.
+
+**The DRAG-7.18 cost study.** Nathan's reason: about 24 s of clocks to prove a single case is very costly, so the case is the study for weighing a surface test's cost against what it proves (`.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves"). The facts it starts from:
+
+- **What the case's Then asks for:** after the modal a hold opened is left by a pop to `P`'s column and the drag zooms back into `P`, a hold beside an overflow row opens the modal again at the same Descendants layer; the drag does it twice more in the same drag (two exits, two reopens); no write occurs during any exit, re-entry or opening; only a release in the final opening commits `X` at the selected gap and depth; earlier openings don't limit a later one.
+- **What the tests cost,** from D2's report (`batch4c-d2-repeat10.json`), mean per run at five workers: **10.1 s** for P's own Stub and **13.0 s** for the Free Card zoomed in, **23 s** for the pair, so 231 s of test time over ten repeats. Each run chains a first hold, then two cycles of a pop (300 ms), the full zoom-in hold (1,500 + 800 ms) and a modal hold (200 + 300 ms).
+- **What the waits buy:** each cycle is a step of the When. The zoom's length buys no clause: it is long because the pop rests the cursor on a Card in the column, where a short zoom would carry the drag into that Card.
+- **What the history was:** no correction to the aim or the timing after the first authoring, and no failed attempt in 20. The Test Reviewer's fourth pass proves the case against the current Then and raises the cost as a note, never as a gap; it counts the two variants as one gesture repeated across two kinds of `X`, which the Terms let a case hold for either.
+- **The options the guide gives, for the study to weigh:** simplify (rest the pop on column space outside any Card, so the zoom can be about a second, which the reviewer puts at 2.6 to 3.9 s a variant; one variant in place of two); one gesture with the matrix inside (the second and later reopenings in the pure module that decides them, with the surface test showing the gesture reaches it); split the case; or keep it as it was. The study is the 4j session's to write, with the three questions answered and a recommendation. It decides nothing.
+
+- **The Reconciler's notes on 4d, for 4j to weigh (2026-11-13).** Its report records five test-quality notes: the five-cell matrix and a fault specific to one pair; DRAG-6.8's no-write release being the Board-layer "nowhere" only; the stop run reading the banner's text and not its visibility after the reload; DRAG-6.9's Given being unread before the answer; and `ForcedStopCue.test.tsx`'s DRAG-6.19 fade test claiming more than it shows. It also notes that the DRAG-6.23 Mid variant could start from the skipped DRAG-6.24 test's setup, and lists the duplicated carriers. Open questions, "Batch 4d Stop 5" items 3 to 5, has them.
+
+- **A possible Product Owner gap, a question to resolve (from batch 4d's Stop 2 and Stop 5, 2026-11-13).** Nobody has said whether a section a person collapsed by hand stays collapsed across a board reload, and the wiki doesn't say. The app returns every Card's section to the board's own default ("Show attached children by default") after a reload, so a section collapsed by hand opens again. Batch 4d's DRAG-6.21 and DRAG-6.28 tests reach a collapsed hidden place only by turning that default off. The Reconciler flags it as a Product Owner gap, and no case or test depends on the answer. 4j asks the PO whether a section collapsed by hand should stay collapsed after a reload. If it should, the wiki gains a rule through a Planner session and the app needs a change from the Coder. If it shouldn't, the wiki says that a reload restores the board's default.
 
 ## The shared looks (D13)
 
@@ -324,14 +346,14 @@ All 24, by the report's skip register.
 |                                                | DRAG-7.15, the same with a child                            | Merged into the spec above                                                                                    | 4c    |
 |                                                | DRAG-7.17, above the overflow row with a scrolling list     | Trace (item 8), then Rework                                                                                   | 4c    |
 |                                                | DRAG-7.12, the modal carries the classification             | Rework as the tier-attribute test (D13)                                                                       | 4c    |
-|                                                | DRAG-7.10, 7.18, reopening the modal in the same drag       | Rework, with no Card layer. Reworked in 4c; the DRAG-7.18 tests were then skipped for their cost (4i)         | 4c    |
+|                                                | DRAG-7.10, 7.18, reopening the modal in the same drag       | Rework, with no Card layer. Reworked in 4c; the DRAG-7.18 tests were then skipped for their cost (4j)         | 4c    |
 | `drag-7-overflow-row.spec.ts`                  | DRAG-7.27, R carries its overflow row                       | Rework, at an aim that's been tried                                                                           | 4c    |
 | `project-tree-drag.spec.ts`                    | TREE-1.4, a subtree that holds every project                | Rework, aimed at the dragged project's own row                                                                | 4g    |
 |                                                | TREE-2.1, descendants dimmed                                | Rework to the branch's absence and the tier attributes, with #12's title and reason replaced                  | 4g    |
 | `item-repositioning-cross-column-dnd.spec.ts`  | 1.a and 2.a                                                 | Re-check, then re-derive or delete (4h)                                                                       | 4h    |
 | `item-repositioning-cross-project-dnd.spec.ts` | 1.a, 2.a, 2.b and 4.b                                       | The same                                                                                                      | 4h    |
 
-Skips added since, each temporary: DRAG-3.16's two tests (2026-11-10), DRAG-5.3's eight B18 variants, DRAG-5.10's two B21 variants and DRAG-7.18's two tests (2026-11-12), all for 4i.
+Skips added since, each temporary: DRAG-3.16's two tests (2026-11-10), DRAG-5.3's eight B18 variants, DRAG-5.10's two B21 variants and DRAG-7.18's two tests (2026-11-12), all for 4i except DRAG-7.18's, which went on to 4j (2026-11-13).
 
 ## The checkpoint, after 4a
 
@@ -363,71 +385,25 @@ The decision is recorded here, and a change to a decision is amended in the plan
 
 ## Results
 
-**Current packet: batch 4c, Stop 5 complete, at Nathan's review and commit (2026-11-12).** The Reconciler has run: 14 of the 15 cases are `Automated`. The frozen selection met D2 for every added or changed test that still runs, and the final full E2E run and the root gate are green, with failed attempts disclosed below. After Stop 4, Nathan skipped the DRAG-5.3, DRAG-5.10 (B21) and DRAG-7.18 tests and moved them, with DRAG-3.16, to a new batch 4i, so 4c closes 14 of its 15 cases. Nothing is committed. It replaces the Stop 3 packet; Git holds that one. Plan: [story-10-batch-4c-proof-plan.md](story-10-batch-4c-proof-plan.md).
+**Current packet: batch 4d, Stop 5 complete (reconciliation and closure), at Nathan's review (2026-11-13).** 12 of the batch's 16 cases are now `Automated`. The other four stay `Open`, each held for 4j by Nathan's rulings. ATT-10.9, outside the batch, is also `Automated` now, on Nathan's approval. Nothing is committed, and no next batch is started. It replaces the Stop 4 packet; Git holds that one. Plan: [story-10-batch-4d-proof-plan.md](story-10-batch-4d-proof-plan.md). The Reconciler's [report](../../audits/test-reconciliation-story-10-batch-4d.md) has the detail.
 
-- **What came after Stop 3.** Nathan committed the Stop 3 tree as `61a0df4b` (tree `65898343e75afe99ab22faf58116fc56ad6d95f5`); that commit holds the tree the reviewer's third pass read, plus the Planner's rewording of eight cases. It did not hold a Stop 4. The QA Engineer then extended the tests for the new text, with Nathan's go-ahead (2026-11-12), and ran Stop 4 on the result:
-  - DRAG-7.10: the Coder's two-excursion clock test in `popSession.test.ts` is stamped DRAG-7.10 (title only; the clock category, so no approval);
-  - DRAG-7.14: the two padding tests assert the ghost's gap and level after the modal opens (X's row under the cursor, `3:3:true`), and that the modal is inside the window by more than its margin on each side;
-  - DRAG-7.18: each test runs the pop-out, zoom-back and reopening twice in one drag;
-  - DRAG-7.27: the Q-carried test asserts `T` in its Given, absent while carried, and back after the cancel;
-  - DRAG-7.32: a new test presses Escape while the Sheet is mid-entrance, with the page's animations slowed through the browser's animation timeline so the Given (heading visible, Sheet's right edge beyond the window) is asserted;
-  - DRAG-7.31: comment only ("no item write request");
-  - DRAG-7.9 and 7.17: no change; the reviewer judged the existing tests against the new text.
-- **Stop 5, the close-out (2026-11-12).** The Reconciler ran once, cold, on the fixed inputs: [the report](../../audits/test-reconciliation-story-10-batch-4c.md). Its coverage report before it ran is in the QA Engineer's scratch folder (not kept in the repo); the one after is clean.
-  - **Cases closed, by kind (14 of 15):** Extend 2 (DRAG-7.28, DRAG-1.14), New 3 (DRAG-7.13, 7.31, DRAG-3.25), Rework 8 (DRAG-7.6, 7.9, 7.10, 7.14, 7.15, 7.17, 7.27, 7.32) and Split 1 (DRAG-7.12). DRAG-7.18, the ninth Rework, stays `Open`, in 4i.
-  - **Catalog changes** (the Reconciler's, status and Automation line only): the 14 are `Automated`; DRAG-7.2's line gains `drag-7-hierarchy-modal.spec.ts`; DRAG-3.16, DRAG-5.3 and DRAG-5.10 go from `Automated` back to `Open` with the line `—`, all for 4i. Totals: 389 Automated, 85 Open, 10 Manual, 2 Planned, 2 Pending PO (488). Run after it: `npm run report:catalog` shows no lost coverage, no stale line, no status conflict; `check:docs` 454 files, 0 hits; `npm run check` exit 0 (`tests/output/batch4c-stop5-gate.log`).
-  - **Stamps found new:** DRAG-2.22 on the two DRAG-7.27 R-carried and Q-carried tests, title only (a title-only diff confirms it). DRAG-2.22 stays `Open`, assigned to 4f. The Reconciler declined the reviewer's third proposed mapping for it.
-  - **Counts:** 15 catalog cases; 131 tests declared in the five files, 119 running and 12 skipped; 70 of them added or changed (the plan expected 61); 8 DRAG-7.10 matrix variants. Tests added: the `drag-stub-row-height.spec.ts` file (10), a set of re-entry, hold, overflow-row and Sheet tests in the three DRAG-7 specs, and one in `drag-5-stub-detach.spec.ts`.
-  - **Helpers:** `tests/helpers/overflowTree.ts` (the shared trees, `holdAt`, `holdFreeAt`, `pointOutsideModal`, `expectInside`, `dropLineOn`, `rowIds`, `modalState`) and `boardDragSurface.ts` (`zoomIntoCard`, `withinExcess`, header comments), with the `awaitProjection` header reworded in `dragGesture.ts`. Support files from Nathan's flake-investigation session: `tests/global-setup.ts` and `tests/helpers/keepAwake.ps1`.
-  - **Coder handoffs:** one separate Coder session (Stop 3): the carried copy's width for a Stub popped out of a click-opened modal; the Escape handling of the Sheet and the modal (`useEscapeKey.ts`); the `data-drag-cue` hook; and two `popSession.test.ts` clock tests (DRAG-7.10's two excursions, DRAG-7.14's run-on). The five red DRAG-7.10 tests passed unchanged on it.
-  - **Cost:** four Test Reviewer passes, one `/code-review` at `medium`, a Planner session for nine questions, one Coder session. D2's ten repeats took 950 s for 1,310 attempts at five workers, the full suite about 240 s, the gate about 95 s. Failed attempts in the validation: three, all in unchanged batch 4b tests (DRAG-5.3 twice and DRAG-5.10 once), now in 4i; none in the batch's own tests.
-  - **What remains:**
-    - **Batch 4i:** DRAG-3.16, DRAG-5.3, DRAG-5.10's B21 test and DRAG-7.18 (the batches doc's 4i).
-    - **Batch 4j (Nathan, 2026-11-12):** the Reconciler's weak-test finding (the two hold-opened Stub variants of DRAG-7.10 and DRAG-1.14 that test the distance don't assert their rest point lies in P's box) and its three candidate new cases are deferred to 4j, not fixed in 4c. The Reconciler counts the cases as covered.
-    - **Candidate new cases:** in 4j, with the weak test (the batches doc's 4j; Open questions).
-    - **DRAG-6.15** stays `Open` for 4d, and **DRAG-2.22** for 4f.
-- **Batch 4i, after Stop 4 (Nathan, 2026-11-12).** The batches doc has a new 4i (the plan's Phase 4 and Amendments too). DRAG-3.16 moves to it from 4h. DRAG-5.3's eight B18 variants and DRAG-5.10's two B21 variants (two parameterized tests in `drag-5-stub-detach.spec.ts`) and DRAG-7.18's two tests (`drag-7-modal-hold.spec.ts`) are now `test.skip`, with a comment that states the reason, and join 4i. DRAG-7.18 is also kept as a case study in weighing a surface test's cost: 10.1 s and 13.0 s a run, 23 s for the pair. No other test, helper or app file changed. A skipped test never counts, so the Reconciler will find DRAG-5.3 and DRAG-7.18 with no running test (Nathan: that is fine for now), DRAG-5.10 left to its B17 and B10 tests, and DRAG-3.16 as before.
-- **New rules for the rest of the story (Nathan, 2026-11-12), in D2 and the stops:** a flaky test that predates the batch is skipped and moved to 4i, which is how B21 got there; a test the batch added or changed that fails gets up to two fix attempts when the failure is false, then a report with what is known about why. No test of this batch needed a fix attempt after Stop 2.
-- **Reviewer passes:** four, each word for word in the Review log. The fourth, on `d5a17972…` against the reworded cases: no gap, no correction after a red run. It made two optional suggestions, both taken before the freeze (the margin check above, and the early-Escape test asserting the list's scroll offset first), and the changed tests ran 9 of 9 afterwards. The reviewer hasn't seen those two edits.
-- **The frozen selection.** Tree `75b654edb0aca33df7c4c194277e629494617950`, subtrees `tests` `932eaf7c836c634b1e2b8a21e220e5783f0b7675`, `client` `2a7390e8df90d5bf73797af43468069a932a512a`, `server` `9afce5ff3395c2b08caa1400e6ba21883122b7d4`. At the end of Stop 4 those three subtrees are unchanged (tree `836cf84a0f2bd77aeb6fa79becbca2dc1c93ee3b`, which differs only by another session's epic-4 planning docs). Selection: the five files whole, **131 tests**: `drag-7-hierarchy-modal.spec.ts` 44, `drag-7-modal-hold.spec.ts` 31, `drag-7-overflow-row.spec.ts` 17, `drag-5-stub-detach.spec.ts` 29, `drag-stub-row-height.spec.ts` 10. **70 of them are added or changed** against the baseline commit `175943d7` (2, 29, 24, 5 and 10 by file), by a diff of each test's own source block. That misses a test changed only through a helper in its file, which is why the whole files were repeated.
-  - **Stamps:** the one new stamp is the clock test's title, a title-only diff; `check:docs` 454 files, 0 hits.
-- **D2: ten repeats at five workers, retries 0** (`tests/output/batch4c-d2-repeat10.json`, 950 s). 1,310 attempts: **1,309 passed, 1 failed.** All 70 added or changed tests passed 10 of 10 (700 passes). The failure is in an unchanged test, a batch 4b one:
-  - **`DRAG-5.3: B18 expanded sub-row locked-after-A detach uses the destination meaning`, repeat 4, 9 of 10.** A 30 s timeout in `locator.evaluate`, waiting for the sub-row region's bottom carve divider (`[data-carve-divider="bottom"]`). The page snapshot is in `tests/output/artifacts/ui-drag-5-stub-detach-DRAG-82914-ses-the-destination-meaning-chromium-repeat4/error-context.md`. No cause is established.
-- **Final full E2E suite, five workers.** Two runs, both disclosed:
-  - `batch4c-final-full-e2e.json`: 450 passed, 10 skipped, **1 failed**: `DRAG-5.3: B18 merged column locked-after-A detach uses the destination meaning`, 6.2 s in, `apiRequestContext.get: read ECONNRESET` on `GET /api/items/:id` (worker 3, port 3013, at `drag-5-stub-detach.spec.ts:608`). It is the signature of the flake investigation's cause D, a connection reset between a test's API calls when a gesture leaves about five seconds idle.
-  - `batch4c-final-full-e2e-rerun.json`, the same tree: **451 passed, 10 skipped, 0 failed.** None of the 10 skips is in the five files (they ran 0 skipped).
-  - **Evidence only, nothing changed:** `batch4c-b18-after.json`, the eight DRAG-5.3 B18 tests repeated 20 times at five workers: 160 of 160 passed.
-  - **On the tree with the skips,** two more runs. `batch4c-after-4i-skips-full-e2e.json`: 440 passed, 20 skipped, **1 failed**, in another unchanged batch 4b test: `DRAG-5.10: B21 both copies switch through Q and back to P before nowhere restores…`, at `drag-5-stub-detach.spec.ts:755`, where the carried copy's height read 96 against the row's 24 (the copy had switched to its shortCard form and the row had not yet). It passed 60 of 60 afterwards on its own (`batch4c-b21-after.json`), and 10 of 10 in D2's repeats. `batch4c-after-4i-skips-full-e2e-rerun.json`, the same tree: **441 passed, 20 skipped, 0 failed**, the final full run for the batch. The 20 skips are the earlier 10 and the ten new ones. After the B21 skip (a flaky failure in a test that predates the batch, skipped under the new rule): `batch4c-after-b21-skip-full-e2e.json`, **439 passed, 22 skipped, 0 failed**, the batch's final full run, and `npm run check` green again (exit 0, 444, 1,105 and 327 tests; `batch4c-after-b21-skip-gate.log`).
-- **Root gate** `npm run check`, on the frozen tree and again on the tree with the skips: exit 0, 444 server, 1,105 client and 327 script tests. `tests/output/batch4c-final-gate.log`, `batch4c-after-4i-skips-gate.log`.
-- **Each case's state:**
-
-  | Case | State |
-  | --- | --- |
-  | DRAG-7.6, 7.9, 7.10, 7.12, 7.13, 7.14, 7.15, 7.17, 7.27, 7.28, 7.31, 7.32, DRAG-1.14, DRAG-3.25 | Authored, green on the frozen tree, D2 met. The fourth pass: Proves the case |
-  | DRAG-7.18 | Authored, passed D2 (20 of 20) and the fourth pass, then **skipped for cost and moved to 4i** |
-
-  None held off, none unauthored. DRAG-2.22 and DRAG-6.15, which the reviewer widened to, keep their gaps and aren't 4c's.
-- **The skips and the evidence.** The skips change no other test, and the D2 repeats and the first final full run ran with those ten tests running. For the other 119 tests of the five files, and the 68 of the 70 added or changed that still run, D2's 1,310 attempts stand unchanged. The twelve skipped tests' own passes (the 20 of DRAG-7.18, the B18 variants' 79 of 80 and B21's 20 of 20 in D2's repeats) are history and don't count. A full run and the gate were repeated on the tree with the skips; both below. Tree with the B18 and DRAG-7.18 skips: `091bf0317b71ac4d0f9383cd5dc0261eac15b32b` (`tests` `3cd76c264b5ffe8ed19b5daf2c4622691b2628e9`). Tree with the B21 skip too, the batch's final tree: `653719b829bbb74c4f80c0155203ef329c178196` (`tests` `1c5d1bc7d1cac59a9c31d9d9d00cb3b50aebfe59`, `client` `2a7390e8df90d5bf73797af43468069a932a512a`, `server` `9afce5ff3395c2b08caa1400e6ba21883122b7d4`); `client` and `server` are unchanged from the freeze.
-- **Adjacent findings, not 4c's:**
-  - **DRAG-5.3's B18 locked-after-A detach, merged and expanded variants, at five workers:** one failed attempt each, one in the ten repeats and one in the first full run. The merged one carries cause D's signature. The expanded one is a 30 s wait for a carve divider, and the flake investigation recorded a 30 s timeout for the merged variant too, as unexplained. Both passed 20 of 20 on their own and on the rerun. Routed by Nathan: the eight variants are skipped and belong to 4i. The investigation's D1 (a longer keep-alive timeout on the server, for the Coder) isn't in the tree.
-  - **DRAG-5.10's B21 "nowhere restores" variant, once at five workers (skipped, to 4i, by Nathan under the new rule):** the carried copy's form and the ghost row's height disagreed for a moment (96 and 24). It passed 60 of 60 on its own and 10 of 10 in D2's repeats. It is a third distinct failure in `drag-5-stub-detach.spec.ts` across five full or repeated runs, each in a different unchanged test and none reproduced on its own. This one reads two boxes at two moments after a form switch. Whether the Coder's change to a Stub's carried shortCard width (`dragOverlayGeometry.ts`) touches the moment the two agree is a question for the Coder or for 4i, not something these runs show.
-- **Cost notes:** decided by Nathan (2026-11-12): DRAG-7.17's gap-above test and DRAG-7.31 stay as they are; DRAG-7.18's two tests are skipped and move to 4i as a cost study (the batches doc's 4i has the facts the study starts from).
-- **`/code-review` at `medium`,** Stop 2, on `tests/helpers/overflowTree.ts` and `boardDragSurface.ts`: seven findings. Fixed, three: `holdFreeAt` hard-coded Card `P`'s title; two comments that said the wrong thing. Added for a fourth: `seedTree` fails if the section's levels aren't the three its depths assume. Noted, not acted on: the cast on `x`, the nine-point grid in `pointOutsideModal`, an import cycle between the two helpers. One, a mix of coordinate spaces, judged not a real problem. No shared test infrastructure has changed since, apart from `dragGesture.ts`'s header comment.
-- **The Coder's return,** as recorded at Stop 3 and unchanged: app files `ItemDetailPanel.tsx`, `KanbanCard.tsx`, `ModalShell.tsx`, `dragChrome.tsx`, `dragOverlayGeometry.ts`, `dragStructure.ts`, `useBoardDnd.ts`, new `useEscapeKey.ts` and `workflow/AGENTS.md`; Vitest `ItemDetailPanel.test.tsx`, `KanbanCard.test.tsx`, new `ModalShell.test.tsx`, `dragChrome.test.tsx`, `dragOverlayGeometry.test.ts`, `dragStructure.test.ts`, `popSession.test.ts`. The original five red DRAG-7.10 tests passed unchanged on it (`batch4c-coder-return-full.json`, 134 of 134).
-- **Living-docs handoff** (for the story plan's list; that file isn't on this stop's list):
-  - the skipped test "DRAG-7.2: R's only attached child dragged…" is deleted; `descendantsSection.test.ts` holds that rule;
-  - DRAG-7.11 is dropped from the old pop-out test's title, and DRAG-7.10 from the old DRAG-7.18 test's, as those tests were replaced;
-  - four DRAG-7.10 matrix variants are deleted, by Nathan's decision on the cost note: the click-opened and hold-free arrivals on one sample of the distance, each to the column and to the expanded sub-row. Two of them carried DRAG-1.14;
-  - DRAG-1.14 is stamped on the two B25 tests in `drag-5-stub-detach.spec.ts`, title only;
-  - DRAG-7.10 is stamped on the Coder's two-excursion test in `popSession.test.ts`, title only;
-  - DRAG-5.3's eight B18 variants, DRAG-5.10's two B21 variants and DRAG-7.18's two tests are `test.skip`, to batch 4i, and DRAG-3.16 moves from 4h to 4i (the batches doc and the plan's Phase 4 and Amendments are updated). For the catalog owner, since a skipped test never counts: DRAG-5.3's Automation line and status, and DRAG-7.18's, must reflect that no running test carries them; DRAG-3.16's already does;
-  - for the Reconciler: the reviewer's two DRAG-2.22 mappings onto DRAG-7.27's Q-carried and R-carried tests and DRAG-7.13's first test (DRAG-2.22 isn't a 4c case, so they aren't stamped).
-- **Open questions:** the Planner has answered the Stop 1 and Stop 2 questions (Open questions). None open for 4c; the flaky tests are in 4i.
-- **Files in scope:** Stop 2's list (Nathan, 2026-11-11), `tests/helpers/dragGesture.ts` (2026-11-12) and, for the one title stamp, `client/src/components/workflow/popSession.test.ts` (Nathan's choice of option, 2026-11-12).
-- **Next owner and action:** Nathan: review and commit batch 4c. Then the next batch is 4d (DRAG-6); 4i follows 4h, and 4j follows 4i. Then the QA Engineer, Stop 5: `npm run report:catalog` on the frozen tree, and the Reconciler, spawned once, cold, with the brief `.claude/agents/test-reconciler.md` names (the plan's Scope and Review log; the coverage report; the record of this green run, its tree IDs and report paths; the range's test and catalog diffs from `175943d7`).
-- **JSON report paths** (`tests/output/`): the frozen run's `batch4c-d2-repeat10.json`, `batch4c-final-full-e2e.json` and `batch4c-final-full-e2e-rerun.json`, `batch4c-b18-after.json`, `batch4c-b21-after.json`, `batch4c-after-b21-skip-full-e2e.json`, `batch4c-after-4i-skips-full-e2e.json`, `batch4c-after-4i-skips-full-e2e-rerun.json`, `batch4c-after-planner-full.json` (131 of 131, on `d5a17972…`), `batch4c-tighten.json`, `batch4c-planner-changes.json`; before the commit `batch4c-coder-return-full.json`, `batch4c-prefreeze-full.json`, `batch4c-files-full.json` to `batch4c-files-full5.json` (`-full2` interrupted by a machine suspend), the traces `batch4c-trace-alone.json`, `batch4c-trace-contention.json` and `batch4c-trace-t3-diag.json`, and one per family `batch4c-c01-focus.json` to `batch4c-c728.json`, `batch4c-c08-rework.json`, `batch4c-pass2-fixes.json`. Gate logs: `batch4c-final-gate.log`, `batch4c-after-4i-skips-gate.log`, `batch4c-after-b21-skip-gate.log`, `batch4c-planner-changes-gate.log`, `batch4c-postcoder-gate.log`, `batch4c-stop2-gate.log`.
-- **Last reviewer tree:** `d5a179720838b34f3143f5d0059dd1151a983ba9`; the frozen tree adds the two optional suggestions above.
-- **Not run:** the T3 trace's early-Escape sequence at real speed (the new test covers it under slowed animation); nothing else in 4c's five stops.
+- **Tree:** the green run's tree is `39abbfa86514218cba4addc19cbb526cdd424888`, with its `tests/` subtree `f5777d107d873560628797f6ccc80d59997fc4b4`. After the freeze only these files changed: the catalog's `docs/test-plans/board-drag-interaction/drag-6-preview-reconciliation.md` (the Reconciler's twelve status and Automation edits) and `docs/test-plans/item-attachment/att-10-creating-an-item.md` (ATT-10.9's), the Reconciler's report, and the two planning docs. The `tests/` subtree is unchanged, so the Reconciler added no stamp and edited no test, and there is no title-only diff to check.
+- **Reconciliation:** run once, cold, on that tree. It read the cases, wiki board-drag-interaction §10 and the tests, and found:
+  - **Closed, `Automated`:** DRAG-6.8, 6.9, 6.15, 6.18, 6.19, 6.20, 6.21, 6.22, 6.25, 6.26, 6.27 and 6.28. Automation lines: `tests/ui/drag-preview-reconciliation.spec.ts` for DRAG-6.8 and 6.9; `tests/ui/drag-forced-stop.spec.ts` for the rest, with DRAG-6.15 also naming `tests/ui/drag-7-hierarchy-modal.spec.ts`, whose DRAG-7.23 test covers a failed drop in the modal.
+  - **Held for 4j, `Open`:** DRAG-6.7 (its discard clause has no test), DRAG-6.16 (the top edge is unasserted), DRAG-6.23 (the whole case: its one surface test is skipped) and DRAG-6.24 (its drop-line test is skipped).
+  - **Closed by kind:** 9 of the 11 New (the open two are DRAG-6.7 and 6.16) and 3 of the 5 Split (the open two are DRAG-6.23 and 6.24).
+  - **The five-cell stop matrix** is accepted as covering DRAG-6.15, 6.16 and 6.20, since every clause is asserted for each cause and in each place. The Reconciler records a fault specific to one pair as a concern for 4j.
+  - **Outside the scope, confirmed:** DRAG-6.1 (whole with the new test), 6.2, 6.5 (two tests carry it) and 6.6 stay `Automated`. DRAG-6.17 is retired and no test carries it. DRAG-6.30 and 6.31 are `Manual`, left alone. TREE-5.3 and ATT-10.7 each lost a clause in the Planner's pass and stay `Automated`. ATT-10.9 was `Open`. Nathan approved its internal mapping onto the two `ItemDetailPanel.test.tsx` tests on 2026-11-13, and the Reconciler's follow-up set it `Automated` with `tests/ui/item-create-cap.spec.ts` and `client/src/components/ItemDetailPanel.test.tsx`. Both tests already carried the ID, so no stamp was added.
+  - **Review log:** it answered every open verdict, each resolved or routed, including what the Test Reviewer hadn't seen (the skips, the retired DRAG-6.5 test, the matrix cut and the DRAG-6.1 test).
+- **Coverage report, before and after its edits:** `tests/output/batch4d-stop5-report-catalog.txt` and `tests/output/batch4d-stop5-after-report-catalog.txt`. Both show no lost coverage, no `Manual` case a running test carries, no stale Automation line and no case with two statuses. After all its edits, including ATT-10.9's, the totals are 487 cases: 402 `Automated`, 71 `Open`, 10 `Manual`, 2 `Planned` and 2 `Pending PO`. By priority, P0 is 139 / 8 / 0 / 1 / 0, P1 is 191 / 52 / 6 / 0 / 0 and P2 is 72 / 11 / 4 / 1 / 2. The last report is `tests/output/batch4d-stop5-final2-report-catalog.txt`, with the same clean findings.
+- **Authored and expanded counts:** 50 variants were authored in Stop 2 against 44 planned. At the close 44 run and 6 are skipped. The two specs list 52 tests, run 46 (the 44 and the two earlier tests "DRAG-6.1, DRAG-6.2" and "DRAG-6.6") and skip 6. D2's ten repeats were 460 passes. One Vitest test was added, for DRAG-6.1.
+- **Helpers:** `tests/helpers/stopRun.ts` (new), `tests/helpers/forcedStopCause.ts` (`ready` and `land` added) and `tests/helpers/boardLocators.ts` (three locators).
+- **Coder handoffs:** none in this batch's stops, so Stop 3 was not needed. The Coder's earlier `ForcedStopCue.tsx` change, which removed the status element, is in the entry snapshot.
+- **Cost:** D2's repeats of the two specs took 5 minutes at five workers, the full suite 245 s and the gate 1.6 minutes. Nathan's cuts took out DRAG-6.5's older test (at least 5.5 s) and four matrix cells (7.8 s a pass), and skipped the DRAG-6.23 ghost and DRAG-6.24 drop-line tests.
+- **Gate and runs:** the green run's evidence is Stop 4's: D2 (460 passed, 0 failed, 0 flaky) and the full suite (482 passed, 0 failed, 0 flaky, 28 skipped). The root gate ran again after the Reconciler's edits: exit 0, 444 server, 1,106 client and 327 `scripts/` tests, format clean, `check:docs` 456 files and 0 hits, log `tests/output/batch4d-stop5-gate.log`. It ran once more after ATT-10.9's close with the same result, log `tests/output/batch4d-stop5b-gate.log`.
+- **What remains:** 4j holds DRAG-6.7, 6.16, 6.23 and 6.24, DRAG-7.18 and its cost study, the stop matrix's four cells and DRAG-6.22's two endings as questions, and the Reconciler's notes. ATT-10.9 is closed, and whether a section collapsed by hand stays collapsed across a reload is a possible Product Owner gap that 4j resolves. Open questions, "Batch 4d Stop 5", has the Reconciler's items. 4e (DRAG-8) is next in the batch order.
+- **Next owner and action:** Nathan reviews the report and this packet, and commits if he accepts them. I start no next batch. Gate: `npm run check` from PowerShell.
+- **Report and ledger paths:** `docs/audits/test-reconciliation-story-10-batch-4d.md`; `tests/output/batch4d-d2-repeat10.json`; `tests/output/batch4d-final-full-e2e.json`; `tests/output/batch4d-stop4-gate.log`; `tests/output/batch4d-stop5-gate.log`; `tests/output/batch4d-stop5b-gate.log`. **Last Test Reviewer tree:** `035aad0e08ebe73e4e9bd4ba0191e62b3da2c52f`.
 
 ## Review log
 
@@ -1630,7 +1606,760 @@ No new cost from this pass's other changes:
 
 **After this pass** (the QA Engineer): both optional tightenings are taken. DRAG-7.14's padding tests now assert each side of the modal is further than the margin from the window's edge, and the early-Escape test asserts the list's scroll offset first. The five changed tests ran 9 of 9 afterwards.
 
+### Batch 4d, Stop 1 — the desk's questions and replies (2026-11-12)
+
+Asked by the QA Engineer, from the cases, one desk agent for all seventeen. The baseline tree was `13d925d5c10cf9f55fb91452f26d98f431f60563`; the catalog was unchanged since. The harness indented each reply; that indent is the only thing removed. The Then quotes inside are the desk's, as it read each case. The proof plan routes each verdict ([story-10-batch-4d-proof-plan.md](story-10-batch-4d-proof-plan.md)). A follow-up to the same desk agent corrected five of its first verdicts (DRAG-6.25 r1 and r4, DRAG-6.26 r1, r3 and r4); both replies are here, and the second stands in place of the rows it names. The 74 rows, after the corrections: 59 follow the Then, 3 are not stated by it, 3 contradict it and 9 need a session. (The second reply's own count of withdrawn verdicts says six; the rows it lists are these five.)
+
+**The questions, as sent:**
+
+```text
+QA Engineer's reading questions for Story 10 batch 4d (DRAG-6). Answer in your fixed form: for each case quote its Then whole, then one line per row in exactly one of the four forms. Rows are outcomes I mean to assert (or to leave unasserted) in the stated variant. The cases are in docs/test-plans/board-drag-interaction/drag-6-preview-reconciliation.md; the wiki is board-drag-interaction §10 and boards-columns-unsorted §7. Notation: X is the item being dragged; Y is an item dropped earlier whose write or answer causes the resync; "pending" is the pending marker; "the three resyncs" are DRAG-6.15's: a failed item drop, a stale response carrying reindex pairs, and a failed column reorder.
+
+DRAG-6.7
+ r1. Write 1's response arrives after write 2's and carries reindex pairs: the board reloads from the server, and afterwards every item the pairs reindexed is shown in the server's order (the board equals the server).
+ r2. A stale response with no reindex pairs: its row for X is discarded, and the board does not reload.
+ r3. "Stale" means a response to an earlier write of the same item that arrives after a later write's response for it (DRAG-6.5's two writes).
+
+DRAG-6.8
+ r1. X is dropped at slot s1 (write 1 held in flight), then picked up again and cancelled with Escape: after the cancel X is shown pending at s1.
+ r2. The same when the re-drag is released where nothing is written (outside any band): X is shown pending at s1.
+ r3. "the board never shows X at its old slot while a write that moves it is outstanding" asks for the state after the cancel or release, not for a continuous watch from pickup to cancel.
+ r4. Write 1 has already landed before the cancel: X sits at its saved position with no pending marker.
+ r5. During the re-drag itself (before the cancel), where X's in-list ghost sits is not stated by this case.
+
+DRAG-6.9
+ r1. Write 1's response lands while X is dragged again, with the cursor not moving: once the board has applied the response the ghost is at the drag's current placement.
+ r2. "as soon as the board has applied the response" is asserted as a state reached with no pointer movement after the response, with no duration.
+ r3. After that, the drag carries on, and a release writes against the reconciled board (the request's anchor and side name the reconciled neighbours of the ghost).
+ r4. "reconciled as usual": X's pending marker for write 1 clears and X holds the server's position.
+
+DRAG-6.15
+ r1. For a stop by a failed item drop, a stale response with pairs, and a failed column reorder, X is wherever the reloaded board has it, which is where the server has it, and which may differ from the pickup place.
+ r2. After the stop no carried copy and no in-list ghost is left.
+ r3. Nothing is written for X, and releasing the pointer afterwards sends no request.
+ r4. "a column reorder released just before this pickup failed": the column reorder's request is still outstanding when X is picked up, and its refusal is what reloads the board.
+ r5. The drag is stopped "at once": it is over by the time the reloaded board is drawn.
+ r6. The statement "This holds in a column/sub-row, a Card's descendants section, and the hierarchy modal" asks that each of the three contexts is shown stopped by one of the three resyncs; it does not itself require all nine pairs.
+
+DRAG-6.16
+ r1. The banner lies along the window's top edge, the full width of the window.
+ r2. A failed item drop and a failed column reorder both show "Your last move didn't save, so the board reloaded. Nothing moved."; a stale response shows "The board refreshed, which stopped your drag. Nothing moved."
+ r3. The banner is on screen while "Loading board…" shows and remains on the reloaded board, never cleared by either transition.
+ r4. The same for an item dragged in a column/sub-row, in a Card's descendants section and in the hierarchy modal.
+ r5. The explanation names the earlier write or response, not a failure of the interrupted drag.
+
+DRAG-6.17
+ r1. The status live region (role status) holds the cause's full explanation after the stop, and keyboard focus has not moved to the banner.
+ r2. The loading transition leaves the same text in the same region (it is not lost or replaced by the other cause's text).
+ r3. "assistive tech announces" is asserted by the live region's content, since a screen reader's output can't be observed.
+
+DRAG-6.18
+ r1. After the stop and the reload, a click on the banner, and a click elsewhere on the board that starts no drag, leaves the banner up with the same explanation.
+ r2. Starting the next drag (pickup) before the lifetime expires removes the explanation at the pickup.
+ r3. That holds when the pickup comes in the banner's fully visible part and when it comes in its fade, which the wiki makes the last quarter of the lifetime.
+
+DRAG-6.19
+ r1. With the lifetime set to a positive T, the banner is present until T has passed and is absent after, for the write-failed explanation and for the refresh explanation.
+ r2. T runs from the stop, so a reload that takes some of T does not extend it.
+ r3. A test may use T as a parameter it seeds, with a margin either side of expiry, and fix no milliseconds.
+
+DRAG-6.20
+ r1. After the reload the row drawn for X has the flash state (an attribute), and no row of another item has it.
+ r2. That holds for X as a Free Card, as a Stub in an expanded descendants section, and as a row in an open hierarchy modal.
+ r3. If the reload moved X from where the drag picked it up, the flash state is on its reloaded place.
+ r4. The item whose earlier write or response caused the stop (Y) has no flash state.
+ r5. Assigning the flash state changes no saved placement of X or Y.
+
+DRAG-6.21
+ r1. X is stopped, and the reloaded board does not draw it because it lies in a collapsed descendants section, behind an overflow row, or in a closed hierarchy modal: no row flashes, X's included.
+ r2. In those states the section stays collapsed, the overflow row stays unopened, the modal stays closed, and nothing scrolls to reveal X.
+ r3. The banner still shows the explanation.
+ r4. The case doesn't say how X comes to lie where it is hidden; a Given may move X there on the server while the drag is held.
+ r5. "behind an overflow row" and "in a closed hierarchy modal" name two hidden states, not one place seen two ways.
+
+DRAG-6.22
+ r1. Escape or another cancel of an item drag: no banner, no announcement text in the status region, and no flash.
+ r2. A release where nothing is written, outside any band and at a Stub's own original gap and depth: the same.
+ r3. A failed item drop, a failed column reorder, or a stale response resyncs the board with no drag running, including after the preceding drag was released or cancelled: the same.
+ r4. A failed column save that interrupts an item drag is not this case's: it shows the failed-write explanation (DRAG-6.16).
+
+DRAG-6.23
+ r1. Row X with a write in flight is marked pending when no drag target tier is assigned to it.
+ r2. While another item is dragged and X is assigned Full, then Mid, then Low, X stays pending; pending and the tier coexist as separate states.
+ r3. Pending X picked up again: its ghost is pending and has ghost state, not a target tier.
+ r4. When the response is applied X is no longer pending, and any tier the current drag assigns it still applies.
+ r5. The painted pulse is not asserted (DRAG-6.31's).
+
+DRAG-6.24
+ r1. Pending Card P with an attached Stub S whose own write is not in flight: P is marked pending and S is not, and S keeps its own tier if a drag assigned one.
+ r2. Only S has a write in flight: S is pending and P is not.
+ r3. Both have writes in flight: each is pending; applying one answer clears only that row's marker.
+ r4. A drop line naming a pending row, beside a Mid Card or a Stub, has no pending state.
+
+DRAG-6.25
+ r1. For each of the three resyncs interrupting a column drag of E toward the first slot, the board shows the server's order A, C, E.
+ r2. The interrupted drag sends no reorder request, including when the pointer is released afterwards.
+ r3. No item is moved by ending the drag.
+ r4. The third resync here is a failed column reorder released just before this drag, whose request is still outstanding when E's drag starts.
+
+DRAG-6.26
+ r1. The banner for a stopped column drag has the same sentences by cause as an item's stop (a failed item drop or a failed column reorder: the write-failed sentence; a stale response: the refresh sentence).
+ r2. It is announced through the status region without a focus change.
+ r3. A click leaves it up; the next drag clears it; otherwise it expires at T from the stop without restarting when the reload finishes.
+ r4. Neither the stopped column nor any item receives the flash state.
+
+DRAG-6.27
+ r1. When the reload takes longer than F, the stopped item's flash state starts when the reloaded board is first drawn (t0) and lasts until t0 + F; loading spends none of it.
+ r2. At t0 + F the state ends even though the banner is still up.
+ r3. A new drag started before t0 + F ends the flash at that start. Another reload started before t0 + F ends it too.
+ r4. That other reload, with no stop behind it, draws no flash, even if it draws the same item or finishes before t0 + F.
+ r5. Ending the new drag, redrawing the row, or keeping the banner up does not replay the old flash.
+ r6. F is the app's one flash-window length (a constant, not a tuning value), so a test may read it from the app and compare timings to it with a margin.
+
+DRAG-6.28
+ r1. X is hidden in a collapsed descendants section at t0; opening the section at t0 + d, with 0 < d < F, makes X flash until t0 + F (for F − d), not for a fresh F.
+ r2. Opening it at or after t0 + F draws X without the flash, though the banner is still up.
+ r3. The same boundary for an item behind an overflow row that the user brings into view by opening the hierarchy modal, and for one brought into view in a previously closed hierarchy modal.
+ r4. No other item flashes, and nothing opens automatically.
+ r5. "behind overflow" and "in a previously closed hierarchy modal" are the same hidden place reached the same way, opening the modal from the overflow row.
+```
+
+**The desk's first reply:**
+
+```text
+Story 10 batch 4d (DRAG-6): the desk's reading of each case
+
+Sources: c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-6-preview-reconciliation.md, c:\Users\natha\Dev\KanbanApp\docs\wiki\board-drag-interaction\README.md (§10; also §4.1 for DRAG-6.23 and DRAG-6.24), c:\Users\natha\Dev\KanbanApp\docs\wiki\boards-columns-unsorted\README.md §7, and c:\Users\natha\Dev\KanbanApp\docs\wiki\hierarchy-placement\README.md §7 for DRAG-6.24. I read §2 and §9 of the board-drag-interaction page only for what their terms mean, and I say so wherever I lean on them. I show links in quotes as the bare case ID.
+
+Four questions need a session. They cover 12 rows between them:
+- **How an announcement is observed.** DRAG-6.17 r3, which also decides DRAG-6.17 r1 and r2, DRAG-6.22 r1–r3 and DRAG-6.26 r2. Neither the case nor the wiki says that a live region's content stands for an announcement.
+- **Overflow row versus closed modal.** DRAG-6.21 r5 and DRAG-6.28 r5 ask opposite things. The cited §10 doesn't settle whether these are one hidden place or two.
+- **The stop paragraph of DRAG-6.25 and DRAG-6.26.** It is DRAG-6.25 r1 and DRAG-6.26 r1, r3 and r4. Read with §4.1 and boards-columns-unsorted §7, the cases' "a failed item drop" isn't a resync that can land during a column drag.
+- **The column drag's banner timing.** DRAG-6.26 r3. The Then reads two ways on when the banner's lifetime `T` starts.
+
+Four rows contradict the Then: DRAG-6.15 r5 and r6, DRAG-6.23 r2 and DRAG-6.25 r4.
+
+---
+
+## DRAG-6.7
+
+**Then, as I read it:** "its row for `X` is discarded, **and** the board resyncs from the server instead of applying the pairs: the client doesn't guess whether they are still current after write 2. After the resync, the board matches the server, every reindexed item included. *And given* a stale response with no reindex pairs, *then* discarding its row is all that happens; no resync is needed."
+
+- **r1** (the response with pairs: the board reloads and then equals the server): **Follows the Then.** It follows "the board resyncs from the server instead of applying the pairs … After the resync, the board matches the server, every reindexed item included". Wiki §10 settles that "resyncs" means a reload: "the client resyncs rather than guess whether they are still current, by reloading the board".
+- **r2** (the response without pairs: the row is discarded and the board doesn't reload): **Follows the Then.** It follows "discarding its row is all that happens; no resync is needed". "All that happens" rules out the reload, which §10 makes the resync.
+- **r3** ("stale" means the response to the item's earlier write arriving after its later write's response): **Follows the Then.** The Then says "*when* the stale response is received, *then* its row for `X` is discarded", and the Given names that response: "the two writes of DRAG-6.5, where write 1's response arrives after write 2's". Wiki §10 sequences responses "per item so a stale one can't be applied last".
+
+## DRAG-6.8
+
+**Then, as I read it:** "`X` is shown pending at `s1` again: the earlier placement is restored, not cleared, so the board never shows `X` at its old slot while a write that moves it is outstanding. *And given* write 1 had already landed before the cancel, *then* there is nothing to restore: `X` sits at its saved position, with no marker."
+
+- **r1** (cancel with Escape: pending at s1): **Follows the Then.** It follows "`X` is shown pending at `s1` again". Escape is a cancel, as wiki §10 has it: "Escape, any other cancel".
+- **r2** (a release where nothing is written, outside any band: pending at s1): **Follows the Then.** The When is "released where nothing is written (DRAG-1.9, DRAG-3.12)" and the Then is "`X` is shown pending at `s1` again". The release must actually write nothing. Outside any band, that means `X` has popped out to the Board layer and is released "nowhere" (DRAG-1.9). A Card still locked in its column with the cursor outside commits that column's reposition, which is not this When.
+- **r3** (the "never" asks for the state after the cancel or release, not a watch from pickup to cancel): **Follows the Then.** "so the board never shows `X` at its old slot while a write that moves it is outstanding" is the result of "the earlier placement is restored, not cleared" at the When's cancel or release. So it holds at every moment from the cancel or release until write 1 lands, not at one sample. The re-drag before the cancel is DRAG-6.13's Then: "At no point in the re-drag does the ghost appear at `s0`".
+- **r4** (write 1 landed before the cancel: saved position, no marker): **Follows the Then.** It follows "*And given* write 1 had already landed before the cancel, *then* there is nothing to restore: `X` sits at its saved position, with no marker."
+- **r5** (where the ghost sits during the re-drag is not this case's): **Not stated by the Then or the wiki.** This Then says nothing about the ghost during the re-drag, and its rule (restored, not cleared, at the cancel or release) is proved without it. The wiki does say where a re-dragged pending item's ghost sits: §10, "The placement is the ghost during the drag", with §2 rule 2. That is DRAG-6.13's Then ("its ghost starts at `s1`"), whose Given and When are this same pickup. So it is a question about that case, not a gap in this one.
+
+## DRAG-6.9
+
+**Then, as I read it:** "the response is reconciled as usual (TC-5a.1, DRAG-6.5), **and** the ghost is back at the drag's current placement as soon as the board has applied the response, without waiting for any further cursor movement. The drag carries on, and its release commits against the reconciled board."
+
+- **r1** (with the cursor still, the ghost is at the current placement once the response is applied): **Follows the Then.** It follows "the ghost is back at the drag's current placement as soon as the board has applied the response, without waiting for any further cursor movement".
+- **r2** (asserted as a state reached with no pointer movement, with no duration): **Follows the Then.** "as soon as the board has applied the response" ties the ghost's return to the response being applied, not to a time. Wiki §10 limits the gap to "only for the instant it takes the board to notice" and names no duration. So the state to assert is the one present once the response is applied, not one reached at some later point.
+- **r3** (the drag carries on, and the release's anchor and side name the ghost's neighbours on the reconciled board): **Follows the Then.** It follows "The drag carries on, and its release commits against the reconciled board". Wiki §10 says "In a column or sub-row the saved anchor is always one of the ghost's own neighbors (§2)". This is for an in-context release in a column or sub-row.
+- **r4** ("reconciled as usual": write 1's marker clears and `X` holds the server's position): **Follows the Then.** It follows "the response is reconciled as usual". Wiki §10: "On the response, in this order: apply any reindex pairs, assign the authoritative position, clear the pending marker".
+
+## DRAG-6.15
+
+**Then, as I read it:** "the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. This holds in a column/sub-row, a Card's descendants section, and the hierarchy modal. These are the three resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios. A column drag stopped by the same resyncs is DRAG-6.25's."
+
+- **r1** (`X` is where the reloaded board and the server have it, which may differ from the pickup place): **Follows the Then.** It follows "`X` renders wherever the reloaded board has it, which is where the server has it". Wiki §10 adds "and may not be where the drag picked it up".
+- **r2** (no carried copy and no in-list ghost left): **Follows the Then.** It follows "no carried copy or ghost is left".
+- **r3** (nothing written, and a later release sends no request): **Follows the Then.** It follows "Nothing is written for `X`, and releasing the pointer afterwards sends no request."
+- **r4** (the column reorder's request is outstanding at pickup, and its refusal is what reloads the board): **Follows the Then.** It follows the When, "the board reloads from the server mid-drag because … a column reorder released just before this pickup failed", with boards-columns-unsorted §7: "A reorder that fails reloads the board". The failure that starts the reload comes mid-drag, so the request is still outstanding at the pickup. "Failed" is the case's word, and a refusal is one kind of failure.
+- **r5** ("at once" means the drag is over by the time the reloaded board is drawn): **Contradicts the Then.** It contradicts "the drag ends at once". The drag ends when the reload lands, not as late as the redraw. Wiki §10 puts the stop's banner "over the board and over the 'Loading board…' that replaces it" and has it stay "up across the reload". So the stop has happened by the time "Loading board…" replaces the board. Being over by the redraw is true, but a drag still held during loading passes this row and fails the Then.
+- **r6** (the contexts sentence asks for each context with one resync, not all nine pairs): **Contradicts the Then.** It contradicts "This holds in a column/sub-row, a Card's descendants section, and the hierarchy modal." "This" is the stop the When gives for each of its three resyncs. So the sentence states the outcome for each resync in each context, nine in all. Which of those a test must run to assert it is a coverage judgment, not a reading of the case.
+
+## DRAG-6.16
+
+**Then, as I read it:** "a banner appears along the window's top edge with the explanation for its cause: after an earlier item move or column save failed: “Your last move didn’t save, so the board reloaded. Nothing moved.”; after a stale response carrying reindex pairs triggers a refresh: “The board refreshed, which stopped your drag. Nothing moved.” The banner is visible over “Loading board…” and remains over the reloaded board, without being cleared by either transition. This holds for an item dragged in a column/sub-row, in a Card's descendants section, or in the hierarchy modal. The cause is the write or response that forced the resync, not a failure of the interrupted drag to save: that drag writes nothing (DRAG-6.15)."
+
+- **r1** (along the top edge, the full width of the window): **Not stated by the Then or the wiki.** "along the window's top edge" is the Then's. The full width is in neither the Then nor wiki §10, which calls the banner's look "a working placeholder (Open questions)". The case's rule, a top-edge banner with its cause's text that stays across the reload, is proved without it.
+- **r2** (the failed drop and the failed column reorder share the write-failed sentence; a stale response gets the refresh sentence): **Follows the Then.** It follows the two bullets: "after an earlier item move or column save failed: “Your last move didn’t save, so the board reloaded. Nothing moved.”" and "after a stale response carrying reindex pairs triggers a refresh: “The board refreshed, which stopped your drag. Nothing moved.”" Both the case and wiki §10 spell "didn’t" with the typographic apostrophe ’ (U+2019), not the straight ' in the row.
+- **r3** (on screen during "Loading board…", still up on the reloaded board, cleared by neither transition): **Follows the Then.** It follows "The banner is visible over “Loading board…” and remains over the reloaded board, without being cleared by either transition". "Visible over" means drawn above the loading text, not hidden under it.
+- **r4** (the same in a column/sub-row, a descendants section and the hierarchy modal): **Follows the Then.** It follows "This holds for an item dragged in a column/sub-row, in a Card's descendants section, or in the hierarchy modal." The full width from r1 stays unstated in each.
+- **r5** (the explanation names the earlier write or response, not a failure of the interrupted drag): **Follows the Then.** It follows "The cause is the write or response that forced the resync, not a failure of the interrupted drag to save: that drag writes nothing". The explanation's words are the two sentences the Then quotes, so this is asserted through them. The refresh sentence names the refresh the stale response forced, not the response itself.
+
+## DRAG-6.17
+
+**Then, as I read it:** "assistive tech announces that cause's full explanation from DRAG-6.16 without the user moving focus to the banner. The loading transition does not lose the announcement or substitute the other cause's explanation."
+
+- **r1** (a role-status live region holds the full explanation, and focus hasn't moved to the banner): **The case is silent, so it needs a session.** A status live region holding the text is the form of "assistive tech announces" that r3 asks about, and neither the Then nor wiki §10 gives one. The focus part is also not stated. The Then's "without the user moving focus to the banner" says the user needn't move focus. It says nothing about the app moving it. The column case, DRAG-6.26, says "without a focus change", and this one doesn't.
+- **r2** (the loading transition leaves the same text in the same region): **The case is silent, so it needs a session.** The outcome itself is the Then's: "The loading transition does not lose the announcement or substitute the other cause's explanation". Asserting it as text kept in a region uses the live-region form r3 asks about.
+- **r3** ("announces" is asserted through the live region's content): **The case is silent, so it needs a session.** The case's rule can't be proved by a test without an outcome neither source states. The Then says "assistive tech announces that cause's full explanation", and wiki §10 says "Assistive tech reads it out when it appears". Both name what assistive tech does, and neither names anything observable that stands for it, such as a live region's content. Whether such content counts as the announcement, or the announcement is checked another way, is a judgment the case doesn't make.
+
+## DRAG-6.18
+
+**Then, as I read it:** "the banner remains, with the same explanation. *When* the user starts the next drag before that lifetime expires, *then* the explanation disappears at pickup, rather than remaining over the new gesture. This holds when the next drag starts during the fully visible part of the cue or during its fade."
+
+- **r1** (a click on the banner, or elsewhere without starting a drag, leaves it up with the same text): **Follows the Then.** The When is "the user clicks the banner or elsewhere on the board without starting a drag" and the Then is "the banner remains, with the same explanation". The Given has the board reloaded and the lifetime not yet expired.
+- **r2** (the next pickup before expiry removes the explanation at the pickup): **Follows the Then.** It follows "the explanation disappears at pickup, rather than remaining over the new gesture".
+- **r3** (it holds in the fully visible part and in the fade, the last quarter of the lifetime): **Follows the Then.** It follows "This holds when the next drag starts during the fully visible part of the cue or during its fade". Wiki §10 settles the fade as the last quarter: "It goes after about 5 seconds (tunable), the last quarter a fade". That is the last quarter of the configured lifetime, not of 5 s.
+
+## DRAG-6.19
+
+**Then, as I read it:** "the banner remains present until `T` expires and is absent at expiry. Completing the board reload does not restart its lifetime. The same lifecycle holds for both cause explanations in DRAG-6.16. This case asserts lifetime and presence using `T` as a parameter, without fixing milliseconds. The banner's full-strength appearance and final-quarter fade are checked in DRAG-6.30."
+
+- **r1** (present until `T` has passed and absent after, for both explanations): **Follows the Then.** It follows "the banner remains present until `T` expires and is absent at expiry" and "The same lifecycle holds for both cause explanations".
+- **r2** (`T` runs from the stop, so a reload that uses some of it doesn't extend it): **Follows the Then.** It follows "remains present until `T` expires … Completing the board reload does not restart its lifetime". The cue's lifetime starts when the cue appears at the stop (DRAG-6.16). Wiki §10 opens the flash's window only once the board is drawn "so a slow reload doesn't use it up", and has no such clause for the banner, which "stays up across the reload".
+- **r3** (a test may seed `T` as a parameter, with a margin either side, and fix no milliseconds): **Follows the Then.** It follows "This case asserts lifetime and presence using `T` as a parameter, without fixing milliseconds". A `T` the test sets is the configured value for that run. The margin is the test's own business, and the case leaves it open.
+
+## DRAG-6.20
+
+**Then, as I read it:** "the drawn row for `X` has the stopped-item flash state and no row of another item receives it. This holds when `X` is a Free Card, a Stub in an expanded descendants section, or a row in an open hierarchy modal. If the reload moved `X` relative to the interrupted drag's pickup, that state belongs to its reloaded place. The item whose earlier failed write or stale response caused the resync is not substituted for `X`. Assigning the state changes neither item's saved placement. The state's window is DRAG-6.27's; its two painted amber pulses are DRAG-6.30's."
+
+- **r1** (after the reload, `X`'s row has the flash state, as an attribute, and no other item's row does): **Follows the Then.** It follows "the drawn row for `X` has the stopped-item flash state and no row of another item receives it". The case asserts the state apart from its painting, which is DRAG-6.30's. An attribute is one way of exposing the state, and the case leaves that open. The state is read within its window (DRAG-6.27).
+- **r2** (as a Free Card, as a Stub in an expanded section, as a row in an open modal): **Follows the Then.** It follows "This holds when `X` is a Free Card, a Stub in an expanded descendants section, or a row in an open hierarchy modal."
+- **r3** (if the reload moved `X`, the state is on its reloaded place): **Follows the Then.** It follows "If the reload moved `X` relative to the interrupted drag's pickup, that state belongs to its reloaded place."
+- **r4** (`Y` has no flash state): **Follows the Then.** It follows "The item whose earlier failed write or stale response caused the resync is not substituted for `X`" and "no row of another item receives it". This holds where `Y` is a different item from `X`. A stale response can be `X`'s own earlier write's (DRAG-6.7's two writes), and then that clause doesn't set `Y` apart from `X`.
+- **r5** (assigning the state changes no saved placement of `X` or `Y`): **Follows the Then.** It follows "Assigning the state changes neither item's saved placement."
+
+## DRAG-6.21
+
+**Then, as I read it:** "while `X` remains hidden there is no flash for it and no substitute item flashes. The section stays collapsed, the overflow row does not open the hidden subtree, the modal stays closed, and neither the board nor a list scrolls to reveal `X`. The forced-stop banner still gives the explanation in DRAG-6.16. A user bringing `X` into view is DRAG-6.28's."
+
+- **r1** (hidden in a collapsed section, behind an overflow row or in a closed modal: no row flashes, `X`'s included): **Follows the Then.** It follows "while `X` remains hidden there is no flash for it and no substitute item flashes".
+- **r2** (section stays collapsed, overflow row unopened, modal closed, nothing scrolls): **Follows the Then.** It follows "The section stays collapsed, the overflow row does not open the hidden subtree, the modal stays closed, and neither the board nor a list scrolls to reveal `X`."
+- **r3** (the banner still shows the explanation): **Follows the Then.** It follows "The forced-stop banner still gives the explanation in DRAG-6.16."
+- **r4** (the case doesn't say how `X` comes to be hidden; a Given may move it there on the server during the drag): **Not stated by the Then or the wiki.** The When fixes only that the reloaded board doesn't draw `X` because of where it lies. Wiki §10 says the item is "wherever the reloaded board shows it, which is where the server has it". So a Given that puts `X` there on the server, before one of the three resyncs stops the drag, reaches this When. The rule is proved however `X` got there.
+- **r5** ("behind an overflow row" and "in a closed hierarchy modal" are two hidden states, not one place seen two ways): **The case is silent, so it needs a session.** The Then reads two ways. It lists "past an overflow row, or in a closed hierarchy modal" as separate alternatives, which reads as two states. Neither the Then nor wiki §10 says whether a closed modal is a hidden place of its own: §10 gives them only as examples, "such as one inside a collapsed section, past an overflow row or in a closed modal". Wiki §9 defines both terms but isn't in the Rule field. It makes the modal "the set the section shows, without the cut-off" and the overflow row the stand-in for the children past the cut-off. Under §9, a hidden item in a closed modal is one past an overflow row, or in a collapsed section.
+
+## DRAG-6.22
+
+**Then, as I read it:** "*Given* no forced-stop cue is showing, *when* any of the following happens, *then* no forced-stop banner or announcement appears, and no item receives the forced-stop flash: the user ends an item drag with Escape or another cancel; the user releases where the drag writes nothing, such as nowhere or a Stub's original gap and depth; an earlier failed item drop, failed column reorder or stale response resyncs the board with no drag running, including when the preceding drag has already been released or cancelled. An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in DRAG-6.16."
+
+- **r1** (Escape or another cancel: no banner, no status-region text, no flash): **The case is silent, so it needs a session.** "No banner" and "no flash" follow "no forced-stop banner … appears, and no item receives the forced-stop flash" for "the user ends an item drag with Escape or another cancel". But asserting "no … announcement appears" as no text in the status region uses an observable form of an announcement that neither the Then nor wiki §10 gives. That is the same question as DRAG-6.17 r3.
+- **r2** (a release where nothing is written, outside any band or at a Stub's own gap and depth: the same): **The case is silent, so it needs a session.** The banner and flash parts follow the same clause for "the user releases where the drag writes nothing, such as nowhere or a Stub's original gap and depth". "Outside any band" writes nothing only from the Board layer after a pop ("nowhere", DRAG-1.9). The status-region part rests on the same open question as DRAG-6.17 r3.
+- **r3** (a failed drop, failed column reorder or stale response resyncs with no drag running, including after a release or cancel: the same): **The case is silent, so it needs a session.** The banner and flash parts follow the same clause for "an earlier failed item drop, failed column reorder or stale response resyncs the board with no drag running, including when the preceding drag has already been released or cancelled". The status-region part rests on the same open question as DRAG-6.17 r3.
+- **r4** (a failed column save that interrupts an item drag is not this case's): **Follows the Then.** It follows "An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in DRAG-6.16."
+
+## DRAG-6.23
+
+**Then, as I read it:** "it is marked pending. *When* another item is dragged and `X` is assigned Full, Mid or Low, *then* `X` remains pending independently of that tier. *When* pending `X` is picked up again, *then* its ghost retains the pending state while having ghost state rather than a target tier. *When* the response is applied and the write's marker clears, *then* `X` is no longer pending; any pickup tier belonging to the current drag still applies. The painted pulse at each strength is DRAG-6.31's."
+
+- **r1** (pending with no tier assigned): **Follows the Then.** It follows "*when* it has no drag target tier, *then* it is marked pending".
+- **r2** (assigned Full, then Mid, then Low while another item is dragged, `X` stays pending): **Contradicts the Then.** It contradicts "When another item is dragged and `X` is assigned Full, Mid or Low", which gives `X` one of the three in a drag. Wiki §4.1 holds a tier "for the whole drag, at every layer, from pickup to the drag's end", so one drag can't move `X` from Full to Mid to Low. If each tier comes from its own drag, `X` staying pending as a state apart from the tier follows "`X` remains pending independently of that tier".
+- **r3** (a re-picked pending `X`: its ghost is pending and has ghost state, not a tier): **Follows the Then.** It follows "its ghost retains the pending state while having ghost state rather than a target tier".
+- **r4** (once the response is applied, `X` isn't pending and any tier from the current drag still applies): **Follows the Then.** It follows "`X` is no longer pending; any pickup tier belonging to the current drag still applies".
+- **r5** (the painted pulse isn't asserted): **Follows the Then.** It follows "The painted pulse at each strength is DRAG-6.31's."
+
+## DRAG-6.24
+
+**Then, as I read it:** "`P` alone is marked pending and `S` is not. `S` retains its own target tier, if a drag assigned one. *Given* instead `S` alone has a write in flight, *then* `S` is pending and `P` is not. If both have writes in flight, each has its own pending state; applying one answer clears only that row's marker while the other write is still pending. A drop line naming a pending row never acquires pending state, including beside a Mid Card or Stub. The painted pulses, their independent strengths and the unpulsed line are DRAG-6.31's."
+
+- **r1** (`P` pending and `S` not, and `S` keeps its own tier): **Follows the Then.** It follows "`P` alone is marked pending and `S` is not. `S` retains its own target tier, if a drag assigned one." Wiki §4.1 adds: "A Card's Stubs are drawn at their own tier".
+- **r2** (only `S` in flight: `S` pending, `P` not): **Follows the Then.** It follows "*Given* instead `S` alone has a write in flight, *then* `S` is pending and `P` is not."
+- **r3** (both in flight: each pending, and one answer clears only its own row): **Follows the Then.** It follows "each has its own pending state; applying one answer clears only that row's marker while the other write is still pending".
+- **r4** (a drop line naming a pending row, beside a Mid Card or a Stub, isn't pending): **Follows the Then.** It follows "A drop line naming a pending row never acquires pending state, including beside a Mid Card or Stub". "Never" covers the line beside any pending row.
+
+## DRAG-6.25
+
+**Then, as I read it:** "the column drag ends at once and the board shows the server-saved order `A, C, E`. The interrupted drag sends no reorder request, including when the pointer is subsequently released. No item is moved by ending this drag. Its banner and lack of a flash are DRAG-6.26's."
+
+- **r1** (for each of the three resyncs, the board shows `A, C, E`): **The case is silent, so it needs a session.** For a stale response with reindex pairs and for a failed column reorder, it follows "the board shows the server-saved order `A, C, E`". The failed item drop is the problem. The When names "an earlier item drop failed", but neither the Then nor the cited wiki makes a failed item drop's resync one that can land during a column drag. §10 says "Three resyncs can land while the user is dragging", "the two above, a failed drop's and a stale response's, and a failed column reorder's". Wiki §4.1 holds a tier "for the whole drag … from pickup to the drag's end", and an item drag ends at its drop. boards-columns-unsorted §7 says only that "A reorder that fails reloads the board". So a column drag that starts after an item drop and is still held when that drop's refusal lands is not stated. Without it, this column-drag rule can't be proved for that cause.
+- **r2** (no reorder request, including after a later release): **Follows the Then.** It follows "The interrupted drag sends no reorder request, including when the pointer is subsequently released."
+- **r3** (no item is moved by ending the drag): **Follows the Then.** It follows "No item is moved by ending this drag."
+- **r4** (the third resync is a failed column reorder whose request is still outstanding when `E`'s drag starts): **Contradicts the Then.** It contradicts "the column drag ends at once" when the reload lands. Wiki §10 puts the stop's banner "over the board and over the 'Loading board…' that replaces it", and boards-columns-unsorted §7 says "A reorder that fails reloads the board". So the reload that starts on the earlier reorder's failure stops the drag at once. A reading that leaves this drag running while that request is outstanding conflicts with that clause.
+
+## DRAG-6.26
+
+**Then, as I read it:** "the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it present; the next drag clears it. Otherwise it remains until configured lifetime `T` expires, without restarting when the reload finishes. Neither the stopped column nor any item receives stopped-item flash state. The banner's full-strength appearance and final-quarter fade are checked in DRAG-6.30."
+
+- **r1** (the same sentences by cause as an item's stop): **The case is silent, so it needs a session.** For a failed column reorder and a stale response, it follows "An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.”". As with DRAG-6.25 r1, neither the Then nor wiki §4.1, §10 or boards-columns-unsorted §7 states that a failed item drop's resync can land during a column drag. So the write-failed sentence for that cause can't be proved without an outcome neither source states.
+- **r2** (announced through the status region, with no focus change): **The case is silent, so it needs a session.** "Without a focus change" follows "The explanation is announced without a focus change". "Through the status region" uses an observable form of the announcement that neither the Then nor wiki §10 gives, the same question as DRAG-6.17 r3.
+- **r3** (a click leaves it up, the next drag clears it, and otherwise it expires at `T` from the stop, not restarting when the reload finishes): **The case is silent, so it needs a session.** The Then reads two ways. "A click leaves it present; the next drag clears it" follows, and so does "without restarting when the reload finishes". But "it remains until configured lifetime `T` expires" doesn't say whether `T` runs from the stop or from when the banner is first shown. Wiki §10 says only that "It goes after about 5 seconds (tunable)".
+- **r4** (neither the column nor any item gets the flash state): **The case is silent, so it needs a session.** For a failed column reorder and a stale response, it follows "Neither the stopped column nor any item receives stopped-item flash state". As with DRAG-6.25 r1, neither the Then nor the cited wiki states that a failed item drop's resync can land during a column drag, so the outcome for that cause can't be proved without an outcome neither source states.
+
+## DRAG-6.27
+
+**Then, as I read it:** "loading spends none of the window. When the reloaded board first draws the stopped item at time `t0`, its stopped-item flash state has the full window until `t0 + F`. At `t0 + F` that state ends even if the banner remains. The target row is DRAG-6.20's; the painted pulses are DRAG-6.30's. *Starting again, when* a new drag starts or another reload starts before `t0 + F`, *then* the flash ends at that start. The other reload, with no new stop behind it, draws no flash, even if it draws the same item or finishes before `t0 + F`. Ending the new drag, redrawing the row or keeping the banner visible does not replay the old flash. The window is measured from the board drawing, even when the stopped item is hidden (DRAG-6.28), and is not the banner's lifetime."
+
+- **r1** (with a reload longer than `F`, the flash starts at the first draw, `t0`, and lasts until `t0 + F`): **Follows the Then.** It follows "loading spends none of the window. When the reloaded board first draws the stopped item at time `t0`, its stopped-item flash state has the full window until `t0 + F`."
+- **r2** (at `t0 + F` the state ends though the banner is up): **Follows the Then.** It follows "At `t0 + F` that state ends even if the banner remains."
+- **r3** (a new drag or another reload before `t0 + F` ends the flash at its start): **Follows the Then.** It follows "when a new drag starts or another reload starts before `t0 + F`, then the flash ends at that start".
+- **r4** (that other reload draws no flash, even of the same item or if it finishes before `t0 + F`): **Follows the Then.** It follows "The other reload, with no new stop behind it, draws no flash, even if it draws the same item or finishes before `t0 + F`."
+- **r5** (ending the new drag, redrawing the row or keeping the banner up doesn't replay the flash): **Follows the Then.** It follows "Ending the new drag, redrawing the row or keeping the banner visible does not replay the old flash."
+- **r6** (`F` is one app constant, not a tuning value, so a test may read it and compare with a margin): **Follows the Then.** It follows "with flash-window length `F`". A value the case names by name is the value the app has. So a test reads it and compares with a margin, and pins no number: wiki §10's "about 1.4 seconds in all" is not the case's. The parenthetical claim that `F` is a constant and not a tuning value describes the app, so that part is asked from the app and I give it no verdict. The reading doesn't depend on it. Wiki §10 marks the banner's lifetime "(tunable)" and gives the flash's length without that mark.
+
+## DRAG-6.28
+
+**Then, as I read it:** "`X` flashes at its saved place only until `t0 + F`, for the remaining `F - d`; mounting it does not start a fresh window. No other item flashes and opening the section changes no saved placement. *Starting again, when* the section is first opened at or after `t0 + F`, *then* `X` is drawn without the flash, even if the stop banner is still visible. The same boundary holds for a stopped item brought into view from behind overflow or in a previously closed hierarchy modal. No section, overflow or modal is opened automatically (DRAG-6.21)."
+
+- **r1** (opening the collapsed section at `t0 + d` makes `X` flash until `t0 + F`, not for a fresh `F`): **Follows the Then.** It follows "`X` flashes at its saved place only until `t0 + F`, for the remaining `F - d`; mounting it does not start a fresh window."
+- **r2** (opening at or after `t0 + F` draws `X` without the flash, banner still up): **Follows the Then.** It follows "when the section is first opened at or after `t0 + F`, then `X` is drawn without the flash, even if the stop banner is still visible".
+- **r3** (the same boundary behind an overflow row via opening the modal, and in a previously closed modal): **Follows the Then.** It follows "The same boundary holds for a stopped item brought into view from behind overflow or in a previously closed hierarchy modal." Whether those are two setups or one is r5's question.
+- **r4** (no other item flashes, and nothing opens automatically): **Follows the Then.** It follows "No other item flashes" and "No section, overflow or modal is opened automatically".
+- **r5** ("behind overflow" and "in a previously closed hierarchy modal" are one place reached one way, by opening the modal from the overflow row): **The case is silent, so it needs a session.** The Then reads two ways. "from behind overflow or in a previously closed hierarchy modal" lists them as alternatives. Neither the Then nor wiki §10 says whether they are one hidden place or two: §10 names only bringing an item into view "by opening its section". Wiki §9 defines both terms but isn't in the Rule field. It opens the modal only from an overflow row (by a click with no drag running, or by a hold during a drag), and gives the modal as the set the section shows "without the cut-off". Under §9, the two are one place reached one way.
+```
+
+**The follow-up, as sent** (the first reply gave DRAG-6.15 r4 "follows the Then" and DRAG-6.25 r4 "contradicts the Then" for what the QA Engineer read as one arrangement, and found DRAG-6.25 r1 and DRAG-6.26 r1, r3 and r4 silent):
+
+```text
+Follow-up on DRAG-6.25, same form (quote the Then, one line per row).
+
+Your reply gives DRAG-6.15 r4 "Follows the Then" and DRAG-6.25 r4 "Contradicts the Then", for what I read as the same arrangement: a column reorder is released, its request is still outstanding when the next drag starts (an item's for 6.15, the column E's for 6.25), and its refusal reloads the board mid-drag. DRAG-6.25's When says "because an earlier item drop failed, a stale response carries reindex pairs, or a column reorder released just before this drag failed". Please re-read both rows and tell me, for 6.25:
+
+ r4'. A column reorder is released and its request is still outstanding when a new column drag of E starts; the refusal of that request then lands while E is held and reloads the board. This is the third resync of 6.25's When.
+ r1'. An item is dropped and its write is still in flight when a column drag of E starts; the refusal of that write then lands while E is held. This is the first resync of 6.25's When ("an earlier item drop failed"). The When names this cause itself; I am asking whether the When's own wording makes it a reading the case states, apart from whether the wiki's §10 sentence about "three resyncs" repeats it.
+ r1''. For 6.26, the same two arrangements r4' and r1' give the banner sentences by cause that 6.26 states.
+
+Give each row one of the four forms. If a row stays "silent, needs a session", say which of the two arrangements it concerns.
+```
+
+**The desk's second reply:**
+
+```text
+DRAG-6.25 and DRAG-6.26 follow-up: all three rows follow the Then, and I'm withdrawing six verdicts from my first reply
+
+You were right that DRAG-6.15 r4 and DRAG-6.25 r4 are the same arrangement. My first reply judged them differently, and the DRAG-6.25 verdict was the wrong one. Re-reading both, three things in my first reply were mistakes. Each correction is below in the four forms, so it can go into the plan word for word in place of the first answer:
+- I read DRAG-6.25 r4 as keeping E's drag going after the reload. The row doesn't say that.
+- I used wiki §4.1's tiers to rule out a failed item drop's resync landing during a column drag. §4.1's tiers are about item drags only, and say nothing about which resyncs a column drag can meet.
+- I read a timing doubt into DRAG-6.26 r3 that the Given settles.
+
+Revised tally:
+- **Need a session (two questions):** how an announcement is observed (DRAG-6.17 r1–r3, DRAG-6.22 r1–r3, DRAG-6.26 r2), and whether "behind an overflow row" and "in a closed hierarchy modal" are one hidden place or two (DRAG-6.21 r5, DRAG-6.28 r5).
+- **Contradict the Then:** DRAG-6.15 r5, DRAG-6.15 r6 and DRAG-6.23 r2.
+
+## DRAG-6.25
+
+**Then, as I read it:** "the column drag ends at once and the board shows the server-saved order `A, C, E`. The interrupted drag sends no reorder request, including when the pointer is subsequently released. No item is moved by ending this drag. Its banner and lack of a flash are DRAG-6.26's."
+
+- **r4'** (a column reorder's request is still outstanding when E's drag starts, and its refusal lands while E is held and reloads the board; this is the When's third resync): **Follows the Then.** The When names the cause: "a column reorder released just before this drag failed". The outcome is "the column drag ends at once and the board shows the server-saved order `A, C, E`". boards-columns-unsorted §7 says "A reorder that fails reloads the board, and a reload that lands mid-drag stops the drag, a column's or an item's". Wiki §10 says the same: "a failed column reorder's, from a column drag released just before". The failure that starts the reload comes while E is held, so the request is still outstanding when E is picked up. A refusal is one kind of failure. This is the same reading as DRAG-6.15 r4, and it replaces my first reply's "Contradicts the Then" for DRAG-6.25 r4, which I withdraw.
+- **r1'** (an item's write is still in flight when E's drag starts, and its refusal lands while E is held; this is the When's first resync): **Follows the Then.** The When names this cause in its own words: "a reload lands because an earlier item drop failed". The Then's outcome for it is "the column drag ends at once and the board shows the server-saved order `A, C, E`". Wiki §10 says the same separately: "A reload that lands mid-drag stops the drag, an item's or a column's. Three resyncs can land while the user is dragging: … a failed drop's". "While the user is dragging" covers a column drag. The item's write being in flight when E's drag starts is how its refusal comes to land while E is held.
+
+## DRAG-6.26
+
+**Then, as I read it:** "the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it present; the next drag clears it. Otherwise it remains until configured lifetime `T` expires, without restarting when the reload finishes. Neither the stopped column nor any item receives stopped-item flash state. The banner's full-strength appearance and final-quarter fade are checked in DRAG-6.30."
+
+- **r1''** (both arrangements, a failed column reorder as in r4' and a failed item drop as in r1', give the sentence 6.26 states for their cause): **Follows the Then.** The Given is "a column is being dragged when any of the three resyncs in DRAG-6.25 stops it". For both arrangements the Then says "An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”". Wiki §10 agrees: "Each of the three resyncs shows it, on an item's drag or a column's", and a stopped column drag's "banner is the same one, worded by the same cause". The case and the wiki spell "didn’t" with the typographic apostrophe ’ (U+2019).
+
+## Corrections to my first reply
+
+- **DRAG-6.25 r1** (for each of the three resyncs interrupting E's drag toward the first slot, the board shows `A, C, E`): **Follows the Then.** It follows "the board shows the server-saved order `A, C, E`" for each cause the When names: "an earlier item drop failed, a stale response carries reindex pairs, or a column reorder released just before this drag failed". Wiki §10 says "Three resyncs can land while the user is dragging", for a drag that is "an item's or a column's". I withdraw my first reply's "silent, needs a session".
+- **DRAG-6.25 r4** (the third resync is a failed column reorder whose request is still outstanding when E's drag starts): **Follows the Then**, as in r4' above. I withdraw "Contradicts the Then".
+- **DRAG-6.26 r1** (the same sentences by cause as an item's stop): **Follows the Then.** It follows "An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.”" Wiki §10: "worded by the same cause". I withdraw "silent, needs a session".
+- **DRAG-6.26 r3** (a click leaves it up, the next drag clears it, and otherwise it expires at `T` from the stop without restarting when the reload finishes): **Follows the Then.** It follows "A click leaves it present; the next drag clears it. Otherwise it remains until configured lifetime `T` expires, without restarting when the reload finishes." The banner appears "when the stop occurs", so its lifetime runs from the stop. Wiki §10 has the banner stay "up across the reload", while only the flash's window waits for the redraw. This is the same reading as DRAG-6.19 r2. I withdraw "silent, needs a session".
+- **DRAG-6.26 r4** (neither the column nor any item gets the flash state): **Follows the Then.** It follows "Neither the stopped column nor any item receives stopped-item flash state", for each of the three causes. Wiki §10: "A column drag has no item, so a stopped one flashes nothing". I withdraw "silent, needs a session".
+
+Files read: c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-6-preview-reconciliation.md, c:\Users\natha\Dev\KanbanApp\docs\wiki\board-drag-interaction\README.md (§10), c:\Users\natha\Dev\KanbanApp\docs\wiki\boards-columns-unsorted\README.md (§7).
+```
+
+### Batch 4d, Stop 2 — the Test Reviewer's first pass (2026-11-13)
+
+Test Reviewer: Batch 4d (Story 10), Stop 2, first pass, on tree fa490a7b7f76dbd49c85fd48887ba3dd60e9b634.
+
+Of the 20 cases in scope, 8 are proved (DRAG-6.2, 6.6, 6.8, 6.9, 6.15, 6.18, 6.19, 6.20). 11 have test gaps (DRAG-6.1, 6.5, 6.7, 6.16, 6.21, 6.22, 6.23, 6.25, 6.26, 6.27, 6.28), and DRAG-6.24 has a case gap. All seven corrections are accepted.
+
+The brief is in form: no reasons given for the corrections, and no verdicts argued. The scope is as briefed, widened by the changed file tests/ui/drag-preview-reconciliation.spec.ts to DRAG-6.1, DRAG-6.2, DRAG-6.5 and DRAG-6.6. The unchanged carrier "DRAG-7.23, DRAG-6.15: …" in tests/ui/drag-7-hierarchy-modal.spec.ts wasn't needed for DRAG-6.15's verdict, so I didn't read it.
+
+## Verdicts
+
+**DRAG-6.1 — Test gap.**
+- **Surface carrier:** tests/ui/drag-preview-reconciliation.spec.ts, "DRAG-6.1, DRAG-6.2: the drop is drawn at its slot and marked pending until the response lands, then settles unchanged". It asserts the bottom-band clause on screen: X is drawn last (A, B, C, X), pending, the same once the answer lands, and the server holds ABCX.
+- **Approved internal carrier:** client/src/components/workflow/itemWriteReconciliation.test.ts, "DRAG-6.1, TC-2.28: a top or bottom band drop is marked pending as the anchor it sends…". It asserts the top and bottom bands in a one-item list: X drawn at the anchor, its position untouched, and the same order after the answer.
+- **Gap:** no carrier asserts the opening clause. A drop resolving to `{anchorId: A, side: after}` in `A, C, E` renders X at index 1 (`A, X, C, E`), with no position assigned.
+- **Gap:** no carrier asserts that the request is `before A` or `after E`. The surface test doesn't read the request body. The internal test builds the request but never checks its anchor.
+- **Fix:** add a mid-list anchor case to the internal test, and an anchor check on the request it builds.
+
+**DRAG-6.2 — Proves the case.**
+- **Surface:** "DRAG-6.1, DRAG-6.2: …" in tests/ui/drag-preview-reconciliation.spec.ts asserts that X carries the pending marker while the write is in flight.
+- **Internal:** client/src/components/workflow/itemWriteReconciliation.test.ts, "TC-2.30, DRAG-6.2: a pending item keeps its position and its place when another item's response re-sorts the list". It's an existing pointer, so it counts as approved. It asserts the rest:
+  - X's position stays its pre-drop value, so it isn't null;
+  - its placement is kept;
+  - another item's answer re-sorting the list doesn't send X to the top.
+
+**DRAG-6.5 — Test gap (standing review entry).** The test is tests/ui/drag-preview-reconciliation.spec.ts, "DRAG-6.5: re-dragging a pending item — the later write wins even when its response lands first". It doesn't prove the response-order clause.
+- **Write 2 first isn't confirmed.** Write 1's answer is delayed a fixed 2500 ms and write 2's isn't, but nothing checks that write 2's answer arrived first. A re-drag longer than 2500 ms lets write 1 answer before write 2 is even sent.
+- **Write 1's answer isn't awaited.** The test sleeps 3000 ms instead, so nothing confirms that answer arrived before the final check.
+- **The end state can't tell the two paths apart.** X, A, B, C on screen and XABC on the server hold in either order, so the stale-last path looks like the ordinary one.
+- **The other order is asserted by no carrier:** write 1's answer first, with write 2 still in flight.
+- See the proposed mapping onto DRAG-6.7's no-pairs test, which holds the answers and does give the order evidence.
+
+**DRAG-6.6 — Proves the case.** The test is "DRAG-6.6: a refused drop is not kept — the board reloads and shows the item where the server has it", in tests/ui/drag-preview-reconciliation.spec.ts.
+- **Given:** the server has X in Review, which the open board doesn't know.
+- **When:** a drop of X into In Progress is refused (status 400 asserted).
+- **After the reload:**
+  - X is drawn in Review, unmarked, and isn't in Todo.
+  - In Progress reads A, B, C on screen and ABC on the server.
+- So no part of the guess survives, and the board is the server's.
+
+**DRAG-6.7 — Test gap.** The tests are in tests/ui/drag-preview-reconciliation.spec.ts: "DRAG-6.7: a stale response with reindex pairs resyncs the board to the server once" and "… without reindex pairs is discarded and the board does not reload".
+- **Asserted, both variants:**
+  - the Given: write 1's held answer carries pairs only in the with-pairs variant, and write 2 answers first;
+  - one reload with pairs, none without;
+  - the board matches the server afterwards: B, A, C on screen, BAC on the server.
+- **Asserted, without pairs:** the stale row is discarded. Applying it would draw B, C, A.
+- **Not asserted, with pairs:** "its row for X is discarded" and "instead of applying the pairs". The board is read only after the resync, when every path ends in the server's order.
+- **The internal tests don't close it.** The approved tests in client/src/components/workflow/dragRequest.test.ts ("DRAG-6.7: a stale response's own row is still discarded, but resyncs…") mock the tracker's stale verdict. They assert the resync call, not the discard.
+- **What would observe it:** hold the resync's board read (holdNextRead, as landStop does). Record the column's order just before the stale answer lands, and assert it's unchanged while the read is held.
+  - The arrangement must make the stale row and the pairs each visibly change that order.
+  - With the current pinning, the board may still hold B and C at their pre-reindex numbers after write 2's answer. In that state the stale row alone may not move A, and I can't settle that without app source.
+  - The alternative is an internal test of the per-item tracker's discard with pairs.
+
+**DRAG-6.8 — Proves the case.** The tests are the four "DRAG-6.8: <Escape | a release where nothing is written> on a re-drag with write 1 <still in flight | already landed> …" in tests/ui/drag-preview-reconciliation.spec.ts.
+- **Given:** X is pending at the end of In Progress (A, B, C, X), or unmarked once its write has landed.
+- **The re-drag ends** by Escape, or by a popped-out release in the gap between the columns. Afterwards:
+  - X is still at A, B, C, X, and isn't in Todo;
+  - it's pending while write 1 is in flight, and unmarked once write 1 has landed;
+  - the re-drag wrote nothing: one write in all.
+- **Once the answer is released:** the marker clears and the server holds ABCX.
+
+**DRAG-6.9 — Proves the case.** The test is "DRAG-6.9: a response that lands mid-drag of the same item leaves its ghost at the placement of the drag, and a release commits against the reconciled board", in tests/ui/drag-preview-reconciliation.spec.ts.
+- **Given and reconciliation:** X is pending before the re-pickup, and its marker clears when write 1's answer lands.
+- **Ghost:** with no further cursor movement, the painted order of In Progress reaches A, X, B, C. That's the drag's placement, not the answer's A, B, C, X.
+- **Release:** it commits against the reconciled board. The server holds AXBC, there are two moves, and the second names A or B, a detail the Then leaves open.
+- **Hardening, not a gap:** the Given's "ghost at the drag's current placement" isn't confirmed before the answer. The test can't pass wrongly without it, since only the ghost produces A, X, B, C. A paintedCardOrder read before `held.release()` would restore it.
+
+**DRAG-6.15 — Proves the case.** The tests are in tests/ui/drag-forced-stop.spec.ts:
+- the nine "DRAG-6.15, DRAG-6.16, DRAG-6.20: <cause> stops <an item drag in a column | a Stub's drag in a Card's descendants section | a row's drag in the hierarchy modal>";
+- "DRAG-6.15, DRAG-6.20: the flash is at the reloaded place of the stopped item when the reload moved it".
+
+What they assert:
+- **The drag ends at once, with no carried copy or ghost left.** expectDragOver passes while the read is held, and again on the reloaded board with the pointer still down. It checks for no `data-drag-state`, no carried copy, and no row with a drop state or tier.
+- **X is drawn where the server has it:**
+  - in the column scene, X is in Todo;
+  - in the tree scenes, the rows are polled to the expected order, and X's saved parent and workphase are read back;
+  - in the moved-X test, X is drawn in Review and isn't in Todo.
+- **Nothing is written for X, and the release sends nothing.** No recorded write names X's id, and the write count is unchanged after `mouse.up()`.
+- **Each of the three causes, in each of the three places.** holdForcedStopCause asserts each Given: a refusal, or a 200 with pairs whose later move has already answered.
+- **Hardening:** the column scene's `pickUpX` doesn't confirm the drag is live before the stop; the tree scenes do, with awaitDragContext. It can't pass wrongly, because the banner assertion would fail with no live drag.
+
+**DRAG-6.16 — Test gap.** The tests are the nine "DRAG-6.15, DRAG-6.16, DRAG-6.20: …" stop-run tests in tests/ui/drag-forced-stop.spec.ts.
+- **Asserted:**
+  - each cause's sentence, spelled from the case, while "Loading board…" shows and on the reloaded board, in all three places;
+  - a page-side recorder logs exactly one banner inserted and none removed, so the banner is never cleared or redrawn.
+- **Gap, "along the window's top edge":** no test reads where the banner is drawn. client/src/components/ForcedStopCue.test.tsx doesn't either.
+- **Gap, "visible":** `expectBannerSays` uses `toHaveText`, which passes for a hidden element. Adding `toBeVisible()` in `tests/helpers/stopRun.ts::expectBannerSays` closes it, here and for DRAG-6.26.
+- **Gap, narrow, "without being … replaced by the other cause's explanation during either transition":** this is sampled at two points only.
+  - The recorder logs a banner's text only when the element is inserted.
+  - So an in-place change of the text, or of `data-forced-stop`, between those two points goes unseen.
+  - Adding `characterData` and the `data-forced-stop` attribute to the observer would close it.
+
+**DRAG-6.18 — Proves the case.** The tests are "DRAG-6.18: a click leaves the banner up and the next drag's pickup removes it, in its <fully visible | fade> part", in tests/ui/drag-forced-stop.spec.ts.
+- **Given:** the banner shows on the reloaded board, with the clock frozen inside its lifetime.
+- **A click** on the banner, then one on Done, each leave the same sentence.
+- **The next pickup removes the banner.** The clock is frozen, so nothing but the pickup can have removed it. It stays gone after the cancel.
+- **Both parts:** the pickup comes at time 0, or at ceil(0.75 × `forcedStopCueMs`) with the banner confirmed still present. The lifetime is read from seedDragTuning.
+
+**DRAG-6.19 — Proves the case.** The tests are "DRAG-6.19: the banner for <a failed item drop | a stale response> stays until its lifetime passes, and the reload does not restart it", in tests/ui/drag-forced-stop.spec.ts.
+- Half of T passes while the read is held, with the banner present.
+- After the reload draws, the banner is present at T − 1 from the stop and gone at T. A restart at the reload would leave it present at T.
+- Both causes' sentences are covered, and T comes from the configured `forcedStopCueMs`.
+
+**DRAG-6.20 — Proves the case.** The tests are the nine stop-run tests and "DRAG-6.15, DRAG-6.20: the flash is at the reloaded place …", in tests/ui/drag-forced-stop.spec.ts.
+- **Only X flashes.** X's drawn row has `data-stop-flash="true"` and exactly one row flashes. That holds for a Free Card, a Stub in an open section, and a row in the open modal.
+- **The causing item isn't flashed instead.** The bystander row checked is the earlier drop's own item: Item A, or B in the tree scenes.
+- **At its reloaded place:** with X moved to Review on the server, it flashes in Review.
+- **No saved placement changes:** the server's In Progress order, X's saved place, and no write for X.
+
+**DRAG-6.21 — Test gap.** The tests are "DRAG-6.21, DRAG-6.28: a stopped item hidden <in a collapsed section | behind an overflow row> is not revealed, and flashes for the rest of the window once opened", in tests/ui/drag-forced-stop.spec.ts.
+- **Asserted:**
+  - no row flashes, and the banner gives its explanation;
+  - the section stays collapsed (P2's "Show attached children" control), and X isn't drawn;
+  - the overflow row is still drawn, the modal is closed, and the section doesn't list X.
+- Opening the modal from the overflow row also covers the case's "a closed hierarchy modal".
+- **Gap:** "neither the board nor a list scrolls to reveal X" can't fail as arranged. scrollState is compared before and after the stop. But nothing confirms that X's hidden place is out of view, or that any container could scroll toward it, so at 1600×900 such a scroll would do nothing.
+- **Fix:** put P2, or R's row, out of view, with more Cards above it or a smaller viewport, and assert that before the stop.
+
+**DRAG-6.22 — Test gap.** The tests are in tests/ui/drag-forced-stop.spec.ts:
+- "DRAG-6.22: an Escape cancel …";
+- "DRAG-6.22: a release where nothing is written …";
+- "DRAG-6.22: a Stub released at its own gap and depth …";
+- the three "DRAG-6.22: <cause> that resyncs the board with no drag running shows no banner and no flash".
+
+What they cover:
+- **Asserted:** no banner and no flash, in the recorder's log since the page loaded and on screen, and no write, for each of these:
+  - Escape;
+  - a popped-out release nowhere;
+  - a Stub set down at its own gap and depth, with the projection `8:0:true` awaited;
+  - each cause's resync landing after its drag was released.
+- **Gap:** "including when the preceding drag has already been … cancelled" is asserted by no surface test.
+- **Fix:** pick up and press Escape before `earlier.trigger()` in the three no-drag tests.
+- **Internal coverage:** existing internal carriers cover part of this clause, but count only once Nathan approves them (see Mappings).
+
+**DRAG-6.23 — Test gap.** The test is "DRAG-6.23: a pending item picked up again has a pending ghost that is no target, and the other rows have tiers", in tests/ui/drag-preview-reconciliation.spec.ts. It's red, so it can't count until it's green.
+- **Asserted, clause 1:** X is pending, with no tier.
+- **Asserted, clause 3:** after the re-pickup, X is still pending with no `data-drop-tier`, while A, B and C carry tiers.
+- **Not asserted, clause 2:** "X remains pending independently of the Full, Mid or Low tier another item's drag assigns". These are the variants deferred by Nathan's ruling.
+- **Not asserted, clause 4:** "when the response is applied and the write's marker clears, X is no longer pending; any pickup tier belonging to the current drag still applies". The test cancels and disposes the answer without releasing it.
+  - To cover the ghost half: release the held answer mid-re-drag, and assert X unmarked and still without a tier.
+  - The tier half goes with the deferred variants.
+- **Can't tell:** whether "having ghost state" is observable. The test only asserts that no tier is set. If the app marks the re-dragged row with a ghost-state attribute, that would settle it; only app source can say.
+- **Internal coverage:** client/src/components/dragChrome.test.tsx, "DRAG-6.23, DRAG-6.24: pulses a pending row's content, which keeps its tier, and not its root", covers part of clause 2. A pending Low Stub keeps Low, and a pending row at full strength is covered; Mid isn't. It's internal and not approved.
+
+**DRAG-6.24 — Case gap.** Every clause but the last is proved, by tests in tests/ui/drag-preview-reconciliation.spec.ts.
+- **Proved:**
+  - "DRAG-6.24: a pending Card is pending alone, and its Stub is not and keeps its tier": P alone is pending, and S keeps the tier Z's drag gives it.
+  - "… a pending Stub is pending alone, and its Card is not": S alone is pending.
+  - "… with a Card and its Stub both pending, each answer clears only its own marker": S's answer clears S while P stays pending.
+- **The open clause reads two ways:** "A drop line naming a pending row never acquires pending state, including beside a Mid Card or Stub" can mean a Mid Card or any Stub, or a Mid Card or a Mid Stub.
+- **What the test asserts:** "… a drop line naming a pending Mid Card or a pending Stub has no pending state of its own" asserts it beside:
+  - F, a pending Card with tier `anchor`, which is Mid;
+  - S2, a pending Stub whose tier isn't read. Under wiki board-drag-interaction §4.1, S2 would be Full: a Stub under a Valid P, and itself a legal parent for S.
+- **If the Planner settles on "Mid Stub":** the Stub half becomes a test gap. It would need a pending Stub that's Mid to the drag: one too deep to take the carried item, whose parent can.
+
+**DRAG-6.25 — Test gap.** The tests are the three "DRAG-6.25, DRAG-6.26: <cause> stops a column drag, which saves no reorder and moves no item", in tests/ui/drag-forced-stop.spec.ts.
+- **Asserted, after the reload:**
+  - the columns read Todo, In Progress, Review, Done, on screen and on the server;
+  - no reorder and no item write beyond the cause's own were sent, before or after `mouse.up()`;
+  - In Progress and X are where the server has them.
+- **Gap, in the Given:** "E currently being dragged toward the first slot" isn't asserted before the stop.
+  - A column drag has no drag session (the workflow `AGENTS.md`), so expectDragOver can't see one.
+  - "The drag ends" therefore rests on the release sending no reorder. That proves it only if the column was over a slot that would reorder.
+  - If the aim fell short, a drag that survived and was released in place would also send nothing.
+- **Fix:** before landStop, assert that the column drag is live and that Review is drawn toward the first slot. Read the painted column order, since the columns slide by transform.
+
+**DRAG-6.26 — Test gap.** The tests are in tests/ui/drag-forced-stop.spec.ts:
+- the three "DRAG-6.25, DRAG-6.26: …";
+- "DRAG-6.26: after a column drag is stopped, a click leaves the banner and the next drag clears it";
+- "DRAG-6.26: the banner of a stopped column drag expires at its lifetime from the stop, and the reload does not restart it".
+
+What they cover:
+- **Asserted:**
+  - each cause's sentence during the load and after it, with one banner inserted and none removed;
+  - a click on the banner or on Done leaves it, and the next pickup clears it;
+  - the lifetime: present at T − 1 from the stop and gone at T, with half of T spent loading;
+  - no flash, either on screen or in the recorder.
+- **Gap:** "the banner appears over loading and the reloaded board" is asserted by the text being present (`toHaveText`), not by visibility. The same one-line `toBeVisible()` in expectBannerSays closes it.
+
+**DRAG-6.27 — Test gap.** The tests are in tests/ui/drag-forced-stop.spec.ts:
+- "DRAG-6.27: a reload longer than the window spends none of it …";
+- "DRAG-6.27: a new drag before the window ends ends the flash at its pickup, and ending that drag does not replay it";
+- "DRAG-6.27: another reload before the window ends ends the flash at its start, and draws none of its own".
+
+What they cover:
+- **Asserted:**
+  - the load runs F + 100 with no window spent;
+  - the flash lasts from the draw to t0 + F − 1 and is gone at t0 + F, with the banner still up;
+  - a pickup at t0 + F/2 ends it;
+  - a second reload with no drag running, at t0 + F/2, ends it, and the recorder logs no new flash.
+- **Gap 1, "ending the new drag … does not replay the old flash", can't fail as written.** The only check comes after `advance(FLASH_MS)` following the cancel. A replay of the remaining F/2, or even a fresh full window, would be over by then.
+  - Fix: assert no flashing row straight after `cancel`, or record with recordStopCue and assert no new flash entry.
+- **Gap 2, "even if it draws the same item":** the second-reload test doesn't assert X is drawn after that reload. So its no-flash check doesn't show X redrawn without a flash.
+- **Gap 3:** the window is timed only for a failed item drop, where the Given says "any of the three resyncs". Running the first test over all three causes closes it cheaply on the frozen clock.
+
+**DRAG-6.28 — Test gap.** The tests are in tests/ui/drag-forced-stop.spec.ts:
+- the two "DRAG-6.21, DRAG-6.28: … flashes for the rest of the window once opened";
+- the two "DRAG-6.28: a stopped item hidden <…> and opened once the window has ended does not flash".
+
+What they cover:
+- **Asserted:**
+  - opened at F/2, X flashes alone until t0 + F − 1, and not at t0 + F;
+  - opened at t0 + F, X is drawn without a flash while the banner is still up;
+  - nothing opens on its own;
+  - both the collapsed section and the overflow row into the modal are covered.
+- **Gap:** "opening the section changes no saved placement" isn't asserted. `HiddenScene.writes` is recorded but never checked, and nothing is read from the server after the section is opened.
+- **Small point, not a gap:** in the collapsed scene, `xRevealed` matches X anywhere on the page, not inside P2's section, where X is saved.
+
+## Corrections after a red run
+
+1. **stopRun.ts clock (no `install`, `pauseAt(new Date())` alone): accepted.** It changes how the timers are controlled. The freeze still comes before the stop lands. Every clock-bound clause is still asserted at exact boundaries: T − 1 and T, F − 1 and F, and the ends at F/2 by a pickup and by a reload.
+2. **The column scene's stale-response setup (A to the end, then above C): accepted.** It reaches the same Given, which holdForcedStopCause asserts: a 200 answer carrying pairs, with the later move of the same item already answered. The expected B, A, C on screen and BAC on the server follow from the new setup.
+3. **treeScene's stale-response server check (parentId and workphaseId compared, position as the server holds it): accepted.** The Then's "nothing is written for X" is still asserted through the network: no write names X, and none is sent on release. A sibling's reindex renumbering X isn't a write for X.
+   - In the modal place, the held row is R1a, outside the scope the reindex of P's children renumbers. Its full position comparison could stay there.
+4. **The collapsed-section place (the board's "Show attached children by default" setting off, instead of the Card's control): accepted.** It changes how the hidden state is reached. P2 collapsed with X not drawn is asserted after the reload, and every clause still holds.
+5. **The Stub at its own gap and depth (back to the pickup point, `8:0:true` awaited, then release): accepted.** It corrects the gesture's aim and adds a Given check. With X left out, P's rows are A, Q, R, R1, R1a, R2, T, B, so gap 8 at depth 0 is X's own place.
+6. **DRAG-6.9 (the checks before the answer removed, painted order polled after it): accepted.** Every clause of the Then is still asserted, and a painted read is the right one while rows slide. The workflow `AGENTS.md` notes that a drag's positions come from `paintedBoxOf`. The removed check of the ghost wasn't moved to a painted read; see DRAG-6.9's hardening note.
+7. **The DRAG-6.24 fixture (a database reset, and each answer released with its marker's clearing awaited before disposal): accepted.** It strengthens the setup and adds assertions.
+
+## Held-off cases
+
+None were held off in this brief. DRAG-6.23's Full, Mid and Low variants are deferred by Nathan's ruling. The internal coverage of that clause is in DRAG-6.23's verdict.
+
+## Proposed mappings
+
+- **DRAG-6.5 onto tests/ui/drag-preview-reconciliation.spec.ts, "DRAG-6.7: a stale response without reindex pairs is discarded and the board does not reload".** It's a surface test, so it needs no approval.
+  - **What it proves:** it holds write 1's answer and shows write 2's answer landing first: A unmarked, BAC on the server, no reload. It then awaits write 1's answer and asserts A stays at write 2's slot, B, A, C on screen and on the server.
+  - **What it leaves:** the write-1-first order.
+- **DRAG-6.22's "cancelled before the resync":** two existing internal carriers in client/src/components/workflow/useBoardDnd.test.ts would count only with Nathan's approval:
+  - "DRAG-6.22: is not reported when a drag is cancelled before an armed stop fires" (an item drag, refresh cause);
+  - "DRAG-6.22: is not reported for one cancelled before the reload" (a column drag, failed column save).
+
+  They observe the hook's stop report, not the banner, and leave out the failed item drop. The surface addition in DRAG-6.22's verdict is cheaper and preferred.
+- **Not proposed:** the other internal carriers of the forced-stop IDs (useForcedStop.test.ts, ForcedStopCue.test.tsx, the dragChrome.test.tsx flash tests, the rest of useBoardDnd.test.ts). Either the surface tests cover those cases whole (DRAG-6.15, DRAG-6.18, DRAG-6.19, DRAG-6.20), or those carriers don't cover the missing parts.
+
+## Cost notes
+
+1. **DRAG-6.5's test spends at least 5.5 s with no order evidence.** That's a 2500 ms delay plus a 3000 ms sleep, bought for the clause "write 1's response, if it arrives later, is not applied".
+   - Simpler form: a held answer released after write 2's lands, as the DRAG-6.7 tests do.
+   - With the mapping above, the timed test could give way to a held-answer test of the write-1-first order.
+2. **The stop run is a 3 × 3 matrix: nine tests repeating one stop.** The place doesn't change which resync stops the drag, and the cause doesn't change how each place holds it.
+   - DRAG-6.15, DRAG-6.16 and DRAG-6.20 name both lists. Read as "each cause, and each place" rather than every pairing, five tests prove the same clauses: the three causes in one place, and the two other places under one cause.
+   - That reading is the Planner's to make. This note doesn't justify dropping any of the nine without it.
+3. **The stale-response tests in a column needed two corrections:** the clock (correction 1) and the setup (correction 2). Two corrections are a signal in the testing strategy.
+4. **The frozen clock keeps the timed tests cheap,** so running DRAG-6.27's first test over all three causes would add little.
+
+The files involved:
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-forced-stop.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-preview-reconciliation.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\stopRun.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\forcedStopCause.ts
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\boardLocators.ts
+- c:\Users\natha\Dev\KanbanApp\docs\test-plans\board-drag-interaction\drag-6-preview-reconciliation.md
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\useBoardDnd.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\dragRequest.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\itemWriteReconciliation.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\dragChrome.test.tsx
+
+### Batch 4d, Stop 2 — the Test Reviewer's second pass (2026-11-13)
+
+Test Reviewer: Batch 4d (Story 10), Stop 2, second pass, on tree 721f1e71742a553cdee950a7e42b1a46a04183b2.
+
+Six cases move to proved: DRAG-6.5, DRAG-6.21, DRAG-6.25, DRAG-6.26, DRAG-6.27 and DRAG-6.28. DRAG-6.22 still has a test gap: the change closed the cancelled-drag gap but dropped the released-only form. DRAG-6.16 and DRAG-6.7 keep the gaps that were held back. Correction 8 is accepted.
+
+The brief is in form: no reasons given for the corrections, and no verdicts argued. The reasons attached to the held-back items are hold-off reasons and decisions, which the brief is meant to carry. The scope is every case ID carried in tests/helpers/stopRun.ts, tests/ui/drag-forced-stop.spec.ts and tests/ui/drag-preview-reconciliation.spec.ts.
+
+## Verdicts that changed
+
+**DRAG-6.5 — Proves the case.** First-pass gap closed. Three tests in tests/ui/drag-preview-reconciliation.spec.ts prove it together:
+- **Write 2's answer first, with the order shown:** "DRAG-6.5, DRAG-6.7: a stale response without reindex pairs is discarded and the board does not reload".
+  - Write 1's answer is held while write 2's lands: A unmarked, BAC on the server, no reload.
+  - Write 1's answer is then awaited, and A stays at write 2's slot: B, A, C on screen and on the server.
+- **Write 1's answer first, with both writes in flight:** the new "DRAG-6.5: write 1's answer arriving before write 2's leaves the item in write 2's result".
+  - Both answers are held, and A is pending.
+  - Write 1's answer is released and awaited before write 2's is released.
+  - A ends unmarked at B, A, C on screen, and BAC on the server.
+- **Still carrying the ID:** "DRAG-6.5: re-dragging a pending item — the later write wins even when its response lands first" adds nothing these two don't prove (see Cost notes).
+
+**DRAG-6.16 — Test gap: one clause remains, held back by Nathan's decision.** The tests are the nine "DRAG-6.15, DRAG-6.16, DRAG-6.20: <cause> stops <place>" in tests/ui/drag-forced-stop.spec.ts.
+- **Closed, "visible":** `tests/helpers/stopRun.ts::expectBannerSays` now asserts `toBeVisible()` before the text.
+- **Closed, "without being … replaced by the other cause's explanation during either transition":** the recorder now logs every change to a banner already drawn. That covers its `data-forced-stop` value, its text in place (characterData), and a child changed inside it. The stop run asserts `changed()` is empty, alongside one banner added and none removed.
+- **Remains, "along the window's top edge":** no test asserts where the banner is drawn.
+  - Nathan's "text only for now" leaves the case Open. The wiki states the placement in board-drag-interaction §10, outside Open questions; only the banner's look is a placeholder there.
+  - So the case can be proved later by a test, or by a Then that no longer states the placement. Changing the Then is the Planner's call, after the PO.
+
+**DRAG-6.21 — Proves the case.** First-pass gap closed. The tests are "DRAG-6.21, DRAG-6.28: a stopped item hidden <in a collapsed section | behind an overflow row> is not revealed, and flashes for the rest of the window once opened", in tests/ui/drag-forced-stop.spec.ts.
+- **The scroll clause can now fail.** Twelve filler Cards put the hidden place, P2 or R's overflow row, below the fold. Before the stop, hiddenStop asserts nothing is scrolled and the place lies below the fold. After the reload it asserts the same again, so a scroll to reveal X would show as a scroll offset.
+- **The test's own scroll doesn't mask it.** In the overflow scene the test scrolls to X before the stop. The after-reload check still holds: the reload draws the page from the top, and a reveal scroll would come after that.
+- **The other clauses are as in the first pass:** no flash, the banner, the section collapsed, the overflow row closed and the modal not open.
+
+**DRAG-6.22 — Test gap: narrow, and changed in kind.** The tests are the three "DRAG-6.22: <cause> that resyncs the board with no drag running shows no banner and no flash", in tests/ui/drag-forced-stop.spec.ts.
+- **Closed, "… or cancelled":** X is now picked up, confirmed live (`data-drag-state` locked) and cancelled before `earlier.trigger()`, for each cause.
+- **New gap:** the cancel was added in place of the released-only form, not beside it. No surface test now has a resync land right after a released drag with no later drag. The cause's own drag is still released, but a cancel always follows it.
+- **Why it matters:** a defect specific to a resync just after a release, such as state a cancel would reset, is now masked.
+- **Fix:** run the three tests both with and without the cancel, or keep the cancel in some causes only.
+- **Other DRAG-6.22 tests, unchanged:** Escape, a release nowhere, and a Stub at its own gap and depth.
+
+**DRAG-6.25 — Proves the case.** First-pass gap closed. The tests are the three "DRAG-6.25, DRAG-6.26: <cause> stops a column drag, which saves no reorder and moves no item", in tests/ui/drag-forced-stop.spec.ts.
+- **The Given is asserted.** `dragReviewTowardFirst` polls Review to be first in the painted column order before the stop lands, so the column drag is live and over the first slot.
+- **That makes the release check meaningful.** "Sends no reorder, including on release" now shows the drag ended: a drag that survived over the first slot would reorder when released.
+- **The other clauses are as in the first pass:** the server order on screen and on the server, no reorder or item write beyond the cause's own, and no item moved.
+
+**DRAG-6.26 — Proves the case.** First-pass gap closed. The tests are the three "DRAG-6.25, DRAG-6.26: …", "DRAG-6.26: after a column drag is stopped, a click leaves the banner and the next drag clears it", and "DRAG-6.26: the banner of a stopped column drag expires at its lifetime from the stop, and the reload does not restart it".
+- **Closed:** the banner is now asserted visible during the load and after it, through expectBannerSays.
+- **The column tests also assert `changed()` is empty.**
+- **The other clauses are as in the first pass.**
+
+**DRAG-6.27 — Proves the case.** All three first-pass gaps are closed. The tests are in tests/ui/drag-forced-stop.spec.ts:
+- the three "DRAG-6.27: after <cause>, a reload longer than the window spends none of it, and the flash ends at its length with the banner still up";
+- "DRAG-6.27: a new drag before the window ends ends the flash at its pickup, and ending that drag does not replay it";
+- "DRAG-6.27: another reload before the window ends ends the flash at its start, and draws none of its own".
+
+What closed each gap:
+- **"Ending the new drag does not replay the old flash":** asserted straight after `cancel`, with no flashing row and no new entry in the recorder's flash log. It's asserted again after `advance(FLASH_MS)`.
+- **"Even if it draws the same item":** after the second reload, X is asserted drawn and not flashing.
+- **"Any of the three resyncs":** the window is now timed for each cause. The load runs F + 100 with no window spent, the flash runs from the draw to t0 + F − 1, and it's gone at t0 + F with the banner still up.
+
+**DRAG-6.28 — Proves the case.** First-pass gap closed. The tests are the two "DRAG-6.21, DRAG-6.28: …" and the two "DRAG-6.28: a stopped item hidden <…> and opened once the window has ended does not flash", in tests/ui/drag-forced-stop.spec.ts.
+- **Closed, "opening the section changes no saved placement":** X's saved place is read from the server after the reload and again after the opening, and compared. The page's write count is unchanged across the opening.
+- **Also closed:** the collapsed scene's `xRevealed` is now scoped to P2's Card, where X is saved.
+
+## Verdicts unchanged
+
+- **DRAG-6.15 — Proves the case.** The hardening is done: the column scene's `pickUpX` now awaits `data-drag-state` locked.
+- **DRAG-6.18, DRAG-6.19, DRAG-6.20 — Prove the case.** The bodies are unchanged. The helper now also asserts the banner visible.
+- **DRAG-6.2, DRAG-6.6, DRAG-6.8 — Prove the case.** Unchanged.
+- **DRAG-6.9 — Proves the case.** Unchanged. The hardening note on the pre-answer ghost check stands.
+- **DRAG-6.1 — Test gap, held back as unassigned.** The mid-list `after A` clause at index 1 and the request's anchor are still unasserted.
+- **DRAG-6.23 — Test gap, held back.** The test is red, the tier variants are deferred, and clause 4 is unasserted.
+- **DRAG-6.24 — Case gap.** It still waits on the Planner's reading of "beside a Mid Card or Stub".
+- **DRAG-6.7 — Test gap, held off in part.** The tests are "DRAG-6.7: a stale response with reindex pairs resyncs the board to the server once" and "DRAG-6.5, DRAG-6.7: … without reindex pairs …".
+  - Everything else is proved as in the first pass.
+  - Unasserted, with pairs: "its row for X is discarded" and "instead of applying the pairs". See Held-off cases.
+
+## Corrections after a red run
+
+8. **dragReviewTowardFirst (hover the first column as the board draws it; poll only the first painted column to be Review): accepted.** It corrects the gesture's aim, and keeps a Given check that matches the Then.
+   - The Given asks only that the column be dragged toward the first slot, and Review painted first shows exactly that.
+   - The full painted order the earlier form polled isn't stated by the Then. It also depends on any reorder still in flight: for a failed column reorder, Done is drawn first.
+   - Every clause of DRAG-6.25 and DRAG-6.26 still holds.
+
+## Held-off cases
+
+**DRAG-6.7, with pairs: "its row for X is discarded" and "instead of applying the pairs".**
+- **The reason holds, as far as I can read.** The stop tests show "Loading board…" in place of the board while the resync's read is held, so neither form can be seen at the surface. That also makes my first-pass fix, reading the column while the read is held, unworkable. I withdraw it.
+- **Internal tests cover part of it.** client/src/components/workflow/dragRequest.test.ts, "DRAG-6.7: a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", is an approved category. It asserts that when the write tracker reports a stale answer needing a resync, the board resyncs with the cause "refresh" and fails no write. But it mocks the tracker's verdict, so neither the discard nor the not-applying is asserted.
+- **No internal test covers the rest.** Neither client/src/components/workflow/useItemManagement.test.ts nor itemWriteReconciliation.test.ts tests the tracker's own verdict on a stale answer carrying pairs.
+- **An internal test could cover it.** In useItemManagement's tracker:
+  1. Begin two writes for X.
+  2. Complete the second.
+  3. Complete the first with an answer carrying `reindexed` pairs.
+  4. Assert the result is `{applied: false, needsResync: true}`, and that no row's position changed: neither X's nor any row the pairs name.
+
+  It tests a hook rather than a pure module, so Nathan decides whether it falls in the approved response-reconciliation category or needs approval.
+
+## Proposed mappings
+
+None new. The first pass's DRAG-6.5 mapping onto the no-pairs DRAG-6.7 test is now stamped. The DRAG-6.22 internal carriers in client/src/components/workflow/useBoardDnd.test.ts are no longer needed for "cancelled". The released-only form in DRAG-6.22's new gap has an internal carrier for a column drag: "DRAG-6.22: is not reported for one released before the reload, whose own save is what failed". It counts only with approval, and the surface fix is cheaper.
+
+## Cost notes
+
+1. **"DRAG-6.5: re-dragging a pending item — the later write wins even when its response lands first" now buys no clause** the two held-answer tests don't prove. It still costs at least 5.5 s: a fixed 2500 ms delay and a 3000 ms sleep. Retiring it, or dropping its ID, loses nothing for DRAG-6.5.
+2. **The DRAG-6.27 window test now runs once per cause.** That's two more tests, kept cheap by the frozen clock.
+3. **The DRAG-6.22 fix adds up to three variants if both forms are kept.** Keeping the cancel in some causes only costs nothing extra.
+4. **The 3 × 3 stop matrix note from the first pass stands,** pending the Planner's reading.
+
+The files involved:
+- c:\Users\natha\Dev\KanbanApp\tests\helpers\stopRun.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-forced-stop.spec.ts
+- c:\Users\natha\Dev\KanbanApp\tests\ui\drag-preview-reconciliation.spec.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\dragRequest.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\useItemManagement.test.ts
+- c:\Users\natha\Dev\KanbanApp\client\src\components\workflow\useBoardDnd.test.ts
+
+### Batch 4d, Stop 2 — the Test Reviewer's third pass (2026-11-13)
+
+Test Reviewer: Batch 4d (Story 10), Stop 2, third pass, on the working tree as it stands.
+
+The brief is in form: it gives no reasons, and there are no corrections after a red run to judge. The scope is the case IDs carried in tests/ui/drag-forced-stop.spec.ts. The only body that changed is the DRAG-6.22 no-drag loop.
+
+**DRAG-6.22 — Proves the case.** My second-pass gap is closed. The carriers are in tests/ui/drag-forced-stop.spec.ts:
+- "DRAG-6.22: an Escape cancel shows no banner and no flash";
+- "DRAG-6.22: a release where nothing is written shows no banner and no flash";
+- "DRAG-6.22: a Stub released at its own gap and depth shows no banner and no flash";
+- the six "DRAG-6.22: <a failed item drop | a stale response | a failed column reorder> that resyncs the board with no drag running, after a drag was <released | cancelled>, shows no banner and no flash".
+
+How the Then is covered:
+- **Given, no cue showing:** the recorder's log since the page loaded holds no banner and no flash, and that's checked in every test.
+- **An item drag ended with Escape:** no banner, no flash, no write.
+- **A release that writes nothing:** a popped-out release nowhere, and a Stub set down at its own gap and depth (projection `8:0:true` awaited). Each gives no banner, no flash and no write, with the board and the server unchanged.
+- **A resync with no drag running, after a released drag:** for each cause, the held answer lands after the drag that made the earlier write was released, with no later drag. The board then matches the server, and there's no banner and no flash.
+- **A resync with no drag running, after a cancelled drag:** for each cause, X is picked up, confirmed live (`data-drag-state` locked) and cancelled. The held answer then lands, with the same assertions.
+
+**No other verdict changes.** Every other carrier in this file has the same body as on the second pass's tree. The verdicts on that tree stand:
+- **Prove the case:** DRAG-6.15, DRAG-6.18, DRAG-6.19, DRAG-6.20, DRAG-6.21, DRAG-6.25, DRAG-6.26, DRAG-6.27 and DRAG-6.28.
+- **DRAG-6.16 stays a test gap:** "along the window's top edge" is still unasserted, held back by Nathan's decision.
+- **The drag-preview-reconciliation.spec.ts cases are untouched by this change:**
+  - DRAG-6.2, DRAG-6.5, DRAG-6.6, DRAG-6.8 and DRAG-6.9 prove the case;
+  - DRAG-6.1, DRAG-6.7 and DRAG-6.23 stay test gaps, held back or held off;
+  - DRAG-6.24 stays a case gap.
+
+**Cost note:** the six no-drag tests are the three-variant cost noted on the second pass. Nothing else changes in the cost notes.
+
+The file: c:\Users\natha\Dev\KanbanApp\tests\ui\drag-forced-stop.spec.ts
+
 ## Amendments
+
+- **2026-11-12 — Screen-reading catalog handoff applied (Test Planner).** The PO removed the only wiki announcement rule in board-drag-interaction §10. DRAG-6.17 is retired; DRAG-6.16 explicitly keeps the same cause-specific visible explanation through loading and reload. DRAG-6.22 and DRAG-6.26 no longer require an announcement, and DRAG-6.30 no longer points to one. TREE-5.3, ATT-10.7 and ATT-10.9 no longer require exposure as disabled to assistive technology; their disabled, hover-reason and keyboard behavior stays. The 4d Scope is now 16 cases, 11 New and 5 Split. These are case-text and scope changes only. The QA Engineer updates the 4d proof plan and Playwright title/claims; the Coder or QA Engineer removes DRAG-6.17's ID-bearing component test and title stamp as Nathan assigns. `npm run check:docs` has two expected case-id hits at `ForcedStopCue.test.tsx:16` and `:23` until those test changes land; it has no other hits. The Review log and earlier evidence remain historical.
 
 - **2026-11-11 — DRAG-7.10's "bounded by `K`" ruled: the wiki stands, and the width is a defect (PO, a deduction for Nathan to overrule).** A Stub picked up in a click-opened modal and popped out to its column is carried at the modal row's width, 574 px in a 272 px column. Wiki board-drag-interaction already settles it in three places, and none excepts a modal a click opened:
   - **§2:** a carried card follows the cursor only within its context's own extent.
@@ -1693,7 +2422,112 @@ No new cost from this pass's other changes:
 
 - **2026-11-10 — Five-worker default after the extended trial (Nathan).** Replace the initial three-worker default with five for its measured speed benefit and no newly observed failure identity or mode. Future D2 repeats and batch-final runs use five. Re-evaluate with the smoke suite, considering lower E2E frequency outside Story 10 and capacity for simultaneous work; revisit sooner if failures or contention change. Six is dropped for its small additional saving. Failure destinations and D2's bar stand.
 
+- **2026-11-12 — DRAG-6's banner clauses verify the text only (Nathan).** For now the forced-stop banner's cases (DRAG-6.16, 6.17, 6.18, 6.19, 6.22 and 6.26) are verified by the correct text being visible, and nothing about its look or placement: no top-edge or width check, and no status-region or focus check for the announcement. The [UI message banners](../tech-debt-stories/ui-message-banners.md) story may set more rules for the banner's look. The cases' text is unchanged, so DRAG-6.17's "assistive tech announces" is not proved by it; a Planner session may align the cases, and the Test Reviewer may read a text-only test as short of the whole Then until then. Recorded in the 4d proof plan and Open questions.
+
+- **2026-11-12 — Screen-reader scope clarified (Nathan, Test Planner handoff).** Nathan does not intend screen-reading requirements for the MVP. Story 8.4's D3 introduced `role="status"` and the announcement as a proposed cue behavior before his hands-on choice of banner, wording and time; its handoff then carried the announcement into wiki board-drag-interaction §10 and DRAG-6.17. No explicit Nathan decision to require screen-reader output was found in that story. The text-only verification ruling above remains the 4d proof boundary. The PO owns removal of §10's announcement requirement; afterward the Planner retires DRAG-6.17 and removes announcement-only clauses from DRAG-6.22, DRAG-6.26 and DRAG-6.30. The already visible cause-specific text remains DRAG-6.16's rule. This is a docs and test-scope correction, not a request to change the cue's implementation.
+
+- **2026-11-12 — Screen reading removed from the wiki (PO, at Nathan's direction).** Board-drag-interaction §10's assistive-tech bullet is deleted. A search of every wiki page found no other rule about assistive tech, announcements or a status region. The PO's deduction, for Nathan to overrule: "takes no keyboard focus" in hierarchy-placement §6 stays, since it's keyboard use and not screen reading; and the cap cases' "exposed as disabled to assistive technology" goes, since no wiki rule is behind it. Open questions holds the Planner's list: DRAG-6.17 retired, and clauses out of DRAG-6.22, DRAG-6.26, DRAG-6.30, TREE-5.3, ATT-10.7 and ATT-10.9. No code change.
+
+- **2026-11-12 — DRAG-6's overflow row and closed modal are one hidden place (Nathan).** For DRAG-6.21 and 6.28, an item "behind an overflow row" and one "in a closed hierarchy modal" are the same test case: one variant covers that place, reached by opening the modal from the overflow row, and the collapsed section is the other. The cases' text is unchanged. Recorded in the 4d proof plan and Open questions.
+
+- **2026-11-12 — Batch 4d's stop matrix runs all nine pairs (Nathan).** The forced-stop run (DRAG-6.15, 6.16, 6.17, 6.20) covers each of the three causes (a failed item drop, a stale response, a failed column reorder) in each of the three places (a Free Card in a column or sub-row, a Stub in a Card's descendants section, a row in the open hierarchy modal), at the surface. The covering set of three and the option of three plus internal tests are not taken. Recorded in the 4d proof plan.
+
+- **2026-11-12 — Batch 4d's clock-bound clauses use Playwright's clock (Nathan).** DRAG-6.18's fade, 6.19, 6.26's expiry, 6.27 and 6.28 move the page's clock by exact amounts (`pauseAt`, then `runFor`) instead of waiting in real time, with `T` seeded and `F` imported. If the first representative check shows the drag doesn't work with the clock paused, the plan's fallback is real time with margins no tighter than a quarter of the clock; whether Stop 2 takes the fallback by itself or comes back to Nathan first isn't ruled. Recorded in the 4d proof plan.
+
+- **2026-11-12 — DRAG-6.23's three tier variants deferred to batch 4j (Nathan).** The variants where another item's drag draws a pending `X` Full, Mid or Low move from 4d to 4j. 4d keeps DRAG-6.23's no-tier and ghost clauses, so DRAG-6.23 closes `Open` at 4d and is confirmed at 4j's close. 4d's plan drops from 47 to 44 variants and from 470 to 440 D2 passes. No case's text changes. Recorded in the 4d proof plan and the 4j section.
+
+- **2026-11-12 — Batch 4d's plan follows the Planner's catalog pass, and Stop 2's file list and clock fallback are ruled (Nathan).** The Planner's pass retired DRAG-6.17 and took the announcement clauses out of DRAG-6.22, 6.26 and 6.30, so 4d is 16 cases (11 New, 5 Split) and one run of the stop gesture asserts three cases (DRAG-6.15, 6.16, 6.20). The variant count stays 44. The QA Engineer read the catalog and wiki diff against the plan; no desk questions were asked, since the changes are removals plus DRAG-6.16's second paragraph. One clause is left that the banner ruling doesn't assert: DRAG-6.16's "along the window's top edge" (Open questions, item 3). Nathan approved the five Stop 2 files, a locator added to `boardLocators.ts` if one is missing and any other file reported, not changed; and ruled that Stop 2 comes back to him if the paused clock breaks the drag. Recorded in the 4d proof plan.
+
+- **2026-11-13 — Batch 4d's Stop 2 helper is `tests/helpers/stopRun.ts`, and the stop's variants number 50.** Nathan approved a new `tests/helpers/forcedStop.ts`. It shares its name with the app's `client/src/components/workflow/forcedStop.ts`, which made `check:docs` report five comments in app files as ambiguous symbol references, so the new helper is named `stopRun.ts` and Nathan accepted that on 2026-11-13. The plan's 44 variants became 50 after the Test Reviewer's gaps: DRAG-6.27's window test runs for each of the three causes (+2), DRAG-6.5's order with write 1's answer first is a test (+1), and DRAG-6.22's three no-drag resyncs run after a released and after a cancelled drag (+3). No case's text changed. Recorded in Results and Open questions.
+
+- **2026-11-13 — DRAG-6.23's ghost test is skipped and deferred to batch 4j, and the purposes of 4i and 4j are stated (Nathan).** The red test (a pending item picked up again has no pending marker on its ghost) is skipped with a comment and moves from Stop 2's red result to 4j. Nathan's reason is scope: the MVP phase favours new features over hardening, and this edge case is the kind that goes to a hardening story after it. 4d now carries no test titled DRAG-6.23, and the case stays `Open`. DRAG-6.31 is a `Manual` case with no test, so nothing of it is skipped; 4j lists it with the ghost. 4i is for tests that have shown failures in a run, to settle one-off against flaky. 4j is for test suggestions that are scope creep to defer, or tests to re-weigh on value against cost or flakiness risk. DRAG-7.18, whose tests were skipped for cost, sits in 4i's table and fits 4j's purpose better. It hasn't been moved, and that is Nathan's to say. No case's text changed. Recorded in the 4d scope, Results, Open questions and 4j.
+
+- **2026-11-13 — DRAG-6.24's drop-line test is skipped and deferred to batch 4j (Nathan).** The test passes. Nathan keeps the case's three row-ownership tests running, and skips the drop-line test on its value against its cost, since the clause is close to vacuous at the surface and the pulse is DRAG-6.31's manual check. DRAG-6.24 stays `Open`. The case's wording question ("beside a Mid Card or Stub") waits for 4j, so it no longer needs a Planner session in 4d. No case's text changed. Recorded in the 4d scope, Results, Open questions and 4j.
+
+- **2026-11-13 — DRAG-6.7's discard clause is deferred to batch 4j as a catalogued example (Nathan).** The clause is "its row for `X` is discarded" when a stale response carries reindex pairs, which no surface test can show and no internal test covers, since `dragRequest.test.ts` mocks the tracker's verdict. Nathan keeps DRAG-6.7's two surface tests, writes no internal test now, and wants the clause in 4j as another example of feature hardening that grew past the roadmap's intended scope. DRAG-6.7 closes `Open` in 4d. No case's text changed. Recorded in the 4d scope, Results, Open questions and 4j.
+
+- **2026-11-13 — DRAG-6.1's two gaps are closed by one Vitest test, in a sixth file Nathan approved.** The Test Reviewer's scope reached DRAG-6.1 through the changed spec and found its opening clause (a drop beside `A` draws `A, X, C, E`) and the request's anchor (`before A`, `after E`) unasserted. The case isn't 4d's, and Nathan chose to close it by adding a test to the case's approved internal carrier, `itemWriteReconciliation.test.ts`, which isn't on Stop 2's file list. It passes and changes no app source, wiki or catalog text. Recorded in Results and Open questions.
+
+- **2026-11-13 — DRAG-6.5's older timed test is retired (Nathan).** The test, "DRAG-6.5: re-dragging a pending item — the later write wins even when its response lands first", waited out a 2,500 ms delay and a 3,000 ms sleep. The Test Reviewer found it buys no clause the two held-answer tests don't prove, and Nathan accepted the cost note's recommendation. It is removed from `tests/ui/drag-preview-reconciliation.spec.ts`. DRAG-6.5 stays carried by those two tests. No case's text changed. Recorded in Results.
+
+- **2026-11-13 — Batch 4d's stop matrix is cut to five cells, and two cost decisions go to 4j as questions (Nathan).** After a cost-benefit, Nathan took Option C for the matrix: a column runs under each of the three causes, and a Stub's section and the modal run under the stale response. The other four cells are skipped and held for 4j, and this replaces the 2026-11-12 ruling that all nine pairs run. He kept both of DRAG-6.22's endings for now (Option A). 4j revisits both, the four skipped cells and whether DRAG-6.22 needs both endings. The matrix and the endings are proved by the five cells and six tests that run, and a skipped test never counts. No case's text changed. Recorded in Results, Open questions and 4j.
+
+- **2026-11-13 — DRAG-7.18 and its cost study move from 4i to 4j, and 4j gains a question on DRAG-6.16's top edge (Nathan).** DRAG-7.18's two tests were skipped for their cost and not for a failure, which is 4j's kind of work under the purposes Nathan stated on 2026-11-13, so the case and its cost study move to 4j. 4i keeps DRAG-3.16, DRAG-5.3 and DRAG-5.10's B21 test, and its table, intro and stops name only those. DRAG-6.16's top-edge clause stays unasserted as ruled on 2026-11-12, and 4j reconsiders asserting it. No case's text changed. Recorded in the batch table, 4c, 4i, 4j, Results and Open questions.
+
+- **2026-11-13 — Batch 4d closes with 12 of its 16 cases `Automated` (the Reconciler).** DRAG-6.8, 6.9, 6.15, 6.18, 6.19, 6.20, 6.21, 6.22, 6.25, 6.26, 6.27 and 6.28 are confirmed whole and written `Automated`, with their Automation lines. DRAG-6.7, 6.16, 6.23 and 6.24 stay `Open`, held for 4j by Nathan's rulings. The Reconciler added no stamp and edited no test, and changed only the status and Automation fields of those twelve cases. The coverage report is clean before and after, and the gate is green. No case's text changed. Recorded in Results, Open questions and 4j.
+
+- **2026-11-13 — ATT-10.9 closes `Automated` on Nathan's approval of its internal mapping.** The Reconciler found ATT-10.9's Playwright test and two `ItemDetailPanel.test.tsx` tests cover it whole together, and asked for an approval that wasn't among its inputs. Nathan gave it, for this mapping only, and the Reconciler's follow-up set the case `Automated` with both paths. The case isn't 4d's, and no stamp or test changed. No case's text changed. Recorded in Results and Open questions.
+
 ## Open questions
+
+### Batch 4d Stop 1 — for a Planner session (QA Engineer, 2026-11-12)
+
+From the desk's verdicts (Review log). Each case is left as it reads, and the proof plan's assertions leave the open clauses out meanwhile. Neither question blocks the rest of the batch. Nathan (2026-11-11): take the Planner's answers as they stand, unless the Planner wants input from the PO or him. The Planner's pass and Nathan's rulings answered the first two questions (below), and a third came up after the pass.
+
+1. **How "assistive tech announces" is observed** (DRAG-6.17 r1 to r3; the status parts of DRAG-6.22 r1 to r3; DRAG-6.26 r2). **Resolved by the PO's rule change and the Planner's catalog pass, 2026-11-12.** The MVP cases require the correct visible text, with no status-region or focus assertion. DRAG-6.17 is retired; DRAG-6.16 holds the text through the loading swap. The Review log retains the original question and verdicts as historical evidence.
+2. **One hidden place or two** (DRAG-6.21 r5; DRAG-6.28 r5). **Ruled by Nathan, 2026-11-12:** "behind an overflow row" and "in a closed hierarchy modal" are the same test case, one place. One variant covers it, with the modal opened from the overflow row as the way into view. The case wording is unchanged.
+3. **DRAG-6.16's top-edge clause** (QA Engineer, 2026-11-12, after the Planner's pass). The Then says the banner appears "along the window's top edge", and wiki §10 says it too. Nathan ruled that for now the banner is verified by its text, and that its placement waits for the [UI message banners](../tech-debt-stories/ui-message-banners.md) story. Either a Planner session moves the clause to that story's case, or Nathan accepts that the Test Reviewer may call DRAG-6.16's text-only test short of its Then and the Reconciler may hold the case `Open`. It doesn't block the rest of the batch. **Update, 2026-11-13:** Nathan keeps the clause unasserted and asks 4j to reconsider asserting it (4j's bullet).
+
+**Planner handoff applied — the PO's return on Nathan's screen-reader scope ruling (2026-11-12).** The wiki no longer holds any screen-reading rule. Board-drag-interaction §10's bullet "Assistive tech reads it out when it appears" is deleted, and it was the only one: no other wiki page names assistive tech, an announcement or a status region. The rest of §10's cue stands as it was: the banner, its text by cause, its lifetime and the flash. The catalog pass applied these changes:
+
+1. **Retire DRAG-6.17.** Its whole Then came from the deleted bullet. The visible text by cause, and that the loading swap neither loses it nor swaps in the other cause's, are §10's banner rules ("stays up across the reload", "says why, by cause"). If DRAG-6.16 doesn't already assert that through the reload, it moves there before the retirement.
+2. **DRAG-6.22:** remove "or announcement" from "no forced-stop banner or announcement appears".
+3. **DRAG-6.26:** remove "The explanation is announced without a focus change."
+4. **DRAG-6.30:** remove "announcements" from its list of the other cases' assertions.
+5. **TREE-5.3, ATT-10.7 and ATT-10.9:** remove "exposed as disabled to assistive technology". No wiki rule is behind it. Hierarchy-placement §6 says the control is drawn, shows disabled, takes no click and no keyboard focus, and gives its reason on hover, and those clauses stay. Keyboard focus is not screen reading.
+
+**Tests that follow from the cases** (the QA Engineer's and the Coder's, as Nathan assigns):
+
+- `client/src/components/ForcedStopCue.test.tsx`: "DRAG-6.17: keeps an empty status element while no drag has been stopped…" proves only the deleted rule, so it is removed. "DRAG-6.16, DRAG-6.17: says why in the status element…" loses its DRAG-6.17 stamp and stays for DRAG-6.16.
+- The 4d proof plan's DRAG-6.17 row is dropped. Its text-through-the-reload assertions ride on other runs already and carry DRAG-6.16.
+- `tests/ui/item-create-cap.spec.ts` and `project-tree-create-cap.spec.ts`: `toBeDisabled()` stays. It proves "shows disabled", not anything read out.
+- No code change is asked for. `ForcedStopCue.tsx`'s `role="status"` may stay, with no rule and no test behind it.
+
+### Batch 4d Stop 5 — from the Reconciler (2026-11-13)
+
+The [report](../../audits/test-reconciliation-story-10-batch-4d.md) has the detail. 12 of 4d's 16 cases are `Automated`. DRAG-6.7, 6.16, 6.23 and 6.24 stay `Open`, held for 4j by Nathan.
+
+**For Nathan:**
+
+1. **ATT-10.9 (outside 4d), closed on 2026-11-13.** The Reconciler finds its Playwright test, `tests/ui/item-create-cap.spec.ts`, and two `client/src/components/ItemDetailPanel.test.tsx` tests cover it whole together. The internal tests alone show that the stale answer was applied, that the control takes no keyboard focus, and that reads answered in their original order end the same. The mapping needs an approval that wasn't among the Reconciler's inputs. The archived `docs/archive/catalog-coverage-report.md` records Nathan approving the internal mappings for ATT-10.9 and ATT-1.15 on 2026-11-10. The plan that scheduled it is archived, so the case may be in no live Scope, and BCU-1.9, ATT-1.15 and BCU-1.10 were scheduled with it and are unjudged. The question: carry that approval to a Reconciler follow-up, which sets ATT-10.9 `Automated` with both paths, or route the case into a live batch. **Resolved:** Nathan approved the mapping on 2026-11-13, and the Reconciler's follow-up set ATT-10.9 `Automated` with `tests/ui/item-create-cap.spec.ts` and `client/src/components/ItemDetailPanel.test.tsx`. Both internal tests already carried the ID, so no stamp was added. The approval doesn't cover BCU-1.9, ATT-1.15 or BCU-1.10, which that archived plan scheduled with it and nobody has judged.
+2. **A possible Product Owner gap, moved to 4j as a question to resolve (Nathan, 2026-11-13).** No wiki sentence says whether a reload keeps a section collapsed by hand. It is the fact Stop 2 noted, and the Reconciler flags it as a gap if Nathan wants it settled. No test or case depends on it.
+
+**For 4j, added to its section's notes (no decision is needed now):**
+
+3. **Test-quality notes from the report:**
+   - the stop matrix runs five of nine cells, so a fault specific to one pair, such as the section's or the modal's teardown under a failed column reorder, would go unseen. The Reconciler doesn't read it as a gap;
+   - DRAG-6.8's no-write release is the Board-layer "nowhere" only, where its When also cites DRAG-3.12's middle-band set-down in the item's own region;
+   - on the reloaded board the stop run reads the banner's text and not its visibility, so "remains" rests on DRAG-6.18's and DRAG-6.19's tests, which don't carry DRAG-6.16. If 4j adds a top-edge read, `expectBannerSays` could run there too;
+   - DRAG-6.9's Given, the ghost at the drag's placement, isn't read before the answer. It can't pass wrongly, and the reviewer's hardening note stands;
+   - `ForcedStopCue.test.tsx`'s "DRAG-6.19: times its fade to the cue time" pins the banner's animation duration to `cueMs`. The fade's painting is DRAG-6.30's, which DRAG-6.19's Then sets aside, so the ID claims more than the test shows of DRAG-6.19. It is a Vitest note, for the Coder.
+4. **DRAG-6.23's Mid variant** could start from the skipped DRAG-6.24 drop-line test's setup, which reads `F` as `data-drop-tier="anchor"` and `data-pending="true"` during `Z`'s drag.
+5. **Duplication, reported and not judged:** DRAG-6.15, 6.16, 6.18, 6.19, 6.20, 6.22, 6.25, 6.26 and 6.27 also carry unmapped internal tests with the same IDs (`ForcedStopCue.test.tsx`, `useForcedStop.test.ts`, `useBoardDnd.test.ts` and `dragChrome.test.tsx`). DRAG-6.18 and 6.26 have near-identical click-and-pickup tests, and DRAG-6.19 and 6.26 the same lifetime test, for an item's stop and a column's.
+
+### Batch 4d Stop 2 — defects, hooks and questions (QA Engineer, 2026-11-13)
+
+From the tests and the Test Reviewer's three passes (Review log). No hook is needed by any test. Each item is for Nathan to route; none blocks the others.
+
+**Deferred to 4j (Nathan, 2026-11-13), recorded here for 4j:**
+
+1. **DRAG-6.23: a pending item picked up again has no pending marker on its ghost.** The test was red. Nathan skipped it as scope creep and deferred it to 4j; it stays as written.
+   - **Failing clause:** "*When* pending `X` is picked up again, *then* its ghost retains the pending state while having ghost state rather than a target tier."
+   - **Expected, from the case and wiki board-drag-interaction §10** ("a ghost pulses down from its own value"): with `X`'s write in flight, picking `X` up again leaves its own row in the list, the ghost, still pending (`data-pending="true"`) with no target tier, while the other rows have tiers.
+   - **Observed through the surface:** after the re-pickup, and while the cursor hovers over a neighbour, `X`'s own row has no `data-pending`, no `data-drop-tier` and `data-drop-state="cycle-forming"`. Item A, B and C have `data-drop-tier="parent"`. The marker comes back when the re-drag is cancelled (DRAG-6.8 passes).
+   - **Reproducer:** `tests/ui/drag-preview-reconciliation.spec.ts`, "DRAG-6.23: a pending item picked up again has a pending ghost that is no target, and the other rows have tiers". Hold the answer to `X`'s move, drop `X` at the end of In Progress, pick `X` up again, and read `X`'s row. Saved evidence: `tests/output/artifacts/ui-drag-preview-reconcilia-deab7-d-the-other-rows-have-tiers-chromium`.
+   - **Where I looked:** `client/src/components/workflow/DragSessionContext.ts::useIsPending`. Its comment says the carried item "has a placement too (the ghost) but isn't 'pending' until it's released", which is not what the case says.
+   - **Route:** 4j (Nathan). 4j's session rules it a defect for the Coder if the case stands, or, if the app's reading is the intended one, a question for a Planner session or the PO, since the wiki line and the case then need to say it. DRAG-6.31 (`Manual`) also names the ghost's pulse. The app shows no separate ghost-state attribute, so "having ghost state" is observed only as no tier.
+
+**For a Planner session, when 4j takes the clause:**
+
+2. **DRAG-6.24, "including beside a Mid Card or Stub":** it reads two ways, "a Mid Card or any Stub" or "a Mid Card or a Mid Stub". The test runs the drop line beside a pending Mid Card (tier `anchor`) and beside a pending Stub whose tier it doesn't read, which is Full under wiki board-drag-interaction §4.1. If "a Mid Stub" is meant, the Stub half is a test gap: it needs a pending Stub too deep to take the carried item, whose parent can. The drop-line test is skipped and deferred to 4j (Nathan, 2026-11-13), so the question can wait for 4j.
+
+**For Nathan:**
+
+3. **Deferred to 4j (Nathan, 2026-11-13): DRAG-6.7 with pairs, "its row for `X` is discarded … instead of applying the pairs".** During the resync the board is replaced by "Loading board…", so the stale row and the pairs can't be told apart at the surface; after it, every path ends in the server's order. The Test Reviewer weighed internal coverage: `dragRequest.test.ts`'s approved test of the DRAG-6.7 resync mocks the write tracker's verdict, so it asserts the resync and not the discard, and no other internal test covers it. An internal test could: in the item write tracker (`useItemManagement`), begin two writes for `X`, complete the second, complete the first with an answer carrying `reindexed` pairs, and assert the result discards it and asks for a resync, with no row's position changed. It tests a hook, so whether it falls in the approved response-reconciliation category or needs Nathan's approval is his call. Nathan deferred it to 4j as a catalogued example, so I wrote nothing, and DRAG-6.7 closes `Open` in 4d.
+4. **DRAG-6.1 (`Automated`, not assigned to 4d), closed in Stop 2 (Nathan approved on 2026-11-13):** the Test Reviewer's scope reached it through the changed file and finds two clauses unasserted by its carriers: the opening one (a drop at `{anchorId: A, side: after}` in `A, C, E` renders `A, X, C, E` before the request leaves) and the request's anchor (`before A`, `after E`). The surface test covers the bottom band only, and the internal test uses a one-item list. It isn't in 4d's Scope. One test added to the case's approved internal carrier asserts both, in the case's own column, `A, C, E`, with `X` carried in from Doing: `client/src/components/workflow/itemWriteReconciliation.test.ts`'s "DRAG-6.1: in a column of A, C and E, a drop beside A is drawn A, X, C, E before the request leaves, and the top and bottom bands send before A and after E". For a drop beside `A` and for the top and bottom bands, it reads the request that leaves (`before A`, `after A`, `after E`, with the workphase), what the board draws at that moment (`A, X, C, E`; `X, A, C, E`; `A, C, E, X`), that `X`'s position is untouched, and that the order is the same once the answer is applied. It passes with no change to the wiki or the app. The Test Reviewer hasn't re-read it, and the Reconciler may read the case at a close.
+5. **The cost notes in Results: decided (Nathan, 2026-11-13).** DRAG-6.5's older timed test is retired. The stop matrix runs five cells, its other four skipped, and DRAG-6.22 keeps both endings. 4j revisits the last two as questions.
+
+**Noted, no question:** after a stop's reload every Card's section returns to the board's own default ("Show attached children by default"), so a section collapsed by hand opens again. The collapsed-section hidden place of DRAG-6.21 and DRAG-6.28 therefore arises only when that default is off, and the tests turn it off. No wiki sentence says it.
 
 ### Batch 4c Stop 5 — from the Reconciler (2026-11-12)
 

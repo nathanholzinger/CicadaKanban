@@ -1145,7 +1145,6 @@ shows it, on an item's drag or a column's.
 - **It goes after about 5 seconds** (tunable), the last quarter a fade,
   **or at the next drag's start,** whichever comes first. A click doesn't
   dismiss it.
-- **Assistive tech reads it out** when it appears.
 - **The item that was being dragged flashes** where the reloaded board
   draws it: two amber pulses, about 1.4 seconds in all, so the user sees
   where it went. The flash's window opens once the reloaded board is

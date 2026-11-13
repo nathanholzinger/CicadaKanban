@@ -12,29 +12,29 @@ const SENTENCE: Record<ForcedStop['cause'], string> = {
   refresh: 'The board refreshed, which stopped your drag. Nothing moved.',
 };
 
-describe('ForcedStopCue', () => {
-  it('DRAG-6.17: keeps an empty status element while no drag has been stopped, for assistive tech to announce into', () => {
-    render(<ForcedStopCue stop={null} cueMs={5000} />);
+// The banner, found by the attribute that names its cause.
+const banner = (container: HTMLElement) => container.querySelector('[data-forced-stop]');
 
-    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+describe('ForcedStopCue', () => {
+  it('draws nothing while no drag has been stopped', () => {
+    const { container } = render(<ForcedStopCue stop={null} cueMs={5000} />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it.each(['write-failed', 'refresh'] as const)(
-    'DRAG-6.16, DRAG-6.17: says why in the status element when the cause is %s',
-    cause => {
-      const other = cause === 'refresh' ? 'write-failed' : 'refresh';
-      render(<ForcedStopCue stop={stopOf(cause)} cueMs={5000} />);
+  it.each(['write-failed', 'refresh'] as const)('DRAG-6.16: says why when the cause is %s', cause => {
+    const other = cause === 'refresh' ? 'write-failed' : 'refresh';
+    const { container } = render(<ForcedStopCue stop={stopOf(cause)} cueMs={5000} />);
 
-      // Its own sentence, and never the other cause's.
-      expect(screen.getByRole('status')).toHaveTextContent(SENTENCE[cause]);
-      expect(screen.getByRole('status')).not.toHaveTextContent(SENTENCE[other]);
-    },
-  );
+    // Its own sentence, and never the other cause's.
+    expect(banner(container)).toHaveTextContent(SENTENCE[cause]);
+    expect(container).not.toHaveTextContent(SENTENCE[other]);
+  });
 
   it('words the two causes differently, each in its own sentence', () => {
     const said = (['write-failed', 'refresh'] as const).map(cause => {
-      const { unmount } = render(<ForcedStopCue stop={stopOf(cause)} cueMs={5000} />);
-      const text = screen.getByRole('status').textContent;
+      const { container, unmount } = render(<ForcedStopCue stop={stopOf(cause)} cueMs={5000} />);
+      const text = banner(container)?.textContent;
       unmount();
       return text;
     });
@@ -45,9 +45,9 @@ describe('ForcedStopCue', () => {
   it.each(['write-failed', 'refresh'] as const)(
     'DRAG-6.26: says the same for a column drag’s stop, which names no item, when the cause is %s',
     cause => {
-      render(<ForcedStopCue stop={{ cause, itemId: null }} cueMs={5000} />);
+      const { container } = render(<ForcedStopCue stop={{ cause, itemId: null }} cueMs={5000} />);
 
-      expect(screen.getByRole('status')).toHaveTextContent(SENTENCE[cause]);
+      expect(banner(container)).toHaveTextContent(SENTENCE[cause]);
     },
   );
 

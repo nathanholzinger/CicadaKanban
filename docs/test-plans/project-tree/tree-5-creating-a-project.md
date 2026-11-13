@@ -32,7 +32,7 @@
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §5, wiki hierarchy-placement §6
 
-*Given* the project cap `PCAP` has been read and parent `P` is at absolute depth `PCAP`, *when* the user hovers its sidebar row's actions or views its Overview tab, *then* Add subproject is present on both surfaces but disabled. Hovering each gives exactly `At the depth cap (N levels)`, with `N = PCAP`. Each control is exposed as disabled to assistive technology, takes no keyboard focus and cannot open the create dialog or send a create request by pointer or keyboard activation. It is not replaced by a hidden control.
+*Given* the project cap `PCAP` has been read and parent `P` is at absolute depth `PCAP`, *when* the user hovers its sidebar row's actions or views its Overview tab, *then* Add subproject is present on both surfaces but disabled. Hovering each gives exactly `At the depth cap (N levels)`, with `N = PCAP`. Each control takes no keyboard focus and cannot open the create dialog or send a create request by pointer or keyboard activation. It is not replaced by a hidden control.
 
 *Given* instead `P` is already at depth `PCAP + 1` in data the API did not create, *then* both controls behave the same way and name `PCAP` in the reason, not `P`'s depth. The existing project remains visible and readable. The disabled control's color, opacity and cursor are not assertions of this case.
 

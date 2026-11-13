@@ -37,14 +37,25 @@ export async function holdForcedStopCause(page: Page, cause: ForcedStopCause) {
       .toBe(true);
   };
 
+  // Everything the earlier writes must have done before the drag to interrupt is picked up.
+  const ready = async () => {
+    await arrived();
+    if (cause === 'stale-reindex') await superseded();
+  };
+
   return {
     arrived,
     // For stale-reindex, make a second move of the same item and await this
     // before picking up the drag to interrupt. The first answer stays held.
     superseded,
+    ready,
+    // Lets the held answer land and returns at once, so a caller can hold the reload it causes.
+    async land() {
+      await ready();
+      held.release();
+    },
     async trigger() {
-      await arrived();
-      if (cause === 'stale-reindex') await superseded();
+      await ready();
       const reloaded = boardReload(page);
       held.release();
       await reloaded;
@@ -55,3 +66,5 @@ export async function holdForcedStopCause(page: Page, cause: ForcedStopCause) {
     },
   };
 }
+
+export type HeldCause = Awaited<ReturnType<typeof holdForcedStopCause>>;

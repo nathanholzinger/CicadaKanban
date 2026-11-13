@@ -14,7 +14,7 @@ The rules every write is held to hold for a create too. A parentless create's at
 | ATT-10.6 | The Sheet allows adding a child that reaches exactly the item cap | P1 | Automated |
 | ATT-10.7 | The Sheet's add-child control stays drawn but disabled at or past the item cap | P1 | Automated |
 | ATT-10.8 | After a reparent, the add-child control follows the item's new depth | P1 | Automated |
-| ATT-10.9 | An older depth read cannot enable adding a child after a later reparent reaches the cap | P1 | Open |
+| ATT-10.9 | An older depth read cannot enable adding a child after a later reparent reaches the cap | P1 | Automated |
 
 ---
 
@@ -76,7 +76,7 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §8, wiki hierarchy-placement §6
 
-*Given* parent item `P` at absolute depth `CAP`, with root items at depth 1 and `CAP` the board's item cap, *when* its Sheet is opened, *then* the add-child control remains present but disabled. Hovering it gives exactly `At the depth cap (N levels)`, with `N = CAP`. It is exposed as disabled to assistive technology, takes no keyboard focus and cannot open a child-create input or send a create request by pointer or keyboard activation.
+*Given* parent item `P` at absolute depth `CAP`, with root items at depth 1 and `CAP` the board's item cap, *when* its Sheet is opened, *then* the add-child control remains present but disabled. Hovering it gives exactly `At the depth cap (N levels)`, with `N = CAP`. It takes no keyboard focus and cannot open a child-create input or send a create request by pointer or keyboard activation.
 
 *Given* instead existing `P` is at depth `CAP + 1` in data the API did not create, *then* the control behaves the same way, and the reason names the item cap, not `P`'s depth or the project cap. `P` remains readable in its Sheet. The disabled control's color, opacity and cursor are not assertions of this case.
 
@@ -94,10 +94,10 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 
 ## ATT-10.9 — An older depth read cannot enable adding a child after a later reparent reaches the cap
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §14, wiki item-attachment §8, wiki hierarchy-placement §6
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §8, wiki hierarchy-placement §6
 
 *Given* item cap `CAP >= 3`, root items at absolute depth 1, leaf `X` at depth `CAP` under `T` at `CAP - 1`, and legal parent `S` at `CAP - 2`, with `X` shown in its Sheet and its add-child control disabled, *when* `X` is successfully reparented from its Sheet under `S`, the ensuing depth read captures `X` at `CAP - 1` but its answer is held, and `X` is then successfully reparented back under `T`, *then*, when the second reparent's depth read arrives first, the add-child control is drawn disabled, with hover reason exactly `At the depth cap (N levels)`, `N = CAP`.
 
-*When* the held shallower answer then arrives, *then* `X`'s current saved parent remains `T` at resulting depth `CAP`, and the control stays drawn and disabled with the same reason. It remains exposed as disabled to assistive technology, takes no click or keyboard focus, and cannot open a child-create input or send a create request. No child is created by either reparent or by applying either read. If the Sheet remains open, this holds there without closing and reopening it; the case does not prescribe whether a reparent keeps it open. Answering the reads in their original order ends with the same disabled control after the second reparent's read.
+*When* the held shallower answer then arrives, *then* `X`'s current saved parent remains `T` at resulting depth `CAP`, and the control stays drawn and disabled with the same reason. It takes no click or keyboard focus, and cannot open a child-create input or send a create request. No child is created by either reparent or by applying either read. If the Sheet remains open, this holds there without closing and reopening it; the case does not prescribe whether a reparent keeps it open. Answering the reads in their original order ends with the same disabled control after the second reparent's read.
 
-**Automation test:** —
+**Automation test:** `tests/ui/item-create-cap.spec.ts`, `client/src/components/ItemDetailPanel.test.tsx`

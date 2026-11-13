@@ -64,6 +64,22 @@ export function hierarchyModal(page: Page, cardTitle: string): Locator {
   return page.getByRole('dialog', { name: `Hierarchy of ${cardTitle}`, exact: true });
 }
 
+// The forced-stop banner, by the attribute the app gives it (`ForcedStopCue.tsx`), whose value is the
+// cause. It exists only while a stop is live.
+export function stopBanner(page: Page): Locator {
+  return page.locator('[data-forced-stop]');
+}
+
+// The rows drawn with the stopped-item flash (`data-stop-flash`, `dragChrome.tsx::useItemRow`).
+export function flashingRows(page: Page): Locator {
+  return page.locator('[data-stop-flash]');
+}
+
+// What the board shows in place of itself while a reload is read (`BoardView.tsx`).
+export function loadingBoard(page: Page): Locator {
+  return page.getByText('Loading board…', { exact: true });
+}
+
 // The overflow row standing in for the hidden children of the row `ownerId`
 // (`StubRows.tsx::OverflowRow`). It is no item, so it has no `data-item-id`.
 export function overflowRow(page: Page, ownerId: string): Locator {

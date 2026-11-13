@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
 import { workedList, workedResponse } from '../../test/reindexFixtures';
+import type { MoveItemInput } from '../../api/items';
 import { sendItemMove, toRequest } from './dragRequest';
 import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
@@ -317,6 +318,73 @@ describe('the preview through its responses', () => {
       expect(state.items.find(i => i.id === 'X')!.position, band).toBe(4);
       const next = completeItemWrite(state, response, marker);
       expect(freeItemOrder(next.items, next.placements), band).toEqual(order);
+    }
+  });
+
+  // The case's own column, A, C and E, with X carried in from Doing: a drop beside A, and a release in the top
+  // and the bottom band. What the board draws is read as the request leaves, before any answer.
+  it('DRAG-6.1: in a column of A, C and E, a drop beside A is drawn A, X, C, E before the request leaves, and the top and bottom bands send before A and after E', async () => {
+    const items = () => [
+      item('A', { workphaseId: 'todo', position: 1 }),
+      item('C', { workphaseId: 'todo', position: 3 }),
+      item('E', { workphaseId: 'todo', position: 5 }),
+      item('X', { workphaseId: 'doing', position: 9 }),
+    ];
+    const origin: Placement = { workphaseId: 'doing', slot: 'existing' };
+    const column = [{ id: 'A' }, { id: 'C' }, { id: 'E' }];
+    type Anchor = { anchorId: string; side: 'before' | 'after' };
+    const cases: Array<[string, Placement, Anchor, number, string[]]> = [
+      [
+        'beside A',
+        { workphaseId: 'todo', slot: { anchorId: 'A', side: 'after' } },
+        { anchorId: 'A', side: 'after' },
+        2,
+        ['A', 'X', 'C', 'E'],
+      ],
+      [
+        'top band',
+        { workphaseId: 'todo', slot: 'first' },
+        { anchorId: 'A', side: 'before' },
+        0.5,
+        ['X', 'A', 'C', 'E'],
+      ],
+      ['bottom band', { workphaseId: 'todo', slot: 'last' }, { anchorId: 'E', side: 'after' }, 6, ['A', 'C', 'E', 'X']],
+    ];
+    for (const [drop, ghost, anchor, resolved, order] of cases) {
+      const response = item('X', { workphaseId: 'todo', position: resolved });
+      const request = toRequest({ workphaseId: 'doing' }, origin, ghost, column)!;
+      // The marker the send block records for the write, as the board would hold it.
+      let marker: Placement | null = null;
+      const writes: ItemWriteTracker = {
+        begin: (_id, pending) => {
+          marker = pending;
+          return 1;
+        },
+        complete: () => ({ applied: true, needsResync: false }),
+        fail: () => {},
+        isPending: () => true,
+      };
+      const sent: MoveItemInput[] = [];
+      let drawn: string[] = [];
+      let position: number | null | undefined;
+      const moveItem = async (_id: string, data: MoveItemInput) => {
+        sent.push(data);
+        const state = withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: items() }, 'X', marker);
+        drawn = freeItemOrder(state.items, state.placements);
+        position = state.items.find(i => i.id === 'X')!.position;
+        return response;
+      };
+      await sendItemMove(moveItem, 'X', request, ghost, writes, () => {});
+
+      // The request carries the workphase and the anchor, the board drew that same anchor as it left, and no
+      // position was given to X to get there.
+      expect(sent, drop).toEqual([{ workphaseId: 'todo', ...anchor }]);
+      expect(drawn, drop).toEqual(order);
+      expect(position, drop).toBe(9);
+      // Once the answer is applied, the picture is the one already drawn.
+      const pendingState = withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: items() }, 'X', marker);
+      const next = completeItemWrite(pendingState, response, marker);
+      expect(freeItemOrder(next.items, next.placements), drop).toEqual(order);
     }
   });
 

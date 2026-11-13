@@ -500,8 +500,8 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **4f.** DRAG-2 and ATT-4.9.
 - **4g.** TREE, with TREE-9.4 and TREE-11.7.
 - **4h.** Item 3's six legacy skips.
-- **4i.** Work returned after its tests were skipped: DRAG-3.16 (from 4a, after the runner trial's setup connection reset), DRAG-5.3 and DRAG-5.10's B21 test (from 4b) and DRAG-7.18 (from 4c), and any later flaky test that predates its batch. DRAG-7.18 is also a case study in weighing a surface test's cost.
-- **4j.** Deferred from 4c's close: the weak hold-opened distance variants of DRAG-7.10 and DRAG-1.14, and three candidate new cases (two for a Planner session, one for the PO).
+- **4i.** Work returned after its tests were skipped: DRAG-3.16 (from 4a, after the runner trial's setup connection reset), DRAG-5.3 and DRAG-5.10's B21 test (from 4b), and any later flaky test that predates its batch. DRAG-7.18 came here from 4c and moved to 4j on 2026-11-13.
+- **4j.** Deferred from 4c's close: the weak hold-opened distance variants of DRAG-7.10 and DRAG-1.14, and three candidate new cases (two for a Planner session, one for the PO). Batch 4d adds the three tier variants of DRAG-6.23 and, from 2026-11-13, its skipped ghost test and DRAG-6.24's skipped drop-line test, DRAG-6.7's held-off discard clause, catalogued as an example, and four questions: the stop matrix's four skipped cells, DRAG-6.22's two endings and asserting DRAG-6.16's top edge, to revisit, and whether a section collapsed by hand stays collapsed across a reload, a possible Product Owner gap to resolve. DRAG-7.18 and its cost study moved here from 4i on 2026-11-13.
 
 #### Batch 4a results — 2026-11-08
 
@@ -662,6 +662,24 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **2026-11-12 — Failing tests in a batch (Nathan).** DRAG-5.10's B21 test joins 4i, skipped after one failure at five workers. D2 gains a rule for the rest of the story: a flaky test that predates the batch is skipped and moved to 4i, and a batch's own failing test gets up to two fix attempts when the failure is false, then a report instead of more attempts. The bar, the order of remedies for a test the attempts don't settle, and the five stops stand. The batches doc's stops point at it.
 
 - **2026-11-12 — Batch 4j added (Nathan).** The Reconciler's report on 4c found a weak test (the hold-opened Stub distance variants of DRAG-7.10 and DRAG-1.14 don't show their rest point lies in P's box) and three candidate new cases. All four are deferred to a new batch 4j, after 4i. 4c closes without them. No decision changes. The batches doc's 4j has the detail.
+
+- **2026-11-12 — DRAG-6.23's three tier variants moved to batch 4j (Nathan).** Batch 4d's Stop 1 plan weighed them as a cost signal, and Nathan deferred them to 4j. 4d keeps the case's no-tier and ghost clauses, so DRAG-6.23 closes `Open` there and is confirmed at 4j's close. No decision changes. The batches doc's 4j has the detail.
+
+- **2026-11-13 — DRAG-6.23's ghost test skipped and moved to batch 4j; 4i and 4j's purposes stated (Nathan).** The ghost test was red and is skipped as scope creep, since the MVP phase favours new features over hardening. 4i takes tests that have shown failures in a run, to settle one-off against flaky; 4j takes test suggestions that are scope creep to defer to a hardening story after the MVP, or tests to re-weigh on value against cost or flakiness risk. No decision changes. The batches doc's 4j and Open questions have the detail.
+
+- **2026-11-13 — DRAG-6.24's drop-line test skipped and moved to batch 4j (Nathan).** The test passes. It is skipped on its value against its cost, and the case's other three tests stay. No decision changes. The batches doc's 4j has the detail.
+
+- **2026-11-13 — DRAG-6.7's discard clause deferred to batch 4j as a catalogued example (Nathan).** No internal test is written now, and DRAG-6.7 closes `Open` in 4d. No decision changes. The batches doc's 4j has the detail.
+
+- **2026-11-13 — DRAG-6.1's two gaps closed in batch 4d's Stop 2 (Nathan).** The Test Reviewer found the mid-list drop and the request's anchor unasserted, and one test added to the case's approved internal carrier closes both. No decision changes. The batches doc's Results and Open questions have the detail.
+
+- **2026-11-13 — DRAG-6.5's older timed test retired in batch 4d's Stop 2 (Nathan).** It waited out about 5.5 s and proved nothing the two held-answer tests don't. No decision changes. The batches doc's Results has the detail.
+
+- **2026-11-13 — Batch 4d's stop matrix cut to five cells, and two cost questions for batch 4j (Nathan).** The matrix keeps a column under each cause and a Stub's section and the modal under the stale response, and its other four cells are skipped. DRAG-6.22 keeps both endings for now. 4j revisits both. No decision changes. The batches doc's Results and 4j have the detail.
+
+- **2026-11-13 — DRAG-7.18 and its cost study moved from batch 4i to 4j, and 4j gains a question on DRAG-6.16's top edge (Nathan).** DRAG-7.18's tests were skipped for their cost, not a failure, which is 4j's work. DRAG-6.16's top edge stays unasserted, and 4j reconsiders it. No decision changes. The batches doc's 4i and 4j have the detail.
+
+- **2026-11-13 — Batch 4d closed: 12 of its 16 cases `Automated`, four held for 4j (the Reconciler, Nathan's rulings).** DRAG-6.7, 6.16, 6.23 and 6.24 stay `Open` in 4j. No decision changes. The batches doc's Results and the Reconciler's report have the detail.
 
 ## Open questions
 
