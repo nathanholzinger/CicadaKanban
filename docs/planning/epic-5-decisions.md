@@ -212,6 +212,37 @@ whatever Epic 5 does with the table regardless of this decision.
 
 ---
 
+## Deferred from the Quick Items epic: the start datetime
+
+Nathan deferred this here on 2026-11-12, while planning Epic 4
+(`epic-4-stories/epic-4-roadmap.md`, Q20). It was `epic-4-decisions.md`
+§10.
+
+**The feature:** an item can have a start datetime. When it's set and
+the current time passes it, the item moves from Backlog to Active by
+itself.
+
+**Why here:** the start datetime is likely to show as a pill on the
+Card, which is tag work. Its date buckets in a column are the column
+merging-expanding rework's (`epic-8-decisions.md`, "Deferred (not
+events-specific): column merging-expanding rework"). When the move
+happens, on a timer or worked out at read, is a design of its own.
+
+**What Epic 4 gives it:** three statuses on every item, Backlog, Active
+and Done (working names), with the workflow subdividing Active. A move
+from Backlog to Active is an ordinary status write, and a full item made
+Active with no workphase named takes its workflow's first workphase.
+So the start datetime needs no status rules of its own, only what
+triggers the write.
+
+**Open for this epic:**
+- whether it moves the item at the time, by a server timer, or the item
+  reads as Active once the time has passed, with nothing written;
+- what an item whose start passes while it's Done does (nothing,
+  presumably);
+- whether an attached item can have one, given it reads as at least its
+  parent's status.
+
 ## Test-plan cases routed here by ID
 
 Nathan routed this here on 2026-11-06, from Epic 3.5's Story 10

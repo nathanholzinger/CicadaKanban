@@ -13,7 +13,7 @@ Decide whether the board offers a drop that reparents a Free item and keeps it F
 - **Its candidate home is gone.** Story 6.1's dry run put it at the Card layer, as a third meaning of a release there. Story 8.1 folds the Card layer into the Descendants layer (Epic 3.5's roadmap), so this story starts from a board without that layer.
 - **Why it waited:** it's judged best once the other gestures exist and feel settled, which is Story 8's work.
 
-**Out of scope:** dual position values, which Epic 3.5's Story 9 also raised. They're `positioning-on-create-and-edit.md`'s, under "Two position values", and Story 9's note on them went to that story's Inbound deferrals.
+**Out of scope:** dual position values, which Epic 3.5's Story 9 also raised. They're Epic 4's Story 3 (`docs/planning/epic-4-stories/epic-4-roadmap.md`, Group 6), where Story 9's note on them is Q23. Until 2026-11-12 they were `positioning-on-create-and-edit.md`'s second half.
 
 ## Inbound deferrals
 
