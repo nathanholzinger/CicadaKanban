@@ -102,7 +102,7 @@ In run order, since a later batch reuses an earlier one's setups (D5). The case 
 | 4b. DRAG-4 and DRAG-5 | 26 | Closed; DRAG-5.3 and DRAG-5.10's B21 test returned to 4i | [The log](story-10-batch-4a-4d-log.md) |
 | 4c. DRAG-7 | 15 | Closed; DRAG-7.18 went to 4j | [The log](story-10-batch-4a-4d-log.md) |
 | 4d. DRAG-6 | 16 | Closed; DRAG-6.7, 6.16, 6.23 and 6.24 went to 4j | [The log](story-10-batch-4a-4d-log.md) |
-| 4e. DRAG-8 | 12 | Next | [story-10-batch-4e.md](story-10-batch-4e.md) |
+| 4e. DRAG-8 | 12 | Closed; DRAG-8.10 went to Drag Automation Deferrals | [story-10-batch-4e.md](story-10-batch-4e.md) |
 | 4f. DRAG-2 and ATT-4.9 | 14 | Not started | [story-10-batch-4f.md](story-10-batch-4f.md) |
 | 4g. TREE | 33 | Not started | [story-10-batch-4g.md](story-10-batch-4g.md) |
 | 4h. The six legacy skips | — | Not started | [story-10-batch-4h.md](story-10-batch-4h.md) |
@@ -168,3 +168,4 @@ Skips added since, each temporary: DRAG-3.16's two tests (2026-11-10), DRAG-5.3'
 ## Amendments
 
 - **2026-11-13 — Split into this index and one file per batch (Nathan, the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)).** 4a–4d's history, the five stops, the Review log, the earlier Amendments and 4c's and 4d's settled Open questions moved word for word to [the 4a to 4d log](story-10-batch-4a-4d-log.md). 4e–4h moved to their own files, and 4i and 4j, with the Open questions they cite, to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md). The stops are now four, and the standing rules gain one test per case (D14), the look rule's later word (D13), the deferrals catalog, the reviewer's confirming passes and the Reconciler's single follow-up. The plan's Goal, D2, D5, D10, D12, D13, Phase 4 and Phase 5 are amended to match.
+- **2026-11-15 — Batch 4e closes with 11 of its 12 cases `Automated` and DRAG-8.10 deferred (Nathan, the Reconciler).** DRAG-8.1 to 8.9, 8.11 and 8.12 are `Automated` by their tests in `tests/ui/drag-8-carried-branch.spec.ts`. DRAG-8.10's test is skipped and the case stays `Open`, in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), which also holds 4e's two suggested variants, one test-quality note and one candidate case, and the final run's one connection reset in 4i. [The batch file](story-10-batch-4e.md) has the close-out packet and the Reconciler's report.

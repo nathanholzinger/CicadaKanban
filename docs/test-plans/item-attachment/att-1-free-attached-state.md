@@ -1,6 +1,6 @@
 # ATT-1 — Free / Attached state model
 
-**Next ID:** ATT-1.16
+**Next ID:** ATT-1.17
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -17,6 +17,7 @@
 | ATT-1.12 | Attaching a done Free item clears its `completedAt` and gives it a sibling position | P1 | Automated |
 | ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Automated |
 | ATT-1.15 | An older child answer cannot undo a later parent workphase cascade | P0 | Open |
+| ATT-1.16 | A Card's list keeps the user's choice until the page reloads | P1 | Open |
 
 ---
 
@@ -132,5 +133,22 @@ No read shows one consequence flipped and another not.
 *then*, when `P`'s answer is applied first, `P`, `C` and `G` each hold `workphaseId = W2` in the board's item state. Applying `C`'s older answer second leaves all three at `W2`, matching their saved workphases. `P`'s Card stays in `W2`'s column with `C` and `G` as Stubs inside it. Neither `C`'s workphase nor the workphase cascaded from it to `G` returns to `W1`. Answering the same writes in their saved order ends with the same workphases and placement.
 
 *Given* instead the same hierarchy starts with no workphase on any item, so Unsorted's `invalidItems` includes `P`, `C`, `G` and `S` and `needsAttention` is true, *when* the same writes are saved and answered in either order, with the reorder's answer carrying `C.workphaseId = null`, *then* after `P`'s answer is applied every item in that hierarchy holds `W2`, `invalidItems` is empty and `needsAttention` is false. The older reorder answer cannot restore a missing workphase or raise attention again. There are no other items or uncovered workphases in this setup. Badge appearance is not prescribed.
+
+**Automation test:** —
+
+## ATT-1.16 — A Card's list keeps the user's choice until the page reloads
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §12
+
+*Given* one selected board with Free Cards `C`, `E` and `U`, each with one attached child, and the user has explicitly collapsed `C`'s list and expanded `E`'s but has not set `U`'s, *when* `C` moves to another column and `E` moves to another sub-row on that same board, *then* after each move `C`'s list is collapsed with its child hidden, and `E`'s is expanded with its child drawn, at their respective places. *When* a column editor's save reloads that board with no drag active, *then* those same two choices and child visibilities remain.
+
+*Given* `U`'s list starts from the board's "Show attached children by default" setting, *when* that setting changes in either direction, *then* `C` stays collapsed and `E` stays expanded, both when the setting changes and after the board's next load. `U` keeps the state from the last load until the next load, then starts from the new setting:
+
+| Setting change | `U` at the first load and before the next load | `U` at the next load |
+|---|---|---|
+| On → off | Expanded, child drawn | Collapsed, child hidden |
+| Off → on | Collapsed, child hidden | Expanded, child drawn |
+
+*When* the page is reloaded while staying on that board, *then* every list starts again from the board's current setting, including `C` and `E`: with the setting on, all three lists are expanded and their children drawn; with it off, all three are collapsed and their children hidden. Neither explicit choice survives the page reload.
 
 **Automation test:** —

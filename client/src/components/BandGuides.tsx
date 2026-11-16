@@ -139,8 +139,10 @@ export function DragCarveFrame({
   // renders them through. Board layer puts a carve-out zone *before* them,
   // and React matches unkeyed children by index. Without the key every
   // Card in the region would remount on the way into and out of Board
-  // layer, resetting each one's hand-set expand/collapse to the board's
-  // default (wiki board-drag-interaction §1.1).
+  // layer, losing the state a Card keeps for itself across the drag (its
+  // zoom bookkeeping). A list's open or closed is not among that: it is
+  // kept above the Card (`CardExpansionContext.ts`, wiki item-attachment
+  // §12), so it holds through any remount.
   const cards = <Fragment key="cards">{children}</Fragment>;
 
   if (!session) return wrap(cards);

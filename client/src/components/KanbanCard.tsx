@@ -18,7 +18,7 @@
 // under its box, in either form (`dragChrome.tsx::CarriedBranchLine`).
 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
@@ -27,6 +27,7 @@ import type { CarriedBranch } from '../lib/hierarchyPlacement';
 import { hierarchyRows, sectionEntries } from './workflow/descendantsSection';
 import { parentOpinionOf } from './workflow/itemListOps';
 import { useHierarchyModal } from './workflow/HierarchyModalContext';
+import { useCardExpansion } from './workflow/CardExpansionContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
@@ -141,7 +142,13 @@ export default function KanbanCard({
   overlayBranch = null,
   onCardClick,
 }: KanbanCardProps) {
-  const [manualExpanded, setExpanded] = useState(defaultExpanded);
+  // The list's own choice is the user's, kept by item id above the Card (`CardExpansionContext.ts`), so
+  // it holds wherever the board draws the Card next. A list the user hasn't set starts from the
+  // board's setting, as the board last loaded it (`defaultExpanded`). `attachedOpens` counts the
+  // attachments into this Card that leave it open (below), until the store has them.
+  const { choices, choose } = useCardExpansion();
+  const [attachedOpens, setAttachedOpens] = useState(0);
+  const manualExpanded = choices.get(item.id) ?? (attachedOpens > 0 || defaultExpanded);
   const [zoomedItem, setZoomedItem] = useState<{ id: string; parentId: string | null } | null>(null);
   const {
     setNodeRef,
@@ -236,8 +243,12 @@ export default function KanbanCard({
   } else if (!lockedHere && zoomedItem) {
     setZoomedItem(null);
     const attached = !cardDragSession && rows.find(row => row.id === zoomedItem.id);
-    if (attached && attached.parentId !== zoomedItem.parentId) setExpanded(true);
+    if (attached && attached.parentId !== zoomedItem.parentId) setAttachedOpens(n => n + 1);
   }
+  // The store is the board's, so it is written once this render has committed, and before the paint.
+  useLayoutEffect(() => {
+    if (attachedOpens > 0) choose(item.id, true);
+  }, [attachedOpens, choose, item.id]);
   // What the section draws: `rows` cut at the last shown level, with an overflow row for the
   // children it hides, and without the branch the carried item takes with it. The board still places
   // against all of `rows`.
@@ -316,7 +327,7 @@ export default function KanbanCard({
                         type="button"
                         onClick={e => {
                           e.stopPropagation();
-                          setExpanded(v => !v);
+                          choose(item.id, !manualExpanded);
                         }}
                         onPointerDown={e => e.stopPropagation()}
                         className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"

@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, within } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import KanbanCard from './KanbanCard';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
+import { CardExpansionContext, useCardExpansionStore } from './workflow/CardExpansionContext';
 import { DragSessionContext, type DescendantsProjection, type DragSession } from './workflow/DragSessionContext';
 import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_CARD_ATTR, DRAG_REGION_ATTR, descendantsRegionKey } from './workflow/dragRegions';
@@ -42,6 +44,12 @@ function cardFrame(props: CardProps, { session = null, modalCardId = null }: Car
 
 function renderCard(props: CardProps = {}, context: CardContext = {}) {
   return render(cardFrame(props, context));
+}
+
+// What `BoardView` is to the Cards: the one holder of which lists the user has set, through the same
+// store, which a test's rerender keeps as the board's reload keeps it.
+function BoardStore({ children }: { children: ReactNode }) {
+  return <CardExpansionContext value={useCardExpansionStore()}>{children}</CardExpansionContext>;
 }
 
 const regionElements = (container: HTMLElement) => [...container.querySelectorAll(`[${DRAG_REGION_ATTR}]`)];
@@ -147,12 +155,14 @@ describe('a zoomed Card retaining its expansion after attachment', () => {
       return parentId === OTHER.id ? [OTHER_CHILD] : [];
     };
     return (
-      <DndContext>
-        <DragSessionContext value={session}>
-          <KanbanCard item={CARD} childCount={attached ? 2 : 1} getAttachedChildren={children} />
-          <KanbanCard item={OTHER} childCount={1} getAttachedChildren={children} />
-        </DragSessionContext>
-      </DndContext>
+      <BoardStore>
+        <DndContext>
+          <DragSessionContext value={session}>
+            <KanbanCard item={CARD} childCount={attached ? 2 : 1} getAttachedChildren={children} />
+            <KanbanCard item={OTHER} childCount={1} getAttachedChildren={children} />
+          </DragSessionContext>
+        </DndContext>
+      </BoardStore>
     );
   }
 
@@ -223,6 +233,52 @@ describe('a zoomed Card retaining its expansion after attachment', () => {
 
     rerender(twoCards(null));
     expect(target().queryByText(CHILD.title)).toBeNull();
+  });
+});
+
+// The list is the user's choice about the Card, kept above it (wiki item-attachment §12): a Card drawn
+// again as another instance, in another column or after the board reloads, has it as the user left it.
+describe('a Card’s list of Stubs, as the user set it', () => {
+  const shown = (container: HTMLElement) => container.querySelector('[data-item-id="c"]') !== null;
+  // `instance` names the Card's instance: a new one is a Card drawn again, under the same store.
+  const frame = (props: CardProps, instance = 'first') => (
+    <BoardStore>
+      <DndContext>
+        <KanbanCard key={instance} item={CARD} childCount={1} getAttachedChildren={attachedChildren} {...props} />
+      </DndContext>
+    </BoardStore>
+  );
+
+  it.each([true, false])('stays %s when the Card is drawn again as a new instance', open => {
+    const { container, getByTitle, rerender } = render(frame({ defaultExpanded: !open }));
+    fireEvent.click(getByTitle(open ? 'Show attached children' : 'Hide attached children'));
+    expect(shown(container)).toBe(open);
+
+    // A move to another column, or a reload, draws the Card as a new instance.
+    rerender(frame({ defaultExpanded: !open }, 'elsewhere'));
+
+    expect(shown(container)).toBe(open);
+  });
+
+  it('starts a list the user has not set from the setting the Card is given', () => {
+    const open = render(frame({ defaultExpanded: true }));
+    expect(shown(open.container)).toBe(true);
+    open.unmount();
+
+    const closed = render(frame({ defaultExpanded: false }));
+    expect(shown(closed.container)).toBe(false);
+  });
+
+  it('is left as it is by a change of the setting, once the user has set it', () => {
+    const { container, getByTitle, rerender } = render(frame({ defaultExpanded: true }));
+    fireEvent.click(getByTitle('Hide attached children'));
+
+    rerender(frame({ defaultExpanded: false }, 'after the setting changed'));
+    expect(shown(container)).toBe(false);
+    fireEvent.click(getByTitle('Show attached children'));
+    rerender(frame({ defaultExpanded: false }, 'and again'));
+
+    expect(shown(container)).toBe(true);
   });
 });
 

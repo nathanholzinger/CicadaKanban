@@ -371,6 +371,20 @@ none of it is stored):
 *Dossier* — a hypothetical richer-than-Sheet view — is named but
 undesigned.
 
+**A Card's list of Stubs stays collapsed or expanded as
+the user set it,** wherever the board draws the Card: after a move to
+another column or sub-row, and through every reload of the board it's
+on, a drag's forced stop included
+([`../board-drag-interaction/`](../board-drag-interaction/) §1.1, §10).
+Reloading the page starts every list again from the board's "Show
+attached children by default" setting. The setting decides only how a
+list the user hasn't set starts, from the board's next load, and
+changing it leaves a list the user has set as it is. A switch to another
+board isn't covered (Open questions). **Why:** the choice is about the
+Card, not the place it's drawn in, so a redraw that put back a list the
+user closed, or closed one they opened, would undo it with nothing
+erroring.
+
 ## 13. Deleting an item deletes its subtree
 
 **Deleting an item permanently deletes every descendant with it,
@@ -458,3 +472,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   such a project, and
   whether a reparent into or out of such a project is cross-workflow, is
   undecided.
+- **A list the user set, after a switch to another board (§12).** The
+  rule keeps it through the board's own reloads, and the setting that
+  starts an unset list is each board's own. Whether a list the user set
+  follows the Card to another board of the workflow, or starts again
+  from that board's setting, is undecided.

@@ -149,6 +149,10 @@ The exceptions:
   again, it goes back to how the user set it. If the item is attached into
   it, it stays open, so the item's new place is in view.
 
+After a move and through a reload, a list stays as the user set it by
+[`../item-attachment/`](../item-attachment/) §12's rule, the same as
+through a drag.
+
 ## 2. Default assumption: reposition in place
 
 **A drag is assumed to be a reposition within its current context until the
@@ -1128,6 +1132,11 @@ item up again costs little. Why not keep the drag going on the reloaded board: t
 move or remove what the drag is locked into, such as a Card the failed
 drop had put in this column, and the release would then land somewhere
 the user never saw.
+
+**The reloaded board keeps each Card's list of Stubs as the user set
+it,** collapsed or expanded, so a stop doesn't open a section the user
+had closed, or close one they had open
+([`../item-attachment/`](../item-attachment/) §12).
 
 **A drag the board stops shows a cue that says so,** so the drag's end
 doesn't read as a slip of the user's hand. Each of the three resyncs

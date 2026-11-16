@@ -302,11 +302,11 @@ The outline's painted colour is checked in [DRAG-1.27](drag-1-contexts-and-poppi
 
 **Priority:** P2 · **Status:** Manual · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §2, wiki board-drag-interaction §5a
 
-*Given* the current configured drag appearance, *when* a person picks up a Free Card and carries it through Column/sub-row, Board and Descendants layers, and also picks up a Stub in its section or modal, *then* the shortCard carried copy has its pickup tilt and the carried Stub has the held shadow that distinguishes it from the list's rows. The active context's outline uses `activeContextOutlineColor` wherever the drag is locked. These painted treatments remain appropriate through the form switches; no angle, shadow recipe or final palette is prescribed.
+*Given* the current configured drag appearance, *when* a person picks up a Free Card that has an attached branch and carries it through Column/sub-row, Board and Descendants layers, and also picks up a Stub in its section or modal, *then* the shortCard carried copy has its pickup tilt, its count line turns with it, and the carried Stub has the held shadow that distinguishes it from the list's rows. The active context's outline uses `activeContextOutlineColor` wherever the drag is locked. These painted treatments remain appropriate through the form switches; no angle, shadow recipe or final palette is prescribed.
 
-Which context is active is [DRAG-1.26](drag-1-contexts-and-popping.md)'s; the two forms, their sizes and the pointer's continuity are [DRAG-3.22](drag-3-card-column-bands.md)'s.
+Which context is active is [DRAG-1.26](drag-1-contexts-and-popping.md)'s; the two forms, their sizes and the pointer's continuity are [DRAG-3.22](drag-3-card-column-bands.md)'s. The count line's presence, text and ownership are [DRAG-8.8](drag-8-carried-branch.md)'s and [DRAG-8.9](drag-8-carried-branch.md)'s.
 
-**Automation test:** none — manual: a person judges the painted tilt, held shadow and configured outline colour; context, form, position and size have separate assertions.
+**Automation test:** none — manual: a person judges the painted tilt, the count line turning with it, the held shadow and the configured outline colour; context, form, position and size have separate assertions.
 
 ## DRAG-1.28 — The carried card is bounded by its context
 

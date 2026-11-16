@@ -54,6 +54,11 @@ export function dragOverlay(page: Page): Locator {
   return page.locator(`[${DRAG_OVERLAY_ATTR}]`);
 }
 
+// The count line, read from the app's attribute. This does not expose the hidden branch's IDs.
+export function carriedBranchLine(scope: Page | Locator): Locator {
+  return scope.locator('[data-carried-branch]');
+}
+
 // The existing cue fill element, without committing its colour or final look.
 export function zoomCue(scope: Page | Locator): Locator {
   return scope.locator('[style*="animation-name: cue-fill"]');

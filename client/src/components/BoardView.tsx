@@ -29,6 +29,7 @@ import type { ArmedStop } from './workflow/forcedStop';
 import { useForcedStop } from './workflow/useForcedStop';
 import ForcedStopCue from './ForcedStopCue';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
+import { CardExpansionContext, useCardExpansionStore } from './workflow/CardExpansionContext';
 import { popState } from './workflow/popSession';
 import type { Point } from './workflow/dragRegions';
 import DragTuningPanel from './DragTuningPanel';
@@ -63,6 +64,9 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState<{ cardId: string; anchor: Point | null } | null>(null);
   const hierarchyModalCardId = hierarchyModalOpen?.cardId ?? null;
   const boardRootRef = useRef<HTMLDivElement>(null);
+  // Which Cards' lists the user has set by hand. It lives here, above the reload, for the same reason
+  // the cue does: the reload swaps the board for "Loading board…" and unmounts every Card.
+  const cardExpansion = useCardExpansionStore();
 
   function setDragTuning(next: DragTuning) {
     setDragTuningState(next);
@@ -78,8 +82,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleDeleteBoard,
     handleToggleShowAttachedChildren,
   } = useBoardManagement(workflowId);
-
-  const showAttachedChildrenDefault = Boolean(boards.find(b => b.id === activeBoardId)?.showAttachedChildren);
 
   const {
     workphases,
@@ -272,6 +274,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     );
   }
 
+  // How a list the user hasn't set starts: the setting as this board last loaded it, the Unsorted
+  // bucket's too, so changing the setting leaves every Card drawn as it is until the board next loads.
+  const attachedChildrenDefault = Boolean(board.showAttachedChildren);
+
   return (
     <>
       {cue}
@@ -337,8 +343,9 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
               <DragTuningContext value={dragTuning}>
                 <ForcedStopFlashContext value={dragTuning.forcedStopFlash ? forcedStop.flashItemId : null}>
                   <HierarchyModalContext value={hierarchyModal}>
-                    <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                      {/* data-drag-state / data-drag-context / data-drag-band: the pop
+                    <CardExpansionContext value={cardExpansion}>
+                      <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+                        {/* data-drag-state / data-drag-context / data-drag-band: the pop
                     machine's state, for tests.
                     data-drag-zoom-candidate / data-drag-zoom-phase: the card
                     the blue line currently names as a zoom-in candidate,
@@ -354,79 +361,80 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     data-drag-modal-hold: the hold that opens the hierarchy
                     modal ("<overflow row owner id>:<dwell|cue>") — a test
                     surface, undefined while none runs. */}
-                      <div
-                        ref={boardRootRef}
-                        style={overlayVars}
-                        data-drag-state={session ? popState(session.pop) : undefined}
-                        data-drag-context={session?.pop.contextKey ?? undefined}
-                        data-drag-band={session?.pop.hover?.band ?? undefined}
-                        data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
-                        data-drag-zoom-phase={session?.pop.hover?.phase}
-                        data-drag-projection={
-                          session?.projection
-                            ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
-                            : undefined
-                        }
-                        data-drag-modal-hold={
-                          session?.pop.modalHold
-                            ? `${session.pop.modalHold.ownerId}:${session.pop.modalHold.phase}`
-                            : undefined
-                        }
-                        className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
-                      >
-                        {board.columns.map(column => (
-                          <BoardColumn
-                            key={column.id}
-                            column={column}
+                        <div
+                          ref={boardRootRef}
+                          style={overlayVars}
+                          data-drag-state={session ? popState(session.pop) : undefined}
+                          data-drag-context={session?.pop.contextKey ?? undefined}
+                          data-drag-band={session?.pop.hover?.band ?? undefined}
+                          data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
+                          data-drag-zoom-phase={session?.pop.hover?.phase}
+                          data-drag-projection={
+                            session?.projection
+                              ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
+                              : undefined
+                          }
+                          data-drag-modal-hold={
+                            session?.pop.modalHold
+                              ? `${session.pop.modalHold.ownerId}:${session.pop.modalHold.phase}`
+                              : undefined
+                          }
+                          className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
+                        >
+                          {board.columns.map(column => (
+                            <BoardColumn
+                              key={column.id}
+                              column={column}
+                              getWorkphaseItems={getWorkphaseItems}
+                              getMergedColumnItems={getMergedColumnItems}
+                              childCounts={childCounts}
+                              getAttachedChildren={getAttachedChildren}
+                              defaultExpanded={attachedChildrenDefault}
+                              itemTypes={itemTypes}
+                              onCreateItem={handleCreateItem}
+                              onCardClick={setSelectedItemId}
+                              onEdit={readOnly ? undefined : setEditingColumn}
+                              onDelete={readOnly ? undefined : handleDeleteColumn}
+                            />
+                          ))}
+
+                          <UnsortedBucket
+                            uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
+                            unknownStatusItems={getUnknownStatusItems(workphases.map(w => w.id))}
                             getWorkphaseItems={getWorkphaseItems}
-                            getMergedColumnItems={getMergedColumnItems}
+                            needsAttention={
+                              board.unsorted.uncovered.length > 0 ||
+                              hasUnknownStatusItem(
+                                items,
+                                workphases.map(w => w.id),
+                              )
+                            }
+                            itemTypes={itemTypes}
                             childCounts={childCounts}
                             getAttachedChildren={getAttachedChildren}
-                            defaultExpanded={showAttachedChildrenDefault}
-                            itemTypes={itemTypes}
-                            onCreateItem={handleCreateItem}
+                            defaultExpanded={attachedChildrenDefault}
                             onCardClick={setSelectedItemId}
-                            onEdit={readOnly ? undefined : setEditingColumn}
-                            onDelete={readOnly ? undefined : handleDeleteColumn}
                           />
-                        ))}
 
-                        <UnsortedBucket
-                          uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-                          unknownStatusItems={getUnknownStatusItems(workphases.map(w => w.id))}
-                          getWorkphaseItems={getWorkphaseItems}
-                          needsAttention={
-                            board.unsorted.uncovered.length > 0 ||
-                            hasUnknownStatusItem(
-                              items,
-                              workphases.map(w => w.id),
-                            )
-                          }
-                          itemTypes={itemTypes}
-                          childCounts={childCounts}
-                          getAttachedChildren={getAttachedChildren}
-                          defaultExpanded={Boolean(board.showAttachedChildren)}
-                          onCardClick={setSelectedItemId}
-                        />
-
-                        {/* Inside the board root, so the drag's regions are read under one element and
+                          {/* Inside the board root, so the drag's regions are read under one element and
                       the overlay colors reach its rows. Its backdrop is `fixed`, so it takes no
                       part in the board's own layout. */}
-                        {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
-                          <HierarchyModal
-                            key={hierarchyModalCard.id}
-                            card={hierarchyModalCard}
-                            itemTypes={itemTypes}
-                            getAttachedChildren={getAttachedChildren}
-                            anchor={hierarchyModalOpen.anchor}
-                            onPlaced={readModalPlacement}
-                            onCardClick={setSelectedItemId}
-                            sheetOpen={selectedItemId !== null}
-                            onClose={closeHierarchyModal}
-                          />
-                        )}
-                      </div>
-                    </SortableContext>
+                          {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
+                            <HierarchyModal
+                              key={hierarchyModalCard.id}
+                              card={hierarchyModalCard}
+                              itemTypes={itemTypes}
+                              getAttachedChildren={getAttachedChildren}
+                              anchor={hierarchyModalOpen.anchor}
+                              onPlaced={readModalPlacement}
+                              onCardClick={setSelectedItemId}
+                              sheetOpen={selectedItemId !== null}
+                              onClose={closeHierarchyModal}
+                            />
+                          )}
+                        </div>
+                      </SortableContext>
+                    </CardExpansionContext>
                   </HierarchyModalContext>
                 </ForcedStopFlashContext>
               </DragTuningContext>
