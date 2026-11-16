@@ -9,23 +9,23 @@ The classification states and the Full, Mid and Low assignments are separate ass
 | DRAG-2.1 | A legal target is classified Valid | P0 | Automated |
 | DRAG-2.2 | The dragged item and every descendant are classified Cycle-forming | P0 | Automated |
 | DRAG-2.3 | A target whose resulting depth would exceed `CAP` is classified Depth-capped | P0 | Automated |
-| DRAG-2.4 | Classification is computed once at drag start and doesn't change mid-gesture | P1 | Open |
+| DRAG-2.4 | Classification is computed once at drag start and doesn't change mid-gesture | P1 | Automated |
 | DRAG-2.7 | Every Stub is classified individually | P0 | Automated |
 | DRAG-2.8 | A Stub drag is classified exactly like a Card drag, and a place that's no target isn't classified | P1 | Open |
 | DRAG-2.9 | Cycle-forming wins over Depth-capped | P1 | Automated |
 | DRAG-2.10 | The board's depth cap is the one the API enforces, carried by `GET /boards/:id` | P1 | Automated |
 | DRAG-2.11 | Depth classification includes pending parent changes and a detaching item's kept parent | P0 | Automated |
-| DRAG-2.12 | Cycle classification includes pending parent changes and a detaching item's kept parent | P0 | Open |
-| DRAG-2.14 | Valid Cards and Stubs are Full | P1 | Open |
-| DRAG-2.15 | A Free Card that is not Valid is Mid, never Low | P1 | Open |
-| DRAG-2.16 | A Depth-capped Stub is Mid with a Valid parent, and its children are Low | P1 | Open |
-| DRAG-2.17 | The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low | P1 | Open |
-| DRAG-2.18 | An overflow row is Full with a Valid owner and Low otherwise, never Mid | P1 | Open |
-| DRAG-2.19 | Tiers stay fixed across layers and clear when the drag ends | P1 | Open |
-| DRAG-2.20 | The ghost, carried copy, backdrop rows and non-targets take no target tier | P1 | Open |
-| DRAG-2.21 | Nested rows and the drop line keep independent tier state | P1 | Open |
-| DRAG-2.22 | Dimmed targets never start a zoom-in or modal-hold cue | P1 | Open |
-| DRAG-2.23 | Tier assignment uses pending attachment and parent changes at pickup | P1 | Open |
+| DRAG-2.12 | Cycle classification includes pending parent changes and a detaching item's kept parent | P0 | Automated |
+| DRAG-2.14 | Valid Cards and Stubs are Full | P1 | Automated |
+| DRAG-2.15 | A Free Card that is not Valid is Mid, never Low | P1 | Automated |
+| DRAG-2.16 | A Depth-capped Stub is Mid with a Valid parent, and its children are Low | P1 | Automated |
+| DRAG-2.17 | The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low | P1 | Automated |
+| DRAG-2.18 | An overflow row is Full with a Valid owner and Low otherwise, never Mid | P1 | Automated |
+| DRAG-2.19 | Tiers stay fixed across layers and clear when the drag ends | P1 | Automated |
+| DRAG-2.20 | The ghost, carried copy, backdrop rows and non-targets take no target tier | P1 | Automated |
+| DRAG-2.21 | Nested rows and the drop line keep independent tier state | P1 | Automated |
+| DRAG-2.22 | Dimmed targets never start a zoom-in or modal-hold cue | P1 | Automated |
+| DRAG-2.23 | Tier assignment uses pending attachment and parent changes at pickup | P1 | Automated |
 | DRAG-2.24 | Board tiers and the ghost use the configured strengths without compounded dimming | P1 | Manual |
 
 ---
@@ -56,11 +56,11 @@ The classification states and the Full, Mid and Low assignments are separate ass
 
 ## DRAG-2.4 — Classification is computed once at drag start and doesn't change mid-gesture
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §4
 
 *Given* a drag of `X` in progress, with targets classified as in [DRAG-2.1](drag-2-target-classification.md), [DRAG-2.2](drag-2-target-classification.md) and [DRAG-2.3](drag-2-target-classification.md), *when* the cursor moves across the board, hovering, popping, and entering and leaving contexts, *then* every target keeps the classification it had at drag start. The item being carried doesn't change mid-gesture, so neither does what any target is to it.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.7 — Every Stub is classified individually
 
@@ -68,7 +68,7 @@ The classification states and the Full, Mid and Low assignments are separate ass
 
 *Given* a drag of Card `X`, and Cards `P` and `Q` with Stubs, where `P`'s Stub `S_P` is a legal parent for `X` and `Q`'s Stub `S_Q` would put `X` past `CAP`, *when* the drag begins, *then* `S_P` is classified **Valid** and `S_Q` **Depth-capped**. No Stub is excluded just for being a Stub.
 
-**Automation test:** `tests/ui/drag-target-classification.spec.ts`
+**Automation test:** `client/src/components/workflow/dragClassification.test.ts`, `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.8 — A Stub drag is classified exactly like a Card drag, and a place that's no target isn't classified
 
@@ -108,105 +108,105 @@ The classification states and the Full, Mid and Low assignments are separate ass
 
 ## DRAG-2.12 — Cycle classification includes pending parent changes and a detaching item's kept parent
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki item-attachment §11
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §4, wiki item-attachment §11
 
 *Given* Free Card `A` with a Free child `D` elsewhere on the board, and a pending write attaching or reparenting `A` under Card `X`, *when* `X` is picked up before the response arrives, *then* visible `D` is **Cycle-forming**: the parent chain is `D → A → X`, even though the stored parent of `A` hasn't caught up. `D` is never offered as a Valid parent for `X`.
 
 *And given* instead `D` is a child of `X` whose detach is pending, so it previews as a Free Card while keeping `parentId = X`, *when* `X` is picked up, *then* `D` is **Cycle-forming**. Detaching doesn't break the parent chain, and classification doesn't treat the preview's separate Card as an unrelated root.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.14 — Valid Cards and Stubs are Full
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
 
 *Given* unrelated Card `P` and its attached Stub `S`, both Valid parents for the carried item `X`, *when* `X` is picked up, *then* `P` and `S` are each assigned the Full target tier. Both retain their Valid classification: tier assignment does not replace the legal-parent rule.
 
 The board's painted tier strengths and colours are checked in [DRAG-2.24](drag-2-target-classification.md).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.15 — A Free Card that is not Valid is Mid, never Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1
 
 *Given* `X` has a Free descendant Card `D`, and an unrelated Free Card `T` is Depth-capped for `X`, *when* `X` is picked up, *then* `D` remains Cycle-forming and `T` remains Depth-capped, but both are assigned Mid, never Low. Each can still be the named neighbor for a reposition in its column/sub-row, which assigns no parent; neither can receive `X` as a child. Any attached Stub inside `D` or `T` is assigned Low.
 
 The painted strengths are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.16 — A Depth-capped Stub is Mid with a Valid parent, and its children are Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki hierarchy-placement §6
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki hierarchy-placement §6
 
 *Given* carried item `X` of subtree height `H >= 1`, unrelated parent `P` at absolute depth `CAP - H - 1`, its attached child `S` at `CAP - H`, and an attached child `C` of `S`, with all existing rows within `CAP`, *when* `X` is picked up, *then* `P` is Valid and assigned Full. `S` is Depth-capped as a parent for `X`, but is assigned Mid: placing `X` beside `S` gives it parent `P`, and its deepest descendant fits exactly at `CAP`. `C` is assigned Low, since placing `X` beside it would give it invalid parent `S`. Every further attached descendant below `C` is Low too. No row is removed or collapsed to express the tier.
 
 Tier assignment does not remove a gap's depth range: valid shallower states beside a Low row remain available, as in [DRAG-4.18](drag-4-attach-and-stub-placement.md). Painted strengths are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.17 — The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2, wiki hierarchy-placement §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2, wiki hierarchy-placement §8
 
 *Given* Stub `X` in Card `P`'s section has an attached child `C` with attached child `G`, both shown, *when* `X` is picked up and dragged to a different gap, *then* `C` and `G` are absent from the section. Neither is Top, Bottom or the named neighbor. They remain absent after `X` pops out to the column or zooms into a different Card. The same absence holds for the attached branch of a Card picked up Free and zoomed into a section.
 
 *And given* `X` also has a Free descendant Card `D` with attached Stub `D1`, *then* `D` stays present in its column with Mid assigned, while `D1` stays in `D`'s section with Low assigned. Neither collapses with the branch. A detached link does not make `D1` a legal neighbor for its ancestor. Painted strengths are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.18 — An overflow row is Full with a Valid owner and Low otherwise, never Mid
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §9
 
 *Given* visible overflow rows owned by Valid `V`, Depth-capped `T` and Cycle-forming `C` for carried item `X`, with `C` in the section of a Free descendant of `X`, outside the carried branch, *when* the drag begins, *then* `V`'s overflow row is assigned Full, and `T`'s and `C`'s are assigned Low. None is assigned Mid, even when its owner's own row is Mid. Each overflow row remains present in place and keeps its count meaning; none becomes an item or a possible parent. Overflow rows belonging to the carried item or its attached branch are absent ([DRAG-7.27](drag-7-overflow-and-hierarchy-modal.md)).
 
 Painted strengths are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.19 — Tiers stay fixed across layers and clear when the drag ends
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10
 
 *Given* `X` is picked up with targets assigned Full, Mid and Low, *when* the drag moves through Board, Column/sub-row and Descendants layers, and into a hierarchy modal, *then* each active target representation retains its pickup tier. A Stub keeps its assigned tier while the drag is in a column, and a column Card keeps its tier while the drag is in Descendants. A write's response landing mid-drag does not recompute those tiers. *When* the drag ends by a drop, cancel or forced stop, *then* target tiers clear. After a drop, rows occupy the previewed placement with no drag target tier; any write still in flight retains its independent pending state ([DRAG-6.23](drag-6-preview-reconciliation.md)).
 
 Painted strengths across these states are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.20 — The ghost, carried copy, backdrop rows and non-targets take no target tier
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.3
 
 *Given* targets assigned Full, Mid and Low, *when* the drag begins, *then* the in-list ghost has ghost state and no target tier, and the carried copy has no target tier. Low targets do not give the ghost a Low tier. *When* the hierarchy modal opens, *then* its active target rows retain their own pickup tiers, while static section rows under the backdrop take no target tier. Places that are no target, such as Unsorted, a broken column or an expanded column's outer wrapper, also take no target tier.
 
 The ghost's independent painted strength and the distinction from backdrop shading are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.21 — Nested rows and the drop line keep independent tier state
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
 
 *Given* a Mid Free Card `P` with attached Stub `S`, *when* the drag begins, *then* `P` is assigned Mid, `S` is assigned Low, and a deeper Stub beneath `S` is also assigned Low. Each row has its own tier; the ancestor's assignment does not replace a child's assignment. *When* a Mid row is the ghost's named neighbor, *then* the drop line remains present for that named relation without acquiring the row's target tier. The same holds when a Mid Stub is the named neighbor.
 
 The strengths of those rows and the line, including the absence of compounded dimming, are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.22 — Dimmed targets never start a zoom-in or modal-hold cue
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1, wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1, wiki board-drag-interaction §7.3
 
 *Given* a Mid Card is the named neighbor, *when* the cursor remains on its zoom-in aim, *then* no zoom-in dwell or progress cue starts and the drag never enters it. *Given* an overflow row whose owner is Depth-capped, *when* the ghost sits beside it at its hidden children's level with the cursor inside the Card, *then* the over-cap state starts no modal dwell, shows no hold-progress cue, and opens no modal. *Given* instead a Cycle-forming owner outside the carried branch, in a Free descendant Card's section, *then* that Card cannot be zoomed into, so its overflow row cannot start the modal hold. An overflow row belonging to the carried branch is absent. A Full overflow row with a Valid owner retains the ordinary valid hold behavior ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.23 — Tier assignment uses pending attachment and parent changes at pickup
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10, wiki item-attachment §11
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10, wiki item-attachment §11
 
 *Given* carried item `X` has subtree height 1, unrelated `P` is at depth `CAP - 2`, unrelated `Q` at `CAP - 1`, and leaf `D` has a pending attach or reparent, *when* `X` is picked up before that write responds, *then*:
 
@@ -217,7 +217,7 @@ Neither `D`'s stored attachment flag nor its previous parent determines its tier
 
 The painted tier strengths are [DRAG-2.24](drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-2.24 — Board tiers and the ghost use the configured strengths without compounded dimming
 

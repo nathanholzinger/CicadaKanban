@@ -1020,7 +1020,7 @@ test('DRAG-7.12: a modal a hold opens carries the drag’s tiers: R and R1 Full,
   await cancel(page);
 });
 
-test('DRAG-7.21, DRAG-2.22: a ghost in an over-cap state beside an overflow row starts no hold, from either gap, and none runs a level up where it fits', async ({
+test('DRAG-7.21: a ghost in an over-cap state beside an overflow row starts no hold, from either gap, and none runs a level up where it fits', async ({
   page,
   request,
   projectSidebar,

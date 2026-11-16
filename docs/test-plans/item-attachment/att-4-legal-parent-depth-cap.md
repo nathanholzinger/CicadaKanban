@@ -13,7 +13,7 @@
 | ATT-4.5 | Subtree height is the deepest resulting leaf, detached descendants included | P0 | Automated |
 | ATT-4.6 | Root depth is 1 and a leaf's height is 0 | P1 | Automated |
 | ATT-4.7 | The cap gates reparents, not existing data | P1 | Automated |
-| ATT-4.9 | The UI and the API agree on every target's legality | P0 | Open |
+| ATT-4.9 | The UI and the API agree on every target's legality | P0 | Automated |
 | ATT-4.10 | Every write that can give an item a parent enforces the same rules | P0 | Automated |
 | ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Automated |
 | ATT-4.14 | A parent given as an empty string names no item, and is refused | P1 | Automated |
@@ -78,11 +78,11 @@
 
 ## ATT-4.9 — The UI and the API agree on every target's legality
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §7, wiki hierarchy-placement §6
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §7, wiki hierarchy-placement §6
 
 *Given* a fixed board and a moving item `M`, *when* the UI classifies every visible item target for `M`, Cards and Stubs ([DRAG-2](../board-drag-interaction/drag-2-target-classification.md)), and, from that same starting state for each target, the API is asked to give `M` that parent with attachment set and no workphase or anchor named, *then* every target the UI classifies Valid is accepted: `M` is attached to that item and inherits its workphase. Every target classified Cycle-forming or Depth-capped is rejected, leaving `M` and its subtree unchanged. The comparison covers every visible item target on that board, not just a sample. Overflow controls and places that are no target are not item-parent references, and are not submitted as parents.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-target-classification.spec.ts`
 
 ## ATT-4.10 — Every write that can give an item a parent enforces the same rules
 
