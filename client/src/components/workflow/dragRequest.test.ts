@@ -157,7 +157,7 @@ describe('TC-2.11: toRequest', () => {
     expect(place('last')).toEqual({ workphaseId: 'todo', anchorId: 'E', side: 'after' });
   });
 
-  it('DRAG-3.10: empty others: first/last send a bare workphase move, no anchor to resolve', () => {
+  it('DRAG-1.23, DRAG-3.10: empty others: first/last send a bare workphase move, no anchor to resolve', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
       workphaseId: 'w2',
     });

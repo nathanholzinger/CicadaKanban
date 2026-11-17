@@ -247,6 +247,38 @@ Reconsidering/applying and validating all three is roughly 1–2 h plus independ
 
 The [batch 4g plan](../epic-3-5-stories/story-10-batch-4g.md) retains the case-derived proof contracts, accepted dependency details and verbatim desk/reviewer findings. Its closing Reconciler must disclose these two cases as deferred/Open and judge the other authored cases independently. The future cheaper-test candidates above leave their currently passing coverage intact.
 
+### Batch 4h — removed legacy combinations and their tradeoffs
+
+**Nathan, 2026-11-17:** delete the six unstamped legacy skips in the cross-column/cross-project DnD suites after assessing their unique value. They contributed no current mapping or counted coverage. No required case is deferred by their removal; the current gesture, request-rule and API-resolution tests remain. The [batch 4h plan](../epic-3-5-stories/story-10-batch-4h.md) holds the individual dispositions and the three supplementary DRAG-1.23 mappings to existing tests.
+
+These are optional combinations to reconsider after the smoke suite, not six tests scheduled for restoration:
+
+| Removed test / related cases | Extra combination no longer retained as a skipped script | Coverage retained and cost to reconsider |
+| --- | --- | --- |
+| Cross-column 1.a — DRAG-1.23 | Same-column prepend with A/C/E visible and B/D interleaved in another workphase. | Existing first-slot gestures/request observations and API prepend math remain. Reaching this exact combined fixture would add no named clause; roughly 1–3 h for a replacement observed-ghost gesture and focused validation. |
+| Cross-column 2.a — DRAG-3.1, TC-7.4 | A cross-column first placement whose target's first visible row has an unseen predecessor elsewhere in the workflow. | Current top-band gesture, first-visible request rule and hidden-neighbor API resolution remain. The deleted center aim established neither Board layer nor target pop-in. Roughly 1–3 h to compose an observed band/context/anchor gesture and validate it. |
+| Cross-project 1.a — DRAG-1.23 | Prepend through the filtered inherited board, with the same row first locally and workflow-wide. | First-slot placement and inherited-board dragging remain tested. This does not add TC-7.4's unseen-before-first condition. Roughly 1–3 h for this extra combination, before repeat/review gates. |
+| Cross-project 2.a — DRAG-1.2, TC-2.33 | A root-board before-side gesture directly naming another child project's row while retaining the moving item's project. | Named-neighbor UI requests, accepted foreign-project API anchors and a running reverse-direction cross-project gesture remain. Roughly 1–3 h to author this exact combination with independent request and membership observations. |
+| Cross-project 2.b — DRAG-1.2, DRAG-1.24, TC-2.33 | A longer root-board drag to the D/E gap, described as D/after but aimed at E. | E/before and D/after share a final number but differ in request and anchor project; the old numeric oracle could pass without a foreign-project anchor. Current named-neighbor gestures, E/before persistence and actual D/after API proof remain. Roughly 1–3 h for a replacement that proves the intended highlighted request; no duration/long-distance contract is added. |
+| Cross-project 4.b — DRAG-1.23, TC-2.33 | Reverse-project prepend to the true first row, then navigation to the moving item's project board. | Existing first-slot, reverse-project gesture and exact API math remain. The deleted `projectOrder` assertion reads API rows rather than painted board order; it never covered a new screen-projection clause. A separately justified painted cross-board variant is roughly 1–3 h to author and validate. |
+
+All estimates exclude independent review, formal repeats, final full-suite gates and any separately discovered app work. Cleanup itself was estimated at 0.5–1 h before those gates. No measured runnable-time saving is claimed because the six were already skipped. The benefit is removing obsolete maintenance obligations; the tradeoff is foregoing these additional pointer-path/fixture combinations while retaining the current Then clauses. Reconsider them only if their extra failure information justifies the cost.
+
+The old skip comments describe repeatable wrong-anchor results, not a demonstrated current intermittent failure. Their failure cause was not re-established at removal: no unnecessary gesture was restored just to classify it. Any later variant must derive its expected anchor from the current ghost/context/highlight rules and check the outgoing request, rather than equate matching final positions with matching intent.
+
+**Widened review of retained tests:** the reviewer confirms no deletion regression and accepts the three supplementary mappings as partial evidence. It also finds these pre-existing verification limitations; no surviving assertion or setup is changed to repair them in this cleanup. The verbatim verdict and exact test names are in the batch plan. Catalog status remains the closing Reconciler's judgment, not an implied approval to count an unproved case.
+
+| Case | Remaining verification / possible cheaper next step | Best-guess effort and tradeoff |
+| --- | --- | --- |
+| DRAG-1.2 | Confirm initial painted `A,B,Q,X` before the current A/B-gap gesture; its Then observations are otherwise present. | 0.25–0.5 h of assertion work and focused validation, before review/repeats. Reuse both current lean variants; no new gesture family. |
+| DRAG-1.12 | Confirm initial painted `A,B,X` and the first-slot ghost above A before releasing the current re-entry variant. | 0.25–0.75 h, before review/repeats. Shares the ghost observation with DRAG-1.23; saved first order and exact request alone do not establish the displayed pre-release slot. |
+| DRAG-1.22 | Confirm starting painted `A,X,B` before the own-slot resting movement; current geometry compares post-pickup neighbors. | 0.25–0.5 h, before review/repeats. Strengthens the existing fixture rather than adding another own-slot test. |
+| DRAG-1.23 | Observe first/last ghosts before release and the last-slot E/after request; current value 6 cannot distinguish E/after from append. Existing `placement.test.ts` DRAG-6.10 and `itemListOps.test.ts` append tests are proposed partial fallback mappings, but do not independently prove saved server append. | Roughly 1–3 h to assess/map existing fallback evidence and add missing observations to retained carriers, before gates. The three newly stamped tests prove first-edge highlight/request, endpoint relations and the empty-target adapter only; restoring any deleted script would not fill these gaps. |
+| DRAG-1.24 | Read `A.position < U.position < X.position` before pickup in the existing hidden-U fixture; current setup checks and final X-before-U result do not independently establish that initial relation. | 0.25–0.5 h, before review/repeats. No additional hidden-neighbor gesture is needed. |
+| DRAG-4.23 | The current pure no-candidate clock test samples time 0 only. Exercise a time past the configured full zoom hold and check continued locking/no dwell/cue. | Roughly 0.5–1.5 h in the existing pure clock family plus focused validation and review. Avoid an additional timed surface gesture if the approved clock category can prove the whole sustained-state clause. |
+
+These estimates exclude independent review, formal repeat/full-suite gates and app diagnosis. They are follow-up test-quality work, not regressions caused by removal or approval to edit more files. The batch's static catalog totals are unchanged; a static ID mapping is not a whole-case coverage verdict.
+
 ## Work, in batches
 
 Planned at grooming.

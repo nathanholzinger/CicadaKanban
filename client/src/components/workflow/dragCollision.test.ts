@@ -367,7 +367,7 @@ describe('dropAnchorFor', () => {
     });
   });
 
-  it('at either end there is one neighbor, whichever way it leans', () => {
+  it('DRAG-1.23: at either end there is one neighbor, whichever way it leans', () => {
     expect(dropAnchorFor(dragged('x', 10), overRow('a', 0, ['a', 'x']))).toEqual({
       anchorId: 'a',
       side: 'before',

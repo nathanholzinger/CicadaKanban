@@ -195,7 +195,7 @@ test('DRAG-1.24: an alone Card picked up and set down sends no request', async (
 });
 
 for (const reenter of [false, true]) {
-  test(`DRAG-1.3, DRAG-1.12: a freely-following Board copy ${reenter ? 're-enters and saves A/before' : 'sets down in the origin middle band without a write'}`, async ({
+  test(`DRAG-1.3, DRAG-1.12${reenter ? ', DRAG-1.23' : ''}: a freely-following Board copy ${reenter ? 're-enters and saves A/before' : 'sets down in the origin middle band without a write'}`, async ({
     page,
     request,
     projectSidebar,

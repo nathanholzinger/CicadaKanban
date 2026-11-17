@@ -28,9 +28,9 @@ import type { DragTuning } from '../../client/src/components/workflow/dragTuning
 
 const PROJECT_NAME = 'Repositioning DnD Project';
 
-// The same 8 WHEN/THEN cases as itemRepositioningCrossColumn.spec.ts, this
-// time driven through real drag gestures instead of direct API calls. Same
-// shared scenario, same spec'd expected values.
+// Real drag gestures over the interleaved workflow order shared with
+// itemRepositioningCrossColumn.spec.ts: A/C/E in Column One, B/D in Column
+// Two. The group labels match the corresponding API scenarios.
 //
 // Where an in-column drop lands: dnd-kit's
 // sortable shuffle decides the ghost's slot and the drop lands there; the
@@ -61,8 +61,8 @@ let scenario: RepositioningScenario;
 // is resting on. `POP_OUT_ONLY` (tests/helpers/dragGesture.ts) is seeded
 // short on the pop-*out* side so the cross-column cases below (2, 4, 5) can
 // deliberately pop out, and absurdly high on the pop-*in* side (both the
-// band's own and `cardPopInDelayMs` — several cases here, 1.a/2.a skipped
-// aside, briefly hover a sibling card in-context right before releasing)
+// band's own and `cardPopInDelayMs` — several cases briefly hover a sibling
+// card in-context right before releasing)
 // so nothing completes a second, unwanted pop before the test releases.
 // Same-column cases (1, 3) never leave their own context at all, so none
 // of this affects them either way.
@@ -96,28 +96,6 @@ async function getC(request: APIRequestContext) {
 }
 
 test.describe('1: extreme boundary moves within column 1', () => {
-  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; dragging onto the topmost card shifts it away in dnd-kit's swap preview, and the drop lands on a different anchor than the one aimed at, the same wrong value every run.
-  test.skip('1.a — drag C onto card A', async ({ page, request }) => {
-    const cardC = article(page, 'Item C');
-    const cardA = article(page, 'Item A');
-    await dragTo(page, cardC, () => center(cardA));
-
-    // UI: reorders within column 1's own group.
-    const colOne = column(page, 'Column One');
-    await expect(article(colOne, 'Item C')).toBeVisible();
-
-    // Server truth — the API suite's identical case (1.a) passes cleanly at
-    // 0.5, confirming the position math itself is correct. This DnD version
-    // is skipped: dragging C onto card A drives dnd-kit's own live
-    // swap-preview animation to transform-shift A out of the way as the
-    // cursor approaches, and the resulting drop reproducibly lands on a
-    // different anchor than intended (not a flake — same wrong value every
-    // run). A drag-gesture precision issue in this test, not a product bug.
-    await expect.poll(async () => (await getC(request)).position).toBe(0.5);
-    expect(await columnOrder(request, scenario.workflow.id, scenario.colOnePhase.id)).toBe('CAE');
-    expect(await fullOrder(request, scenario.workflow.id)).toBe('CABDE');
-  });
-
   test('DRAG-1.23: 1.b — drag C below card E, into the empty column space', async ({ page, request }) => {
     const cardC = article(page, 'Item C');
     const colOne = column(page, 'Column One');
@@ -138,23 +116,6 @@ test.describe('1: extreme boundary moves within column 1', () => {
 });
 
 test.describe('2: extreme boundary moves into column 2', () => {
-  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, here onto the topmost card of the other column.
-  test.skip('2.a — drag C onto card B', async ({ page, request }) => {
-    const cardC = article(page, 'Item C');
-    const cardB = article(page, 'Item B');
-    await dragTo(page, cardC, () => center(cardB));
-
-    const colTwo = column(page, 'Column Two');
-    await expect(article(colTwo, 'Item C')).toBeVisible();
-
-    // Skipped for the same drag-gesture precision issue as 1.a (see its
-    // comment) — the API suite's identical case (2.a) passes cleanly at 1.5.
-    await expect.poll(async () => (await getC(request)).position).toBe(1.5);
-    await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colTwoPhase.id);
-    expect(await columnOrder(request, scenario.workflow.id, scenario.colTwoPhase.id)).toBe('CBD');
-    expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
-  });
-
   test('2.b — drag C below card D, into the empty column space', async ({ page, request }) => {
     const cardC = article(page, 'Item C');
     const colOne = column(page, 'Column One');
