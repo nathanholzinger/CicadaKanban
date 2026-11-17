@@ -199,7 +199,7 @@ export default function DragTuningPanel({
           </button>
           {armedStop && (
             <>
-              <span className="text-[11px] text-amber-400/80" data-armed-stop={armedStop.cause}>
+              <span className="text-[11px] text-amber-400/80">
                 armed: {armedStop.cause} at {armedStop.afterMs / 1000}s
               </span>
               <button type="button" onClick={() => onArmStop(null)} className={BTN_CANCEL}>
@@ -228,7 +228,7 @@ export default function DragTuningPanel({
             ? `${pop.hover.regionKey}${pop.hover.band ? ` · ${pop.hover.band}` : ''}${pop.hover.phase ? ` · ${pop.hover.side} · ${pop.hover.phase}` : ''}`
             : '—'}
         </p>
-        <p data-inversion-count={inversions.length}>
+        <p>
           inversions: {inversions.length}
           {lastInversion && (
             <span

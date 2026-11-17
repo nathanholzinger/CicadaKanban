@@ -1598,8 +1598,11 @@ deferral and keep landing with their stories.
      them: `data-drag-overlay-form`, `data-drag-zoom-candidate`,
      `data-drag-zoom-phase`, `data-drag-projection` and
      `data-placement-valid` (written ahead of this story's E2E), plus
-     `data-active-context` and `data-inversion-count`, which have no
-     reader at all.
+     `data-active-context` and `data-inversion-count`, which had no
+     reader at all. Settled by D8 (2026-11-17): the batches' specs now
+     read the first six, so they stay, and the close deletes
+     `data-inversion-count`, with `data-armed-stop`, which nothing reads
+     either.
 
 7. **E2E specs that bypass helpers that exist** (Story 6 + 6.1 audit #17,
    `docs/archive/code-quality-audit-epic-3-5-story-6.md`). This story

@@ -247,8 +247,9 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 
 **D8. The unread `data-*` attributes are settled last** (item 6).
 
-- **An attribute no finished spec reads** is deleted from the client.
-- **`data-active-context` and `data-inversion-count`** have no reader today, so they go unless a batch reads them.
+- **An attribute nothing reads,** no spec, Vitest test or app code, is deleted from the client. One the app reads, such as the region attributes `dragStructure.ts` finds its drag regions by, is drag logic, not a test hook, and stays.
+- **`data-active-context` stays:** batch 4a's DRAG-1.26 test reads it, and so do other specs from 4a and 4b and two Vitest files (amended 2026-11-17).
+- **`data-inversion-count` and `data-armed-stop`,** both on the drag tuning panel, have no reader, so the close deletes them ([Story 10's close](story-10-close.md), step 1).
 
 **D9. Item 11: the column drag's stop shows the banner.**
 
@@ -708,6 +709,8 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - **The audit's range starts at `story-10-checkpoint-audited`,** with 4a's production files checked against the wiki outside it.
 
   The two Open questions that stood here moved with Phase 5.
+
+- **2026-11-17 — D8 brought up to date (Nathan, from the step 1 Coder's audit of every client `data-*` attribute).** Batches 4a and 4b made `data-active-context` a read attribute, so it stays. Only `data-inversion-count` and `data-armed-stop` have no reader, and the close deletes them. D8 now also says an attribute the app reads stays.
 
 ## Open questions
 

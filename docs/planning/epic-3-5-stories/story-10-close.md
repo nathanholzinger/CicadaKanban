@@ -19,7 +19,7 @@
 
 In order, since each reads what the one before it produced (story-done checklist). Each session ends with a handoff to Nathan, and a green result doesn't start the next step.
 
-1. **D8's attributes — a Coder session.** Delete each client `data-*` attribute no spec reads. `data-active-context` and `data-inversion-count` go unless a batch now reads them (D8). It's an app change, so it lands before the freeze, with `/code-review`, the gate and Nathan's check-in. Nathan names the files.
+1. **D8's attributes — a Coder session.** Delete `data-armed-stop` and `data-inversion-count` from `DragTuningPanel.tsx`, the only client `data-*` attributes nothing reads (D8). `data-active-context` stays, since the batches' specs read it. It's an app change, so it lands before the freeze, with `/code-review`, the gate and Nathan's check-in. Nathan approved that one-file list on 2026-11-17.
 2. **The skips — the QA Engineer.** Every `test.skip`, `test.fixme` and `.skip(` left in `tests/` and the unit suites must be one that Drag Automation Deferrals names (D10). Any other goes to Nathan before the freeze, to fix, delete or record there.
 3. **Validation and the freeze — the QA Engineer.** `npm run check`, then `npm run test:e2e` green twice in a row, all on one tree. Freeze that tree's ID, and run `npm run report:catalog` on it. Long commands run in the background, each with a named JSON report. Anything that changes app source, a test or a helper after the freeze stops before the slices: record it, say which evidence still holds, and return to Nathan.
 4. **The reconciliation — the QA Engineer spawns five Reconcilers,** one per slice, on the frozen tree (The reconciliation, below). It then checks the title-only diff, records each slice in Results, and routes what the slices leave open.
@@ -95,3 +95,4 @@ Not written yet. The Architect writes them after the audit (`.claude/guides/audi
 ## Amendments
 
 - **2026-11-17 — Written (Nathan, the Architect).** Phase 5 moved here from the plan, with three changes Nathan made that day: the reconciliation runs as five slices; 4h's reconciliation joins slices 1 and 3, since 4h ran no Stop 4 of its own; and the audit's range starts at `story-10-checkpoint-audited`, with 4a's production files checked against the wiki outside it. The plan's two remaining Open questions moved here too.
+- **2026-11-17 — Step 1 narrowed to one file (Nathan, from the Coder's audit).** Only `data-armed-stop` and `data-inversion-count` have no reader. `data-active-context` stays, and D8 is amended to match.
