@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — batch 4h. The six legacy skips
 
-**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** Stop 2 check-in — cleanup validated; independent review findings recorded
+**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** closed at Stop 2 and committed in `e8cf4f2c`. Its Stop 4 is folded into Story 10's Phase 5, where [the close](story-10-close.md)'s slices 1 and 3 take this file's Review log and Living-docs handoff (Nathan, 2026-11-17)
 
 This file is the batch's plan. It holds the batch's cases, its Proof list, its suggested variants, its Results packet, its Open questions and its Review log, and the Reconciler reads it at the batch's close. A session for this batch reads root `AGENTS.md`, its persona, the batch doc's standing rules and stops, this file, and the cases and wiki sections in scope. It doesn't read the other batches' files or [the 4a to 4d log](story-10-batch-4a-4d-log.md).
 
@@ -180,3 +180,4 @@ Existing drag-test precision, waits and variant-cost reassessment belongs in Dra
 
 - **2026-11-17 — Nathan:** assess the six old skips for unique current coverage before repairing any gesture, and use a passing test for a residual clause where cheaper. Approves the analysis report's six-file scope and deletion of the six legacy skips. This replaces the old precision-first order for this batch; it does not authorize deletion of other deferred tests or a change to any case's Then.
 - **2026-11-17 — Nathan:** authorizes one read-only Test Reviewer and then extends the file scope by `client/src/components/workflow/dragRequest.test.ts` for the prepared one-line DRAG-1.23 mapping. No assertion or fixture change is approved in that extension.
+- **2026-11-17 — Nathan:** closes the batch at Stop 2 and folds its Stop 4 into Story 10's Phase 5. The six deleted tests were skipped and the reviewer found they added no coverage, and the three stamps change no test body, so a separate freeze, full suite and Reconciler would repeat what Phase 5 runs anyway. Phase 5's Reconciler is the "closing Reconciler" this file's Results and Living-docs handoff name. Results' "Stop 4 has not started" and its next-owner line are left as the Stop 2 packet wrote them.

@@ -1,8 +1,8 @@
 # Epic 3.5 Story 10 — the batches
 
-**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation; split into this index and one file per batch on 2026-11-13 by the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md) · **Status:** batches 4a–4d are committed; 4d is `e4f34b9a`. 4e (DRAG-8) is next. The story closes after 4h. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), outside the story (D10)
+**Type:** story plan, Story 10's second part · **Written:** 2026-11-06 by the Architect, from the baseline reconciliation; split into this index and one file per batch on 2026-11-13 by the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md) · **Status:** every batch, 4a to 4h, is closed and committed; 4h is `e8cf4f2c`. 4h's reconciliation is in the close, and [Story 10's close](story-10-close.md), Phase 5, is next. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), outside the story (D10)
 
-[Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D14), Phases 1–3 and Phase 5. This doc holds the standing rules for the remaining batches, their four stops, and a link to each batch's file. A change to a decision is amended in the plan. A change to a standing rule or a stop is amended here.
+[Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D14) and Phases 1–3, and [Story 10's close](story-10-close.md) holds Phase 5. This doc holds the standing rules for the remaining batches, their four stops, and a link to each batch's file. A change to a decision is amended in the plan. A change to a standing rule or a stop is amended here.
 
 ## The files
 
@@ -105,7 +105,7 @@ In run order, since a later batch reuses an earlier one's setups (D5). The case 
 | 4e. DRAG-8 | 12 | Closed; DRAG-8.10 went to Drag Automation Deferrals | [story-10-batch-4e.md](story-10-batch-4e.md) |
 | 4f. DRAG-2 and ATT-4.9 | 14 | Closed; confined scope, several TCs to Drag Automation Deferrals | [story-10-batch-4f.md](story-10-batch-4f.md) |
 | 4g. TREE | 33 | Closed; confined scope, several TCs to Drag Automation Deferrals | [story-10-batch-4g.md](story-10-batch-4g.md) |
-| 4h. The six legacy skips | — | Not started | [story-10-batch-4h.md](story-10-batch-4h.md) |
+| 4h. The six legacy skips | — | Closed; all six deleted, and its reconciliation moved to Phase 5 | [story-10-batch-4h.md](story-10-batch-4h.md) |
 | 4i and 4j | — | Outside the story, after the smoke suite | [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) |
 
 ## The shared looks (D13)
@@ -161,11 +161,16 @@ Skips added since, each temporary: DRAG-3.16's two tests (2026-11-10), DRAG-5.3'
 
 ### Standing entries
 
-- **Separately recorded follow-up — existing conditional DRAG-3.12 Board set-down; nonblocking for 4b (Nathan):** the null-return review finds that Board layer + Free X with null position + its own covered active region + other positioned rows selects a write. DRAG-3.12/wiki board-drag-interaction §5 require no request for this own-region middle release. The branch existed before this return, and real-board reachability remains unproved. If Nathan later routes this work, add a deterministic composed regression for that exact context/peers/null boundary, then the minimal Board set-down guard if the regression confirms the static finding. Preserve the valid locked-Column bare-container append with explicit unchanged `workphaseId`, foreign-middle no-anchor fallback, positioned same-region no-write, empty-peer no-write, end preview and explicit Top/Bottom anchors. Do not remove the workphase field globally or alter case wording to match a write. The request-rule internal category is already approved; application/Vitest work still uses a separate session with exact changed files/source identity and paired red/green evidence. Nathan checks in before later automation. This adds no case ID or 4b assignment and does not hold up the batch close-out; the existing catalog status/pointer is unchanged for this deferred issue.
+None remain. Both were settled on 2026-11-17 (Nathan):
 
-- **For a separate Architect review, with PO input if needed:** review 4a's seven production files and paired regressions against the wiki before accepting the app changes. The retrospective gives the review manifest and the two Planner/observer interpretations to spot-check. No new review or implementation session has been started.
+- **Conditional DRAG-3.12's Board set-down** moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md#story-10--drag-312-conditional-board-write), which holds the finding and the handoff.
+- **The Architect's review of 4a's seven production files** is folded into this story's audit, in [Story 10's close](story-10-close.md).
 
 ## Amendments
 
 - **2026-11-13 — Split into this index and one file per batch (Nathan, the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)).** 4a–4d's history, the five stops, the Review log, the earlier Amendments and 4c's and 4d's settled Open questions moved word for word to [the 4a to 4d log](story-10-batch-4a-4d-log.md). 4e–4h moved to their own files, and 4i and 4j, with the Open questions they cite, to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md). The stops are now four, and the standing rules gain one test per case (D14), the look rule's later word (D13), the deferrals catalog, the reviewer's confirming passes and the Reconciler's single follow-up. The plan's Goal, D2, D5, D10, D12, D13, Phase 4 and Phase 5 are amended to match.
 - **2026-11-15 — Batch 4e closes with 11 of its 12 cases `Automated` and DRAG-8.10 deferred (Nathan, the Reconciler).** DRAG-8.1 to 8.9, 8.11 and 8.12 are `Automated` by their tests in `tests/ui/drag-8-carried-branch.spec.ts`. DRAG-8.10's test is skipped and the case stays `Open`, in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), which also holds 4e's two suggested variants, one test-quality note and one candidate case, and the final run's one connection reset in 4i. [The batch file](story-10-batch-4e.md) has the close-out packet and the Reconciler's report.
+- **2026-11-16 — Batch 4f closes with 13 of its 14 cases `Automated` and DRAG-2.8 deferred (Nathan, the Reconciler).** Seven DRAG-7 cases whose legacy tests the reviewer found short went back to `Open`. All of them are in Drag Automation Deferrals. Committed in `1a7f13bd`; [the batch file](story-10-batch-4f.md) has the close-out.
+- **2026-11-17 — Batch 4g closes with 31 of its 33 cases `Automated`, and TREE-1.14's and TREE-9.4's Coder work deferred (Nathan, the Reconciler).** Both cases stay `Open`, in Drag Automation Deferrals. Committed in `b2f0b319`; [the batch file](story-10-batch-4g.md) has the close-out.
+- **2026-11-17 — Batch 4h closes at Stop 2, and its Stop 4 is folded into Phase 5 (Nathan).** 4h deleted six unstamped skipped tests, which the Test Reviewer confirmed added no coverage, and stamped three existing tests with DRAG-1.23, changing no test body. So it skipped its own Stop 4. Phase 5 already runs the gate, the full suite and one cold Reconciler, and that Reconciler takes 4h's Scope, Review log and handoff among its inputs. Committed in `e8cf4f2c`.
+- **2026-11-17 — The standing Open questions are settled (Nathan).** Conditional DRAG-3.12 moved to Drag Automation Deferrals. The Architect's review of 4a's production files is folded into this story's audit, in Phase 5.

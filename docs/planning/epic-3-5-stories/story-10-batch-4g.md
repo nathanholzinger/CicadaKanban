@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — batch 4g. TREE
 
-**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** Stop 4 QA validation/reconciliation and TREE-2.13 wiki handoff complete; ready for Nathan’s review/commit; TREE-1.14/TREE-9.4 deferred; uncommitted
+**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** closed at Stop 4 on 2026-11-17 and committed in `b2f0b319`, with the TREE-2.13 wiki handoff complete; TREE-1.14 and TREE-9.4 are deferred to Drag Automation Deferrals
 
 This file is the batch's plan. It holds the batch's cases, its Proof list, its suggested variants, its Results packet, its Open questions and its Review log, and the Reconciler reads it at the batch's close. A session for this batch reads root `AGENTS.md`, its persona, the batch doc's standing rules and stops, this file, and the cases and wiki sections in scope. It doesn't read the other batches' files or [the 4a to 4d log](story-10-batch-4a-4d-log.md).
 

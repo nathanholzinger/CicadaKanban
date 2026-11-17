@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress. Phases 1–3 and batches 4a–4d are committed; 4d is `e4f34b9a`. [Story 10's second part](story-10-batches.md) is the index for the remaining batches, 4e to 4h, each with a file of its own, and [the 4a to 4d log](story-10-batch-4a-4d-log.md) holds the closed batches' history and Review log. The story closes after 4h. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) (D10, amended 2026-11-13). Conditional DRAG-3.12 stays separate and nonblocking; DRAG-4.35 stays retired/deferred.
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress; Phase 5, the close, is next, in [Story 10's close](story-10-close.md), the story's third part. Phases 1–4 are committed, and batch 4h, the last, is `e8cf4f2c`. [Story 10's second part](story-10-batches.md) indexes the batches, with a file each for 4e to 4h, and [the 4a to 4d log](story-10-batch-4a-4d-log.md) holds the earlier batches' history and Review log. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) (D10, amended 2026-11-13), and conditional DRAG-3.12 followed them (2026-11-17). DRAG-4.35 stays retired/deferred.
 
 ## Goal
 
@@ -537,29 +537,15 @@ All 70 scoped variants pass twenty distinct executions each, **1,400/1,400 with 
 
 Catalog totals are **378 Automated / 93 Open / 10 Manual / one Planned / two Pending PO**, 484 cases total. Of 151 active story assignments, **91 remain Open** after 4a and 4b. Global identity checks are clean. Conditional DRAG-3.12 stays separately recorded and nonblocking; retired DRAG-4.35 remains outside the catalog. Batch 4b is committed in `857720b9`; no archive move, new Coder task or 4c work follows from that close.
 
+#### Batches 4c to 4h — closed
+
+All six are closed and committed: 4c in `4d89c152`, 4d in `e4f34b9a`, 4e in `2becfdd6`, 4f in `1a7f13bd`, 4g in `b2f0b319` and 4h in `e8cf4f2c`. [Story 10's second part](story-10-batches.md) gives each one's outcome in its batch table and Amendments, and each batch's close-out packet is in its own file, or for 4c and 4d in [the 4a to 4d log](story-10-batch-4a-4d-log.md). The cases they left `Open` are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md). After 4h the catalog stands at 450 `Automated`, 24 `Open`, 10 `Manual`, 2 `Planned` and 2 `Pending PO`, of 488 cases.
+
+4h ran no Stop 4 of its own (Nathan, 2026-11-17). It deleted six unstamped skipped tests, which the Test Reviewer confirmed added no coverage, and stamped three existing tests, changing no test body. Its reconciliation is in [Story 10's close](story-10-close.md), in slices 1 and 3.
+
 ### Phase 5: the close
 
-- D8's attributes.
-- No `test.skip`, `test.fixme` or `.skip(` left in `tests/` or the unit suites, except the skips 4i and 4j hold, which [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) names (D10).
-- `npm run check`, then `npm run test:e2e` green twice in a row.
-- **The one cold Reconciler run, spawned by the QA Engineer** (epic-done checklist), from its fixed inputs: Scope/Review log, green-tree catalog report and run record, and the range's test/catalog diffs. Its report is saved in `docs/audits/`; open reviewer verdicts, quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them. Reconciliation is not repeated inside the audit.
-- **The close's list (D10):** every case in `docs/test-plans/` that isn't `Automated` or `Manual`, each with its status, why it's still open, and the plan that names it. Any tech-debt story D10 calls for is written by now.
-- The 80% coverage goal attempted, with the reason for any shortfall (epic-done checklist).
-- **D13 into the living docs.** The rule exists only in this plan, which goes to the archive at the close, so later stories would lose it. Each writes it as a standing rule, naming no story:
-  - the Architect adds it to `.claude/guides/testing-strategy.md`'s "What stays manual", for Nathan's approval;
-  - the Planner adds it to `docs/test-plans/README.md`'s "Which tests count, and what's manual", beside "One status per case" (Living-docs handoff).
-
-  If a batch has changed the rule by then, its amendment is the later word.
-  - **Done early for the guide (2026-11-13, D13).** The README part is the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s handoff to the Planner.
-
-- A stop for review and commit.
-- **This story's audit** (story-done checklist). Its range starts at `epic-3-5-story-8-13-audited`, the newest `*-audited` tag, since the close-out's end tag has no `-audited`. So it reads:
-  - the close-out's Fix Now batches and the tests written beside them, which no audit has read (`docs/archive/story-8-close-out-audit.md`, D4 and Handoff);
-  - the E2E drag specs, which the close-out left to it.
-
-  Nathan tags its end commit `epic-3-5-story-10-audited`.
-
-- The epic-wide audit follows, as the epic's, on the scope settled for it (Open questions).
+In [Story 10's close](story-10-close.md), the story's third part (moved on 2026-11-17): the close's steps in order, the reconciliation's five slices, the close's list (D10), the story's audit and its fix batches, and the close's Open questions.
 
 ## Code map
 
@@ -711,18 +697,21 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
   The batch doc is split, word for word, into an index, one file per batch from 4e to 4h, and [the 4a to 4d log](story-10-batch-4a-4d-log.md). The process docs gain confirming reviewer passes, a single Reconciler follow-up, cost verdicts, and [MVP Deferrals](../mvp-deferrals.md).
 
+- **2026-11-17 — Phase 4 is done, and three loose ends are settled before Phase 5 (Nathan).** No decision changes.
+  - **Batch 4h's Stop 4 is folded into Phase 5.** 4h changed no test body, and Phase 5's gate, full suite and Reconciler cover what its Stop 4 would have run. Phase 5's Reconciler bullet names what waits on it.
+  - **Conditional DRAG-3.12 moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md#story-10--drag-312-conditional-board-write)**, out of this plan's Open questions, so it outlives the archive. So did ATT-1.16's automation assessment, which only batch 4e's file held.
+  - **The Architect's review of 4a's production changes is folded into this story's audit**, in Phase 5, and leaves the Open questions.
+
+- **2026-11-17 — Phase 5 moves to [Story 10's close](story-10-close.md), the story's third part (Nathan).** No decision changes. It holds the close's steps, the close's list, the audit's fix batches and the close's Open questions. Nathan changed three things that day:
+  - **The reconciliation runs as five slices,** one per family (DRAG-1, DRAG-3, DRAG-4 and 5, DRAG-6, DRAG-7), each about a batch in size, all on one frozen tree. DRAG-2, DRAG-8 and TREE get none: their tests haven't changed since their own batches' Reconcilers confirmed them.
+  - **4h's reconciliation joins slices 1 and 3.**
+  - **The audit's range starts at `story-10-checkpoint-audited`,** with 4a's production files checked against the wiki outside it.
+
+  The two Open questions that stood here moved with Phase 5.
+
 ## Open questions
 
-- **Separately recorded, nonblocking for 4b (Nathan): existing conditional DRAG-3.12 Board no-write guard.** The foreign-middle DRAG-3.3 handoff is delivered. The null-return review finds an existing conditional path that writes for a Free null-position item released in its own region's middle at Board layer with peers, where DRAG-3.12 requires no request. Real-board reachability is unproved; the batch plan retains the precise regression/guard handoff for Nathan to route later, preserving valid locked-Column append. It adds no case or 4b assignment and does not hold up frozen validation. Any later implementation still requires a separate Coder session and Nathan's check-in.
-
-- **For a separate Architect review, with PO input if needed: 4a's production changes.** Review the retrospective's seven-file manifest and paired evidence against the wiki, especially DRAG-1.5's saved/visible placement and the DRAG-1.16/DRAG-3.19 interpretations. The completed Reconciler run establishes scoped test coverage, not whole-application conformance. The Planner has not read the source or started a separate implementation-review session; the retrospective uses existing reports and metadata.
-
-- **For the PO, not blocking: the sidebar drag before the project cap is read.** The baseline report's Candidate New Cases notes it. `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" pins permissive behaviour, which neither wiki project-tree §3 nor hierarchy-placement §6 settles. No case exists for it, so D10 doesn't hold this story up for it.
-- **For Nathan and the Architect, separately: the epic-wide audit's scope** (Nathan, 2026-11-06). It doesn't hold up this story before Phase 5. Nathan's starting points:
-  - **Choose the files, don't take the range.** audit-workflow §10's range, from the previous `epic-N-complete` tag, would take in nearly the whole repo, since the mid-epic refactors touched nearly everything. So it's scoped to the most important files, chosen the way the close-out audit chose its own.
-  - **Weigh the cost against what it would find.** This story is mostly test files. So much of an epic-wide audit right after it would re-read code the close-out audit read in full, little changed since.
-
-  This story's own audit (Phase 5) is part of the same question: what it reads, and whether the epic-wide audit takes it in.
+None here. The close's Open questions are in [Story 10's close](story-10-close.md), where the two that stood here moved on 2026-11-17.
 
 ## Living-docs handoff
 

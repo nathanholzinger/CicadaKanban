@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — batch 4f. DRAG-2 and ATT-4.9
 
-**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** Stop 4 complete; awaiting Nathan's review and commit
+**Type:** story plan, one batch of Story 10 · **Written:** 2026-11-13, moved from [Story 10's batch doc](story-10-batches.md), whose standing rules and four stops govern it · **Status:** closed at Stop 4 on 2026-11-16 and committed in `1a7f13bd`; DRAG-2.8 and seven legacy DRAG-7 gaps are deferred to Drag Automation Deferrals
 
 This file is the batch's plan. It holds the batch's cases, its Proof list, its suggested variants, its Results packet, its Open questions and its Review log, and the Reconciler reads it at the batch's close. A session for this batch reads root `AGENTS.md`, its persona, the batch doc's standing rules and stops, this file, and the cases and wiki sections in scope. It doesn't read the other batches' files or [the 4a to 4d log](story-10-batch-4a-4d-log.md).
 
