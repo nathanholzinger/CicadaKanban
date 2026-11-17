@@ -1,12 +1,18 @@
-import { watchWrites } from '../helpers/requestHarness';
-import type { APIRequestContext, Page } from '@playwright/test';
+import { holdNextRead, settledWrites, watchWrites } from '../helpers/requestHarness';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { dragOverlay } from '../helpers/boardLocators';
 import { cancel, hoverTo, moveOnce, paintedBoxOf, pickUp, release } from '../helpers/dragGesture';
-import { aim, aimAtOwnRow, ghostSlot } from '../helpers/projectTreeDrag';
+import {
+  aim,
+  aimAtOwnRow,
+  ghostSlot,
+  drawnProjectNames,
+  expectProjectLine,
+  expectSavedProjectTree,
+} from '../helpers/projectTreeDrag';
 import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
-import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
+import { holdRequests } from '../helpers/holdRequests';
 import {
   INDENT_WIDTH,
   projectNameIndentPx,
@@ -113,12 +119,16 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   const dragX = async (over: string, tabs: number) => {
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
     await aim(page, from, projectSidebar.row(over), tabs);
+    await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', String(tabs));
+    await expectProjectLine(projectSidebar);
     await release(page);
   };
 
   // Released between A1a and B, at A1a's depth: A1's child, after A1a.
   const first = await seedProjects(request, TREE_1);
+  await expectSavedProjectTree(request, first, TREE_1);
   await page.goto('/');
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(TREE_1.map(([name]) => name));
   await dragX('B', 2);
   await expect.poll(() => moves.length).toBe(1);
   expect(moves[0]).toEqual({ parentId: first.A1, prevId: first.A1a, nextId: null });
@@ -130,7 +140,9 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   // Released above the first row: top-level, before A.
   await resetAndSeedDb();
   const second = await seedProjects(request, TREE_1);
+  await expectSavedProjectTree(request, second, TREE_1);
   await page.goto('/');
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(TREE_1.map(([name]) => name));
   await dragX('A', 0);
   await expect.poll(() => moves.length).toBe(2);
   expect(moves[1]).toEqual({ parentId: null, prevId: null, nextId: second.A });
@@ -142,42 +154,37 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   await expect(projectSidebar.projectNames('X', 'A', 'A1', 'A1a', 'B')).toHaveText(['X', 'A', 'A1', 'A1a', 'B']);
 });
 
-// Skipped until the drag specs are reworked: it aims at X1 and X2, which are not drawn while X is carried (the sidebar's branch). Its rule still holds, and the hook's tests pin it.
-test.skip('TREE-1.4: when the dragged project’s subtree holds every project, no line is drawn and a release writes nothing', async ({
+test('TREE-1.4: the all-project subtree offers only its own place, without a line or a write', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  const ids = await seedProjects(request, [
+  const tree = [
     ['X', null],
     ['X1', 'X'],
     ['X2', 'X'],
-  ]);
+  ] as const;
+  const ids = await seedProjects(request, tree);
+  const before = await expectSavedProjectTree(request, ids, tree);
   await page.goto('/');
-  const stored = () => Promise.all([ids.X, ids.X1, ids.X2].map(id => fetchProject(request, id)));
-  const before = await stored();
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['X', 'X1', 'X2']);
+  const pickup = await paintedBoxOf(projectSidebar.row('X'));
   const writes = watchWrites(page);
-
-  // Every project is in X's subtree, so no row is left to draw a line against,
-  // whichever of them the cursor is over and however far sideways. The cursor
-  // ends over X1, over X2 and over X's own row in turn, and each time a release
-  // sends nothing. X's row is aimed at from the pickup point: the carried copy
-  // repeats its name.
-  for (const over of ['X1', 'X2', null]) {
-    const from = await pickUp(page, projectSidebar.dragHandle('X'));
-    for (const tabs of [-3, 0, 3]) {
-      if (over) {
-        await aim(page, from, projectSidebar.row(over), tabs);
-      } else {
-        await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: from.y + 4 });
-      }
-      await expect(projectSidebar.dropLine).toHaveCount(0);
-    }
-    await release(page);
+  const from = await pickUp(page, projectSidebar.dragHandle('X'));
+  for (const [tabs, rowsAway] of [
+    [0, 0],
+    [-3, -1],
+    [3, 2],
+  ] as const) {
+    await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: from.y + rowsAway * pickup.height });
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['X']);
+    await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
+    await expect(projectSidebar.dropLine).toHaveCount(0);
+    await expect.poll(async () => (await paintedBoxOf(projectSidebar.ghost)).y).toBe(pickup.y);
   }
-
-  expect(writes).toEqual([]);
-  expect(await stored()).toEqual(before);
+  await release(page);
+  expect(await settledWrites(page, writes)).toEqual([]);
+  expect(await expectSavedProjectTree(request, ids, tree)).toEqual(before);
 });
 
 test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
@@ -200,6 +207,12 @@ test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past t
   await page.goto('/');
   const writes = watchWrites(page);
   const before = await fetchProject(request, ids.X);
+  await expectSavedProjectTree(request, ids, [
+    ...chain.map((name, i) => [name, i === 0 ? null : chain[i - 1]] as const),
+    ['X', null],
+    ['X1', 'X'],
+  ]);
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual([...chain, 'X', 'X1']);
 
   // One tab right of T, in X's own gap: X would be T's child, and X1 at depth cap + 1. The state is
   // still offered, with the ghost at that depth, its line and the carried copy marked invalid. A
@@ -212,6 +225,7 @@ test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past t
   await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectNameIndentPx(chain.length)}px`);
   await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-invalid', 'true');
   await expect(dragOverlay(page)).toHaveCSS('outline-style', 'dashed');
+  await expectProjectLine(projectSidebar);
   await release(page);
   expect(writes).toEqual([]);
   expect(await fetchProject(request, ids.X)).toEqual(before);
@@ -225,11 +239,14 @@ test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past t
   await expect(projectSidebar.dropLine).toHaveCount(1);
   await expect(projectSidebar.dropLine).not.toHaveAttribute('data-drop-invalid', 'true');
   await expect(dragOverlay(page)).toHaveCSS('outline-style', 'none');
+  await expectProjectLine(projectSidebar);
   await release(page);
   await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids[s]);
   expect((await fetchProject(request, ids.X)).position).toBeGreaterThan(
     (await fetchProject(request, ids[t])).position!,
   );
+  expect((await fetchProject(request, ids.X1)).parentId).toBe(ids.X);
+  await expect(projectSidebar.row('X1')).toHaveCSS('padding-left', `${projectRowIndentPx(cap - 1)}px`);
 });
 
 test('TREE-1.8: a project set back down in its own gap, at its own depth, writes nothing', async ({
@@ -239,6 +256,8 @@ test('TREE-1.8: a project set back down in its own gap, at its own depth, writes
 }) => {
   const ids = await seedProjects(request, TREE_1);
   await page.goto('/');
+  await expectSavedProjectTree(request, ids, TREE_1);
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(TREE_1.map(([name]) => name));
   const before = await fetchProject(request, ids.X);
   const writes = watchWrites(page);
 
@@ -249,9 +268,11 @@ test('TREE-1.8: a project set back down in its own gap, at its own depth, writes
   const from = await pickUp(page, handle);
   await aim(page, from, projectSidebar.row('B'), 0);
   await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['A1a', 'B']);
+  await expectProjectLine(projectSidebar);
   await aimAtOwnRow(page, from, 0);
   await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
   await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
+  await expectProjectLine(projectSidebar);
   await release(page);
 
   // Released before the cursor has left X's row. Picking up drifts the pointer
@@ -260,9 +281,10 @@ test('TREE-1.8: a project set back down in its own gap, at its own depth, writes
   await hoverTo(page, from);
   await expect.poll(() => ghostSlot(projectSidebar, TREE_1_ROWS)).toEqual(['B', null]);
   await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
+  await expectProjectLine(projectSidebar);
   await release(page);
 
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect(await fetchProject(request, ids.X)).toEqual(before);
 });
 
@@ -294,110 +316,160 @@ test('TREE-1.9: coming back nearest the dragged project’s own row returns the 
   expect(await fetchProject(request, ids.X)).toEqual(before);
 });
 
-// Skipped until the drag specs are reworked: it pins the descendants' old 0.4, and a descendant is now drawn at its tier's strength, 0.3 by default (the sidebar's tiers).
-test.skip('TREE-2.1: the dragged project’s descendants are dimmed for the whole drag', async ({
+test('TREE-2.1: the branch is absent, its space closes, and ghost and tiers clear at release or cancel', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  const ids = await seedProjects(request, [
+  const tree = [
     ['A', null],
     ['X', null],
     ['X1', 'X'],
     ['X1a', 'X1'],
-  ]);
-  await page.goto('/');
-  const dimmed = '0.4';
-  const clear = '1';
-
-  const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row('A'), 0);
-  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
-  await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', dimmed);
-  await expect(projectSidebar.row('A')).toHaveCSS('opacity', clear);
-
-  await cancel(page);
-  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', clear);
-  await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', clear);
-
-  // A release ends the drag the same way, here by moving X ahead of A.
-  const again = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, again, projectSidebar.row('A'), 0);
-  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
-  await release(page);
-
-  const aPosition = (await fetchProject(request, ids.A)).position!;
-  await expect.poll(async () => (await fetchProject(request, ids.X)).position).toBeLessThan(aPosition);
-  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', clear);
-  await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', clear);
-});
-
-test.describe('TREE-2.2: a collapsed project opens when a project is dropped into it as its child', () => {
-  // T is collapsed, with children T1 and T2. X is dropped into the gap
-  // between T and U, `tabs` indents right of its own level.
-  async function dropBelowCollapsedT(
-    page: Page,
-    request: APIRequestContext,
-    projectSidebar: ProjectSidebarPage,
-    tabs: number,
-  ) {
-    await seedProjects(request, [
-      ['T', null],
-      ['T1', 'T'],
-      ['T2', 'T'],
-      ['U', null],
-      ['X', null],
-    ]);
+    ['B', null],
+  ] as const;
+  expect(await fetchProjectDepthCap(request)).toBeGreaterThanOrEqual(4);
+  for (const ending of ['release', 'cancel'] as const) {
+    await resetAndSeedDb();
+    const ids = await seedProjects(request, tree);
+    await expectSavedProjectTree(request, ids, tree);
     await page.goto('/');
-    await projectSidebar.toggle('T');
-    await expect(projectSidebar.projectName('T1')).not.toBeVisible();
-
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['A', 'X', 'X1', 'X1a', 'B']);
+    if (ending === 'cancel') {
+      await projectSidebar.toggle('X1');
+      await expect(projectSidebar.projectName('X1a')).toHaveCount(0);
+    }
+    const firstChild = await paintedBoxOf(projectSidebar.row('X1'));
+    const writes = watchWrites(page);
     const from = await pickUp(page, projectSidebar.dragHandle('X'));
-    await aim(page, from, projectSidebar.row('U'), tabs);
-    await release(page);
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['A', 'X', 'B']);
+    await expect.poll(async () => (await paintedBoxOf(projectSidebar.row('B'))).y).toBe(firstChild.y);
+    for (const name of ['A', 'B']) await expect(projectSidebar.row(name)).toHaveAttribute('data-drop-tier', 'parent');
+    await expect(projectSidebar.ghost).toHaveCount(1);
+    await expect(projectSidebar.ghost.locator('[data-drop-tier]')).toHaveCount(0);
+    await aim(page, from, projectSidebar.row('B'), 0);
+    await expect.poll(() => ghostSlot(projectSidebar, ['A', 'B'])).toEqual(['B', null]);
+    await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', '0');
+    await expect(projectSidebar.projectName('X1')).toHaveCount(0);
+    await expect(projectSidebar.projectName('X1a')).toHaveCount(0);
+    if (ending === 'release') {
+      await release(page);
+      await expectSavedProjectTree(request, ids, [
+        ['A', null],
+        ['B', null],
+        ['X', null],
+        ['X1', 'X'],
+        ['X1a', 'X1'],
+      ]);
+      await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['A', 'B', 'X', 'X1', 'X1a']);
+      expect(await settledWrites(page, writes)).toHaveLength(1);
+    } else {
+      await cancel(page);
+      await expectSavedProjectTree(request, ids, tree);
+      await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['A', 'X', 'X1', 'B']);
+      await expect(projectSidebar.row('X1').getByTitle('Expand')).toBeVisible();
+      expect(await settledWrites(page, writes)).toEqual([]);
+    }
+    await expect(projectSidebar.ghost).toHaveCount(0);
+    await expect(projectSidebar.locator.locator('[data-drop-tier]')).toHaveCount(0);
   }
-
-  test('as its child, T opens, showing X, T1 and T2 under it', async ({ page, request, projectSidebar }) => {
-    await dropBelowCollapsedT(page, request, projectSidebar, 1);
-    await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
-    for (const name of ['X', 'T1', 'T2']) await expect(projectSidebar.row(name)).toBeVisible();
-  });
-
-  test('as its sibling, T stays collapsed', async ({ page, request, projectSidebar }) => {
-    await dropBelowCollapsedT(page, request, projectSidebar, 0);
-    await expect(projectSidebar.row('T').getByTitle('Expand')).toBeVisible();
-    await expect(projectSidebar.projectName('T1')).not.toBeVisible();
-  });
 });
 
-test('TREE-2.3: a collapsed project opened by a drop stays open if the move fails', async ({
+test('TREE-2.2: a child drop opens the collapsed parent before its answer and a sibling set-down leaves it collapsed', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  await seedProjects(request, [
+  const tree = [
     ['T', null],
     ['T1', 'T'],
     ['T2', 'T'],
     ['X', null],
-  ]);
+  ] as const;
+  for (const child of [true, false]) {
+    await resetAndSeedDb();
+    const ids = await seedProjects(request, tree);
+    await expectSavedProjectTree(request, ids, tree);
+    await page.goto('/');
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'T1', 'T2', 'X']);
+    await projectSidebar.toggle('T');
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'X']);
+    const moves = await holdRequests(page, {
+      method: 'PATCH',
+      url: `**/api/projects/${ids.X}/move`,
+      outcome: 'succeed',
+    });
+    const writes = watchWrites(page);
+    try {
+      const from = await pickUp(page, projectSidebar.dragHandle('X'));
+      await aimAtOwnRow(page, from, child ? 1 : 0);
+      await expect(projectSidebar.ghost).toHaveAttribute('data-drag-ghost', child ? '1' : '0');
+      await release(page);
+      if (child) {
+        await moves.arrived();
+        await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids.T);
+        await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
+        await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'X', 'T1', 'T2']);
+        await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(1)}px`);
+        moves.release();
+        await expectSavedProjectTree(request, ids, [
+          ['T', null],
+          ['X', 'T'],
+          ['T1', 'T'],
+          ['T2', 'T'],
+        ]);
+        expect(await settledWrites(page, writes)).toHaveLength(1);
+      } else {
+        await expect(projectSidebar.row('T').getByTitle('Expand')).toBeVisible();
+        await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'X']);
+        expect(await settledWrites(page, writes)).toEqual([]);
+      }
+    } finally {
+      moves.release();
+    }
+  }
+});
+
+test('TREE-2.3: refusal restores X before the following read while the drop-opened parent stays expanded', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const tree = [
+    ['T', null],
+    ['T1', 'T'],
+    ['T2', 'T'],
+    ['X', null],
+  ] as const;
+  const ids = await seedProjects(request, tree);
+  const saved = await expectSavedProjectTree(request, ids, tree);
   await page.goto('/');
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'T1', 'T2', 'X']);
   await projectSidebar.toggle('T');
-  await expect(projectSidebar.projectName('T1')).not.toBeVisible();
-  // The server refuses every move.
-  await page.route('**/api/projects/*/move', route =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
-  );
-
-  // X is released one tab right of T, in its own gap, as T's first child.
-  const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aimAtOwnRow(page, from, 1);
-  const refused = page.waitForResponse(res => res.url().endsWith('/move'));
-  await release(page);
-  expect((await refused).status()).toBe(400);
-
-  // T is open, showing its children, and X is back after it, at the top level.
-  await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
-  await expect(projectSidebar.projectNames('T', 'T1', 'T2', 'X')).toHaveText(['T', 'T1', 'T2', 'X']);
-  await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(0)}px`);
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'X']);
+  const moves = await holdRequests(page, { method: 'PATCH', url: `**/api/projects/${ids.X}/move`, outcome: 'refuse' });
+  const read = await holdNextRead(page, '**/api/projects');
+  const writes = watchWrites(page);
+  try {
+    const from = await pickUp(page, projectSidebar.dragHandle('X'));
+    await aimAtOwnRow(page, from, 1);
+    await release(page);
+    await moves.arrived();
+    await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'X', 'T1', 'T2']);
+    const refused = page.waitForResponse(response => response.url().endsWith(`/projects/${ids.X}/move`));
+    moves.release();
+    expect((await refused).status()).toBe(400);
+    await read.arrived();
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'T1', 'T2', 'X']);
+    await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
+    await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(0)}px`);
+    expect(await expectSavedProjectTree(request, ids, tree)).toEqual(saved);
+    read.release();
+    await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['T', 'T1', 'T2', 'X']);
+    expect(await settledWrites(page, writes)).toHaveLength(1);
+  } finally {
+    moves.release();
+    await read.dispose();
+  }
 });

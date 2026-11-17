@@ -131,7 +131,7 @@ depth is decided against the project above, Top
 starts where the ghost's name starts, at the depth a release would give
 the project, so each depth of a gap starts at a column of its own. It
 keeps full strength, though the ghost it rides is dimmed. No line is
-drawn until the pointer first moves, nor in an empty hierarchy (§1).
+drawn in an empty hierarchy (§1).
 
 **A pickup takes the dragged project's whole subtree out of the rows,**
 as its branch ([`../hierarchy-placement/`](../hierarchy-placement/)

@@ -10,7 +10,7 @@
 | TREE-11.4 | A failed create leaves its parent collapsed | P1 | Automated |
 | TREE-11.5 | A successful parent change opens the collapsed new parent | P1 | Automated |
 | TREE-11.6 | A failed parent change leaves the new parent collapsed | P1 | Automated |
-| TREE-11.7 | A rename or an edit keeping the same parent leaves that parent collapsed | P2 | Open |
+| TREE-11.7 | A rename or an edit keeping the same parent leaves that parent collapsed | P2 | Automated |
 | TREE-11.8 | A top-level create or parent change opens no unrelated project | P2 | Automated |
 
 ---
@@ -65,13 +65,13 @@
 
 ## TREE-11.7 — A rename or an edit keeping the same parent leaves that parent collapsed
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §11, wiki project-tree §7
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §11, wiki project-tree §7
 
 *Given* collapsed parent `P` with child `X`, *when* the app successfully renames `X` without changing its parent, *then* `P` stays collapsed and `X` stays hidden. *When* an edit explicitly names `P`, the parent `X` already has, and succeeds, *then* `P` likewise stays collapsed. Neither successful edit gives `X` a new parent, so neither opens one. Renaming `P` itself also leaves it collapsed.
 
 *Given* instead `P` has child `C` and top-level `X` has been moved under `P` by a release that opens `P`, but its answer is still outstanding, and a rename of `X` is requested meanwhile, *when* the move succeeds and the user collapses `P` before the rename's answer, *then* the later rename success leaves `P` collapsed with both `C` and `X` hidden. `X` keeps parent `P` and receives the new name; the rename gives it no new parent and does not open `P` again. An edit explicitly retaining `P` has the same outcome. This holds regardless of whether the rename was requested before the earlier move's answer.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-expansion.spec.ts`
 
 ## TREE-11.8 — A top-level create or parent change opens no unrelated project
 

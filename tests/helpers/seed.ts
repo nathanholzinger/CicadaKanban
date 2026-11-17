@@ -187,6 +187,7 @@ export async function seedProjects(
 
 export interface ProjectRow {
   id: string;
+  name: string;
   parentId: string | null;
   position: number | null;
   updatedAt: number;
@@ -194,6 +195,32 @@ export interface ProjectRow {
 
 export async function fetchProject(request: APIRequestContext, id: string): Promise<ProjectRow> {
   return checkedJson(await request.get(`${API}/projects/${id}`), `GET /projects/${id}`);
+}
+
+// Reads the current complete project list, independently of the open page's cached tree.
+export async function fetchProjects(request: APIRequestContext): Promise<ProjectRow[]> {
+  return checkedJson(await request.get(`${API}/projects`), 'GET /projects');
+}
+
+// Checked setup writes; callers send parent/neighbor intent, never a computed position.
+export async function updateProject(
+  request: APIRequestContext,
+  id: string,
+  data: Record<string, unknown>,
+): Promise<ProjectRow> {
+  return checkedJson(await request.put(`${API}/projects/${id}`, { data }), `PUT /projects/${id}`);
+}
+
+export async function moveProject(
+  request: APIRequestContext,
+  id: string,
+  data: Record<string, unknown>,
+): Promise<ProjectRow> {
+  return checkedJson(await request.patch(`${API}/projects/${id}/move`, { data }), `PATCH /projects/${id}/move`);
+}
+
+export async function deleteProject(request: APIRequestContext, id: string): Promise<void> {
+  checkedOk(await request.delete(`${API}/projects/${id}`), `DELETE /projects/${id}`);
 }
 
 // Pins one project to an exact position, or to none (`null`), through the

@@ -65,6 +65,92 @@ export async function pickUpAt(page: Page, start: Point): Promise<Point> {
   return start;
 }
 
+// Activates with one pointer sample, leaving no later in-drag movement before the caller observes pickup.
+export async function pickUpBeforeMove(page: Page, source: Locator): Promise<Point> {
+  const start = await center(source);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 6, start.y, { steps: 1 });
+  return start;
+}
+
+export interface GeometryFrame {
+  [key: string]: Array<{
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    ghost: string | null;
+  }>;
+}
+
+// Records screen geometry and the app's ghost-depth attribute on each animation frame and DOM change.
+// It observes the page, never feeds geometry back into the app, and retains transient painted states.
+export async function recordGeometry(page: Page, selectors: Record<string, string>) {
+  const key = `geometry-${Date.now()}-${Math.random()}`;
+  await page.evaluate(
+    ({ key, selectors }) => {
+      const records: GeometryFrame[] = [];
+      let last = '';
+      let frameId = 0;
+      let stopped = false;
+      const sample = () => {
+        const frame: GeometryFrame = {};
+        for (const [name, selector] of Object.entries(selectors)) {
+          frame[name] = [...document.querySelectorAll(selector)]
+            .map(element => {
+              const rect = element.getBoundingClientRect();
+              return {
+                text: element.textContent?.trim() ?? '',
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height,
+                ghost: element.getAttribute('data-drag-ghost'),
+              };
+            })
+            .filter(rect => rect.width > 0 && rect.height > 0);
+        }
+        const serialized = JSON.stringify(frame);
+        if (serialized !== last) {
+          records.push(frame);
+          last = serialized;
+        }
+      };
+      const tick = () => {
+        if (stopped) return;
+        sample();
+        frameId = requestAnimationFrame(tick);
+      };
+      const observer = new MutationObserver(sample);
+      observer.observe(document, { childList: true, subtree: true, attributes: true, characterData: true });
+      tick();
+      (window as unknown as Record<string, unknown>)[key] = {
+        records,
+        stop() {
+          sample();
+          stopped = true;
+          cancelAnimationFrame(frameId);
+          observer.disconnect();
+        },
+      };
+    },
+    { key, selectors },
+  );
+  return {
+    async stop(): Promise<GeometryFrame[]> {
+      return page.evaluate(key => {
+        const registry = window as unknown as Record<string, { records: GeometryFrame[]; stop(): void }>;
+        const record = registry[key];
+        record.stop();
+        delete registry[key];
+        return record.records;
+      }, key);
+    },
+  };
+}
+
 // Hover the live drag over a point, in enough steps for dnd-kit's collision
 // detection to keep up.
 export async function hoverTo(page: Page, target: Point) {
@@ -162,6 +248,37 @@ export async function paintedBoxOf(locator: Locator, { layoutSize = false }: { l
     return { x: box.x + (box.width - size.width) / 2, y: box.y + (box.height - size.height) / 2, ...size };
   }
   return box;
+}
+
+// Reads rendered text rows, available text bounds and overflow state; padding is not a text row.
+export async function textLayoutOf(locator: Locator) {
+  return locator.evaluate(element => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const tops = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).map(rect => rect.y);
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      rows: new Set(tops).size,
+      client: element.clientWidth,
+      scroll: element.scrollWidth,
+      clips: style.overflowX === 'hidden' || style.overflowX === 'clip',
+      contentLeft: rect.x + element.clientLeft + parseFloat(style.paddingLeft),
+      contentRight: rect.x + element.clientLeft + element.clientWidth - parseFloat(style.paddingRight),
+    };
+  });
+}
+
+// Reads one atomic screen snapshot of matching text elements, including rows whose names are clipped to zero width.
+export async function paintedTextRows(locator: Locator) {
+  return locator.evaluateAll(elements =>
+    elements
+      .map(element => {
+        const rect = element.getBoundingClientRect();
+        return { text: (element.textContent ?? '').trim(), y: rect.y, height: rect.height };
+      })
+      .filter(row => row.height > 0),
+  );
 }
 
 // A point on the element's vertical centre line, `fraction` of the way down

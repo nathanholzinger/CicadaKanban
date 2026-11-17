@@ -3,6 +3,9 @@ import { expect, test } from '../fixtures';
 import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import { holdRequests } from '../helpers/holdRequests';
+import { pickUp, release } from '../helpers/dragGesture';
+import { aimAtOwnRow, drawnProjectNames, expectSavedProjectTree } from '../helpers/projectTreeDrag';
+import { holdNextWrite } from '../helpers/requestHarness';
 import { fetchProject, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 
@@ -151,6 +154,9 @@ test('TREE-11.3: a successful create opens its collapsed parent from either crea
   await shows(projectSidebar, 'P', 'Q');
   const creates = await holdRequests(page, { method: 'POST', url: CREATE_URL, outcome: 'succeed' });
 
+  await collapsed(projectSidebar, 'P');
+  await collapsed(projectSidebar, 'Q');
+  await hidden(projectSidebar, 'C', 'Q1');
   // The sidebar's dialog: P stays collapsed while the create is unanswered, and opens on its success, with C
   // then N under it. Q, which the create is not under, stays collapsed.
   await createFromSidebar(page, projectSidebar, 'P', 'N');
@@ -167,6 +173,8 @@ test('TREE-11.3: a successful create opens its collapsed parent from either crea
   // The project page's subprojects list, with P collapsed by hand again.
   await projectSidebar.toggle('P');
   await shows(projectSidebar, 'P', 'Q');
+  await collapsed(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C', 'N', 'Q1');
   await createFromPage(page, projectSidebar, 'P', 'N2');
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
@@ -189,6 +197,8 @@ test('TREE-11.4: a failed create leaves its parent collapsed', async ({ page, re
   await shows(projectSidebar, 'P');
   const creates = await holdRequests(page, { method: 'POST', url: CREATE_URL, outcome: 'refuse' });
 
+  await collapsed(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C');
   // Through the sidebar's dialog: P stays collapsed while the request is out, and after it fails.
   await createFromSidebar(page, projectSidebar, 'P', 'N');
   await creates.arrived();
@@ -238,6 +248,9 @@ test('TREE-11.5: a successful parent change opens the collapsed new parent', asy
   await shows(projectSidebar, 'X', 'P', 'Q');
   const edits = await holdRequests(page, { method: 'PUT', url: EDIT_URL, outcome: 'succeed' });
 
+  await collapsed(projectSidebar, 'P');
+  await collapsed(projectSidebar, 'Q');
+  await hidden(projectSidebar, 'C', 'Q1');
   await parentSelect(page).selectOption(ids.P);
   await edits.arrived();
   // P stays collapsed while the edit is unanswered.
@@ -266,6 +279,8 @@ test('TREE-11.6: a failed parent change leaves the new parent collapsed', async 
   await shows(projectSidebar, 'X', 'P');
   const edits = await holdRequests(page, { method: 'PUT', url: EDIT_URL, outcome: 'refuse' });
 
+  await collapsed(projectSidebar, 'P');
+  await hidden(projectSidebar, 'C');
   await parentSelect(page).selectOption(ids.P);
   await edits.arrived();
   await collapsed(projectSidebar, 'P');
@@ -289,16 +304,24 @@ test('TREE-11.7: a rename or an edit keeping the same parent leaves that parent 
   request,
   projectSidebar,
 }) => {
+  test.slow();
   const ids = await seedProjects(request, [
     ['P', null],
     ['X', 'P'],
   ]);
+  await expectSavedProjectTree(request, ids, [
+    ['P', null],
+    ['X', 'P'],
+  ]);
   await page.goto('/');
+  await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['P', 'X']);
   await projectSidebar.select('X');
   await projectSidebar.toggle('P');
   await shows(projectSidebar, 'P');
 
   // A rename of X: P stays collapsed and X stays hidden.
+  await collapsed(projectSidebar, 'P');
+  await hidden(projectSidebar, 'X');
   const heading = (name: string) => page.locator('main').getByRole('heading', { level: 1, name, exact: true });
   await heading('X').click();
   await page.locator('main').getByRole('textbox').fill('X renamed');
@@ -328,6 +351,77 @@ test('TREE-11.7: a rename or an edit keeping the same parent leaves that parent 
   await collapsed(projectSidebar, 'P renamed');
   await shows(projectSidebar, 'P renamed');
   await hidden(projectSidebar, 'X renamed');
+
+  for (const action of ['rename', 'same-parent'])
+    for (const requestedBeforeMoveAnswer of [true, false]) {
+      await resetAndSeedDb();
+      const tree = [
+        ['P', null],
+        ['C', 'P'],
+        ['X', null],
+      ] as const;
+      const queuedIds = await seedProjects(request, tree);
+      await expectSavedProjectTree(request, queuedIds, tree);
+      await page.goto('/');
+      await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['P', 'C', 'X']);
+      await projectSidebar.select('X');
+      await projectSidebar.toggle('P');
+      await collapsed(projectSidebar, 'P');
+      await hidden(projectSidebar, 'C');
+      await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['P', 'X']);
+      const move = await holdNextWrite(page, {
+        method: 'PATCH',
+        url: `**/api/projects/${queuedIds.X}/move`,
+        outcome: 'succeed',
+      });
+      const edit = await holdNextWrite(page, {
+        method: 'PUT',
+        url: `**/api/projects/${queuedIds.X}`,
+        outcome: 'succeed',
+      });
+      try {
+        const from = await pickUp(page, projectSidebar.dragHandle('X'));
+        await aimAtOwnRow(page, from, 1);
+        await release(page);
+        await move.arrived();
+        await open(projectSidebar, 'P');
+        const requestEdit = async () => {
+          if (action === 'rename') {
+            await heading('X').click();
+            await page.locator('main').getByRole('textbox').fill('X queued');
+            await page.locator('main').getByRole('textbox').press('Enter');
+          } else await parentSelect(page).selectOption(queuedIds.P);
+        };
+        if (requestedBeforeMoveAnswer) await requestEdit();
+        const moveAnswer = page.waitForResponse(response => response.url().endsWith(`/projects/${queuedIds.X}/move`));
+        move.release();
+        expect((await moveAnswer).ok()).toBe(true);
+        if (!requestedBeforeMoveAnswer) await requestEdit();
+        const heldEdit = await edit.arrived();
+        expect(heldEdit.status).toBeGreaterThanOrEqual(200);
+        expect(heldEdit.status).toBeLessThan(300);
+        await projectSidebar.toggle('P');
+        await collapsed(projectSidebar, 'P');
+        await hidden(projectSidebar, 'C', 'X', 'X queued');
+        const editAnswer = page.waitForResponse(
+          response => response.request().method() === 'PUT' && response.url().endsWith(`/projects/${queuedIds.X}`),
+        );
+        edit.release();
+        expect((await editAnswer).ok()).toBe(true);
+        if (action === 'rename') await expect(heading('X queued')).toBeVisible();
+        await collapsed(projectSidebar, 'P');
+        await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['P']);
+        await hidden(projectSidebar, 'C', 'X', 'X queued');
+        expect(await fetchProject(request, queuedIds.X)).toMatchObject({
+          parentId: queuedIds.P,
+          name: action === 'rename' ? 'X queued' : 'X',
+        });
+        expect((await fetchProject(request, queuedIds.C)).parentId).toBe(queuedIds.P);
+      } finally {
+        await move.dispose();
+        await edit.dispose();
+      }
+    }
 });
 
 test('TREE-11.8: a top-level create or parent change opens no unrelated project', async ({
@@ -351,6 +445,9 @@ test('TREE-11.8: a top-level create or parent change opens no unrelated project'
 
   // A new top-level project has no parent to open: P and Q stay collapsed, and N is shown. That a leaf starts
   // open isn't visible, so TREE-11.1 is where a new project's opening is observed.
+  await collapsed(projectSidebar, 'P');
+  await collapsed(projectSidebar, 'Q');
+  await hidden(projectSidebar, 'X', 'P2', 'Q1');
   await projectSidebar.newProjectButton.click();
   await page.getByPlaceholder('Project name').fill('N');
   await page.getByRole('button', { name: 'Create project' }).click();

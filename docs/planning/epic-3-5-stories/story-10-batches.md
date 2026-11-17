@@ -103,8 +103,8 @@ In run order, since a later batch reuses an earlier one's setups (D5). The case 
 | 4c. DRAG-7 | 15 | Closed; DRAG-7.18 went to 4j | [The log](story-10-batch-4a-4d-log.md) |
 | 4d. DRAG-6 | 16 | Closed; DRAG-6.7, 6.16, 6.23 and 6.24 went to 4j | [The log](story-10-batch-4a-4d-log.md) |
 | 4e. DRAG-8 | 12 | Closed; DRAG-8.10 went to Drag Automation Deferrals | [story-10-batch-4e.md](story-10-batch-4e.md) |
-| 4f. DRAG-2 and ATT-4.9 | 14 | Not started | [story-10-batch-4f.md](story-10-batch-4f.md) |
-| 4g. TREE | 33 | Not started | [story-10-batch-4g.md](story-10-batch-4g.md) |
+| 4f. DRAG-2 and ATT-4.9 | 14 | Closed; confined scope, several TCs to Drag Automation Deferrals | [story-10-batch-4f.md](story-10-batch-4f.md) |
+| 4g. TREE | 33 | Closed; confined scope, several TCs to Drag Automation Deferrals | [story-10-batch-4g.md](story-10-batch-4g.md) |
 | 4h. The six legacy skips | — | Not started | [story-10-batch-4h.md](story-10-batch-4h.md) |
 | 4i and 4j | — | Outside the story, after the smoke suite | [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) |
 

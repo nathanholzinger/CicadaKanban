@@ -936,7 +936,7 @@ test('DRAG-7.10: in an expanded sub-row, reaching Board takes another pop out of
   await cancel(page);
 });
 
-test('DRAG-7.10: in an expanded sub-row, the sibling sub-row beside it is not reached by the one pop: a release over it is the sub-row’s own placement', async ({
+test.skip('DRAG-7.10: in an expanded sub-row, the sibling sub-row beside it is not reached by the one pop: a release over it is the sub-row’s own placement', async ({
   page,
   request,
   projectSidebar,

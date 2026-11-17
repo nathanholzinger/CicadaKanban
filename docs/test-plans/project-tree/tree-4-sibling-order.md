@@ -10,15 +10,15 @@
 | TREE-4.4 | The sidebar sorts a project with no position as if its position were 0 | P2 | Automated |
 | TREE-4.5 | A move that reindexes discloses every renumbered sibling, the moved project included | P1 | Automated |
 | TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Automated |
-| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Open |
+| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Automated |
 | TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Automated |
-| TREE-4.9 | A release draws the move and its branch at once, and success keeps that placement | P1 | Open |
+| TREE-4.9 | A release draws the move and its branch at once, and success keeps that placement | P1 | Automated |
 | TREE-4.10 | Moves released one after another settle independently by their own answers | P1 | Automated |
-| TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Open |
+| TREE-4.11 | The next pickup counts earlier drag moves before their answers arrive | P1 | Automated |
 | TREE-4.12 | A drawn move changes order by slot without computing any position | P1 | Automated |
 | TREE-4.13 | A late response preserves positions already set by a newer saved write | P1 | Automated |
 | TREE-4.14 | An older tree read preserves a write already applied in the sidebar | P1 | Automated |
-| TREE-4.15 | An older tree read cannot remove a successful create or restore a deleted subtree | P1 | Open |
+| TREE-4.15 | An older tree read cannot remove a successful create or restore a deleted subtree | P1 | Automated |
 
 ---
 
@@ -75,7 +75,7 @@
 
 ## TREE-4.7 — The sidebar applies the renumbered pairs, so it shows the server's order without a reload
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4, wiki positioning §8
 
 *Given* the sidebar showing parent `P` expanded, with children `A` (`1500`) and `B` (`1600`), and top-level project `X`, each of these from that starting state:
 
@@ -83,7 +83,7 @@
 - *when* a project is created under `P`, *then* it's shown last among `P`'s children, after `B`;
 - *when* `X`'s parent is edited to `P`, *then* `X` is shown last among `P`'s children, after `B`.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
 
 ## TREE-4.8 — After a failed write, the sidebar shows the project where it was before the attempt
 
@@ -101,11 +101,11 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.9 — A release draws the move and its branch at once, and success keeps that placement
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki project-tree §6, wiki hierarchy-placement §8, wiki positioning §5
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4, wiki project-tree §6, wiki hierarchy-placement §8, wiki positioning §5
 
 *Given* top-level projects `A, B, X`, expanded `A` with children `A1, A2`, and expanded `X` with child `X1`, *when* `X` is released in the gap between `A1` and `A2`, at their depth, *then* before the answer arrives the sidebar reads `A, A1, X, X1, A2, B`, with `X` drawn under `A` and `X1` still under `X`. The placement is after `A1` and before `A2`, the same relation the move sends; no `X` row remains top-level. The branch returns at release, not after the answer. *When* the move succeeds, *then* that same tree stays drawn without a frame restoring the pickup placement, and a reload shows the same hierarchy and order.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
 
 ## TREE-4.10 — Moves released one after another settle independently by their own answers
 
@@ -119,11 +119,11 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.11 — The next pickup counts earlier drag moves before their answers arrive
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §4, wiki project-tree §2, wiki hierarchy-placement §6, wiki hierarchy-placement §7, wiki hierarchy-placement §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki project-tree §4, wiki project-tree §2, wiki hierarchy-placement §6, wiki hierarchy-placement §7, wiki hierarchy-placement §8
 
 *Given* project cap `PCAP >= 4`, top-level leaf `P`, top-level `X` with child `X1`, and unrelated chain ending at `S` at absolute depth `PCAP - 3` with child `T` at `PCAP - 2`, *when* `X` is released as `P`'s child and `P` is picked up before that move's answer, *then* the pickup tree already has `X` and `X1` beneath `P`. Both are hidden in `P`'s carried branch and excluded from placement; its line reads "+ 1 child, 2 total descendants". `P`'s subtree height is 2, not its saved leaf height 0. `S` is Full, since putting `P` under it reaches exactly `PCAP`; `T` is Mid, since it would put the deepest descendant at `PCAP + 1` but its parent `S` is legal. Waiting for the first move's answer is unnecessary for the new drag to count that move's hierarchy, branch and tiers.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
 
 ## TREE-4.12 — A drawn move changes order by slot without computing any position
 
@@ -157,7 +157,7 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 ## TREE-4.15 — An older tree read cannot remove a successful create or restore a deleted subtree
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki project-tree §5, wiki project-tree §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §4, wiki project-tree §5, wiki project-tree §9
 
 *Given* expanded top-level project `P` at position `1`, with only child `C` at `1`, unrelated top-level `Q` at `2`, and a read of that tree begun but still unanswered, each of these from that starting state:
 - *when* a create of `N` under `P` succeeds and its answer has put `N` after `C` in the sidebar, then the older tree read arrives, *then* `P`'s children remain `C, N`, with `N.parentId = P` and `N.position = 2`. No intervening sidebar render removes `N`;
@@ -165,4 +165,4 @@ How the user learns that the write failed isn't asserted. That a collapsed proje
 
 `Q` retains its name, top-level parent and saved position in both scenarios. This holds for an initial read that a later read overtook, as well as for a refresh of an already loaded sidebar. If a fresh read is needed to establish the current tree, the old snapshot still never undoes the applied create or delete while it is awaited.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-sidebar.spec.ts`
