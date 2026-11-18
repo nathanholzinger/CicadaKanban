@@ -328,6 +328,16 @@ The close's five slices judge the same frozen tree, `e648bec815c2a86cf626f560b51
 
 **DRAG-6.27, DRAG-7.1 and DRAG-7.16, approved follow-ups applied (Nathan, 2026-11-17):** all three are Automated using the proposed existing hook, row-construction and modal-geometry tests with their surface carriers. Their reload-start clearing, every-row depth and left-edge placement gaps are settled; they are not deferred repairs. Only two DRAG-7.1 title stamps were needed, with no assertion change. See [slice 4](../../audits/test-reconciliation-story-10-close-slice-4.md#proposed-internal-mappings-need-approval) and [slice 5](../../audits/test-reconciliation-story-10-close-slice-5.md#proposed-internal-mappings-need-approval). Earlier 4f observations on DRAG-7.16 remain historical records.
 
+### Story 10 close — code audit quality notes
+
+From the [closing code audit](../../audits/code-quality-audit-epic-3-5-story-10.md), under MVP Deferrals. These are later quality/risk assessments, with no current verdict, new case, variant, status change or test work.
+
+- **Geometry recording:** `tests/helpers/dragGesture.ts:126-127` samples on mutations as well as animation frames; assess whether consumers comparing every recorded layout intend intermediate, pre-paint DOM states to count as visible observations.
+- **Target absence sampling:** `tests/ui/drag-target-classification.spec.ts:455-460,821-837` uses retrying locator assertions with `timeout: 0` inside observation callbacks; assess their ability to detect transient forbidden cues/holds without waiting for them to disappear.
+- **TREE-4.15 initial-read observation:** `tests/ui/project-tree-sidebar.spec.ts:411-434` holds the first initial GET while another read populates the sidebar; assess whether that branch tests write-versus-read protection or an already-superseded StrictMode read. Existing certification is unchanged.
+- **Tuning initialization lifetime:** DRAG-2.22 reseeds different clocks on the same Page at `tests/ui/drag-target-classification.spec.ts:807-847`; `seedDragTuning` retains older init registrations with unspecified ordering. This is a possible fixture flake, with no failing execution observed by the audit.
+- **Saved-tree synchronization:** `tests/helpers/projectTreeDrag.ts:88-103` takes one saved-tree snapshot, and some callers run it directly after `release` without a confirmed PATCH; assess the possible GET-before-commit failure under delay. No failing execution was observed by the audit.
+
 ## Work, in batches
 
 Planned at grooming.

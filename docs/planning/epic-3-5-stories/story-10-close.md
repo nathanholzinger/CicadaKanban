@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — the close
 
-**Type:** story plan, Story 10's third part · **Written:** 2026-11-17 by the Architect, from Phase 5 of [Story 10's plan](story-10-dnd-automation-catch-up.md) · **Status:** step 6 complete; coverage shortfall recorded; step 7 is Nathan's review and commit
+**Type:** story plan, Story 10's third part · **Written:** 2026-11-17 by the Architect, from Phase 5 of [Story 10's plan](story-10-dnd-automation-catch-up.md) · **Status:** step 8 audit review complete; the three correctness findings deferred to MVP Deferrals, 13 required findings open; coverage shortfall recorded; fix batches A to C written, batch D's form open; batch A is next
 
 [Story 10's plan](story-10-dnd-automation-catch-up.md) holds the Goal, the decisions (D1–D14) and the Living-docs handoff, and [Story 10's second part](story-10-batches.md) holds the batches, all closed. This doc holds Phase 5: the close's steps in order, the reconciliation's slices, the close's list, the story's audit and its fix batches, and the close's Open questions. A change to a decision is amended in the plan, and a change to a step is amended here.
 
@@ -177,10 +177,37 @@ Twenty-seven Open cases are held by [Drag Automation Deferrals](../tech-debt-sto
 
 ## Audit fix batches
 
-Not written yet. The Architect writes them after the audit (`.claude/guides/audit-workflow.md`, "Working Fix Now"), and a Coder session works each one.
+The [closing audit](../../audits/code-quality-audit-epic-3-5-story-10.md) is reviewed: 16 required findings (three correctness, eleven documentation, two checked-helper bypasses) and twelve optional structural findings. The Architect writes the batches (`.claude/guides/audit-workflow.md`, "Working Fix Now"), and a Coder session works each one. No fix batch is written by the Auditor. Nathan deferred the three correctness findings, #1 to #3, to [MVP Deferrals](../mvp-deferrals.md#findings-with-no-story-yet) on 2026-11-18. None can put data the user didn't intend in the database: #1 writes nothing, and #2 and #3 leave the database correct and the UI wrong until a refresh. The batches cover #4 to #16, and Nathan's picks from the optional findings (2026-11-18): #19, #20 and #22, and the #25 and #28 splits, with #21 evaluated in batch B. No batch changes app behavior, a test's title or what it asserts.
+
+Each batch ends with `/code-review`, `npm run check` and a stop for Nathan's review and commit.
+
+**Batch A — a Coder session: #4 and #5.** Two lines of docs and one test title.
+- #4: add `CardExpansionContext.ts` to the board-state map in `client/src/components/workflow/AGENTS.md`.
+- #5: qualify the title "anywhere else, or with no drag: the shortCard, with no width" in `dragOverlayGeometry.test.ts`, which leaves out the Stub-drag branch the next test covers. It carries no case ID, and no test plan quotes it.
+
+**Batch B — the QA Engineer: #6 to #16, #19, #20 and #22, and an evaluation of #21.** About eleven files; outside the comments, each change swaps in an existing or new helper.
+- **Comments, #6 to #14:** each one's fix is in the audit. The code under them doesn't change.
+- **Checked setup, #15 and #16:** `deleteWorkphase` in `attached-children.spec.ts`, and `fetchProjects` at both sites in `project-tree-expansion.spec.ts`, each dropping the unused `API` import. A passing run behaves as before; a refused setup now fails at its step.
+- **#19:** `releaseMove(page, x.id)` replaces the local `/move` wait in `drag-7-modal-hold.spec.ts`'s `expectReleaseCommitsShown`.
+- **#20:** drag-8-carried-branch's three `openHeldModal` calls use `dragTargetScenario.ts::openTargetModal`, and the local copy goes.
+- **#22:** a `createSubproject(parent, name)` method on `ProjectSidebarPage` (hover the row, "Add subproject", fill, "Create subproject") replaces the five copies in the four project-tree specs. Each spec keeps the network wait it sets before the call.
+- **#21, evaluation only:** whether `overflowTree.ts::holdAt` can replace `attached-children.spec.ts`'s two hand-written descendant aims, given that `holdAt` waits for the descendants layer after the pickup, and whether it's worth doing. Report a recommendation to Nathan (include, defer or drop), and change nothing for it until he decides.
+- **Run:** the seven specs whose code changes (attached-children, the four project-tree specs, drag-7-modal-hold, drag-8-carried-branch), once, on a test stack. Files with only a comment change need only the gate.
+
+**Batch C — the QA Engineer: the #25 and #28 splits.** Tests move unchanged; no title, assertion or setup changes.
+- **#25:** the Sheet-over-modal tests, `drag-7-hierarchy-modal.spec.ts` from the DRAG-7.28 click test (line 1164) to the end, move to a new `drag-7-modal-sheet.spec.ts`, with the file's `beforeEach` and the one-line `pickUpRow`.
+- **#28:** the pending-state tests, DRAG-6.23 and DRAG-6.24 from line 300 to the end of `drag-preview-reconciliation.spec.ts`, with `seedPendingBoard` and its drop helpers, move to a new `drag-preview-pending.spec.ts`. The skipped DRAG-6.23 test also needs `dropXAtEndOfInProgress`, so export it or move it to a helper.
+- **Drag Automation Deferrals** names the skipped DRAG-6.23 test by its old file (its line 388): update the path.
+- **Run:** the two old and two new spec files, once, on a test stack.
+- **Catalog effect:** #28 changes no catalog field, since DRAG-6.23 and 6.24 are `Open` with `—`. #25 moves five Automation lines: DRAG-7.32 to 7.35 cite only the new file, and DRAG-7.28 cites both.
+
+**Batch D — align the catalog with batches B and C.** The five Automation lines from batch C, plus whatever the coverage report flags after B and C. Its form waits on Nathan's review of the Test Reviewer, the Reconciler and the testing strategy (Open questions). Then Nathan tags `epic-3-5-story-10-audited`.
 
 ## Open questions
 
+- **For Nathan and the Architect: the check a small test change gets, and batch D's form.** Nathan's concern (2026-11-18): the Test Reviewer's and the Reconciler's definitions are written for a full pass, so a small remap pays for scope widening it doesn't need. The two guards stay: the Test Planner reads no code, and the QA Engineer can't make a case `Automated` unchecked. The Architect's proposal is in discussion with Nathan; the agent and guide edits, if any, wait for his approval.
+
+- **For the Test Planner: finish the existing surface-cost README handoff.** The main plan's Living-docs handoff still records the cost-exception pointer beside the surface preference as unapplied, and it is absent from `docs/test-plans/README.md` at this audit. Apply that existing owner handoff or record its disposition. Its proposed third internal category remains conditional on Nathan; this audit approves no new category and changes no case certification.
 - **For the PO: the sidebar drag before the project cap is read.** The baseline report's Candidate New Cases notes it. `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" pins permissive behaviour, which neither wiki project-tree §3 nor hierarchy-placement §6 settles. No case exists for it, so D10 doesn't hold the close up for it. The story-done checklist allows no Open question still waiting on the PO at sign-off, though, so it's settled or routed by then: a PO ruling, a deferral to [MVP Deferrals](../mvp-deferrals.md), or leaving it as shipped, with no rule.
 - **For Nathan and the Architect, separately: the epic-wide audit's scope** (Nathan, 2026-11-06). It doesn't hold up this story's close. Nathan's starting points:
   - **Choose the files, don't take the range.** audit-workflow §10's range, from the previous `epic-N-complete` tag, would take in nearly the whole repo, since the mid-epic refactors touched nearly everything. So it's scoped to the most important files, chosen the way the close-out audit chose its own.
@@ -190,6 +217,8 @@ Not written yet. The Architect writes them after the audit (`.claude/guides/audi
 
 ## Amendments
 
+- **2026-11-18 — The closing audit's three correctness findings deferred (Nathan, the Architect).** #1 (Escape closes a hold-opened modal), #2 (a delayed move answer brings a deleted item back) and #3 (reversed Sheet answers) go to MVP Deferrals' Findings with no story yet, #2 and #3 under its frozen out-of-order write reconciliation. None can put data the user didn't intend in the database, and #2 and #3 need an answer held back far longer than localhost takes. This answers the Open question on #3. No code, test, case or wiki change; the fix batches cover #4 to #16.
+- **2026-11-18 — Closing audit review complete (Auditor).** All 22 cold instances completed over the 18-commit checkpoint-to-`0935c4e3` range; the separate seven-file 4a wiki check found no additional production defect. Three correctness failures were independently replayed. The report holds 16 required findings and twelve optional structural findings, with duplicates merged. Five remaining non-finding quality/risk notes are recorded once in Drag Automation Deferrals under MVP limits. Existing Reconciler answers, case statuses, app/test source, wiki and the coverage-goal record are unchanged. The Architect owns fix batches; Nathan routes the frozen-reconciliation finding.
 - **2026-11-17 — Written (Nathan, the Architect).** Phase 5 moved here from the plan, with three changes Nathan made that day: the reconciliation runs as five slices; 4h's reconciliation joins slices 1 and 3, since 4h ran no Stop 4 of its own; and the audit's range starts at `story-10-checkpoint-audited`, with 4a's production files checked against the wiki outside it. The plan's two remaining Open questions moved here too.
 - **2026-11-17 — Step 1 narrowed to one file (Nathan, from the Coder's audit).** Only `data-armed-stop` and `data-inversion-count` have no reader. `data-active-context` stays, and D8 is amended to match.
 - **2026-11-17 — Step 4's internal mappings approved (Nathan).** DRAG-6.27, DRAG-7.1 and DRAG-7.16 become Automated through their proposed existing internal supplements and surface coverage. Slices 4 and 5 apply the approval in one follow-up each, with two DRAG-7.1 title stamps and no assertion change. No story decision changes, and step 5 has not started.

@@ -26,7 +26,7 @@ What's ruled out of the MVP, what's built and frozen, and where deferred work go
 What's listed here stays as it is, with its existing tests. During the MVP it gets no new case, no new variant and no new rule. A defect found in it goes to Nathan to route.
 
 - **The forced-stop cue:** the banner, its text by cause, its lifetime, and the flash.
-- **Out-of-order write reconciliation:** the reindex fold, and which answer wins a row's position and workphase when answers land out of order (`positionedWrite.ts::positionRecord` and `setLater`, `itemWriteReconciliation.ts`'s `workphaseSetBy`).
+- **Out-of-order write reconciliation:** the reindex fold, and which answer wins a row's position and workphase when answers land out of order (`positionedWrite.ts::positionRecord` and `setLater`, `itemWriteReconciliation.ts`'s `workphaseSetBy`). Its two known defects are in [Findings with no story yet](#findings-with-no-story-yet).
 
 ## Deferred stories
 
@@ -41,3 +41,6 @@ What's listed here stays as it is, with its existing tests. During the MVP it ge
 One line each: the finding, where it came from, and the area above it falls under. A story is written for an area once Nathan schedules it.
 
 - **Selected-board reload failure:** existing `useBoardLoad.test.ts` tests keep the drawn board and finish loading/cue after a reload or repeated read fails, beyond the two BCU cases' specified outcomes; defer this outside-drag failure-recovery candidate from [Story 10 close slice 6](../audits/test-reconciliation-story-10-close-slice-6.md#candidate-new-cases), with the built cue frozen and no new case or ruling request.
+- **Escape closes a hierarchy modal opened during a drag:** the one keypress cancels the drag and closes the modal the hold opened, where wiki board-drag-interaction §7.3 and §9 keep the modal open. Nothing is written, so no data is at risk. From [Story 10's closing audit](../audits/code-quality-audit-epic-3-5-story-10.md#fix-now), finding #1; Nathan deferred it with no area above, 2026-11-18.
+- **A delayed move answer brings a deleted item back to the board:** a move answer that lands after the Sheet deleted the item, or one of its descendants, adds the row back to the board. The database stays correct, the server refuses any write to the restored card, and a refresh clears it. From [Story 10's closing audit](../audits/code-quality-audit-epic-3-5-story-10.md#fix-now), finding #2; its fix would change the frozen out-of-order write reconciliation (Built and frozen, above).
+- **Two Sheet answers landing in reverse restore an older parent, workphase and position:** an agent answer held past a later parent change in the Sheet wins on arrival (`useItemManagement.ts::foldSheetAnswer`), so the board and the Sheet show the older hierarchy. The database holds the newer one, and a refresh clears it. From [Story 10's closing audit](../audits/code-quality-audit-epic-3-5-story-10.md#fix-now), finding #3; Built and frozen, above: out-of-order write reconciliation.
