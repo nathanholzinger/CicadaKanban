@@ -1,6 +1,6 @@
 # Test Reviewer and Reconciler Split
 
-**Type:** tech-debt story. It changes how the test work is run, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-18 by the Architect, from a conversation with Nathan during Epic 3.5 Story 10's close · **Sequenced:** after Story 10's close batches A to C, before its batch D, which is this story's first use · **Status:** approved by Nathan; batch 1 done, for his review and commit; batches 2 and 3 next, each needing only batch 1
+**Type:** tech-debt story. It changes how the test work is run, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-18 by the Architect, from a conversation with Nathan during Epic 3.5 Story 10's close · **Sequenced:** after Story 10's close batches A to C, before its batch D, which is this story's first use · **Status:** approved by Nathan; batches 1 and 2 done; batch 2 for his review and commit; batch 3 next
 
 ## Goal
 
@@ -117,6 +117,13 @@ Each batch ends with `npm run check` (its lint runs `check:docs`) and a stop for
 
 None. Nathan settled the report's name (D6) and the Reconciler's model (D7). Existing Reconciler reports keep their names; they're transient and move to the archive at their stories' sign-off.
 
+## Batch 2 — Test Planner return
+
+- **Applied, 2026-11-18:** updated every README passage in the Architect's handoff. The Test Reviewer judges coverage while tests are written and in the coverage review at a scope's close; the Reconciler writes from accepted evidence and saves the coverage review word for word. Partial mappings, internal-mapping and Manual proposals, totals, lost-coverage checks, and Review log answers now name the responsible reviewer or report. Each Review log verdict carries its tree id.
+- **Preserved:** the status table and the Reconciler's two-field permissions paragraph are unchanged, checked against the committed README. No case, status, Automation line, wiki, app source or test was changed. The README points to the workflow guide for the process and evidence; D5's table remains there alone.
+- **Validation:** `npm run check` passed: type checks, lint (including `check:docs`, 464 files and 0 hits), formatting, and all unit suites (444 server, 1,110 client, 327 scripts). After the final doc edits, `npm run check:docs` and `git diff --check` passed for this batch. No E2E run is required for this documentation-only batch.
+- **Next:** Nathan reviews and commits batch 2. Batch 3 remains the QA Engineer's write-only Reconciler brief for Story 10's close batch D, as scoped above; no Test Reviewer pass is added.
+
 ## Handoff
 
 - **To the Test Planner, at batch 2:** the lines of `docs/test-plans/README.md` that give the Reconciler a judgment, or name its report, as they stood when batch 1 was done. Each now belongs to the Test Reviewer, the coverage report or the coverage review. The wording is the Test Planner's. The two writable fields, and who may set each status (lines 85 to 88), don't change, and lines 5, 48 and 128 stay true.
@@ -136,3 +143,7 @@ None. Nathan settled the report's name (D6) and the Reconciler's model (D7). Exi
   - **Line 147:** "every Test Reviewer verdict, including later passes". Each now carries the tree id it judged.
   - **Line 150:** "The Reconciler confirms verdicts from the tests and answers each open one at the close." The coverage review answers each open verdict.
 - **To every later close:** the full review and the Reconciler's write replace the single Reconciler close. Drag Automation Deferrals' story, the E2E Smoke Suite and the Quick Items epic's stories inherit it.
+
+## Amendments
+
+- **2026-11-18 — Batch 2 README handoff applied (Test Planner).** Updated the catalog's process wording for the Reviewer/Reconciler split and recorded the return above. Status permissions and the two writable fields stay unchanged; no catalog case or test changes. The Architect's handoff list remains as the record of the request.

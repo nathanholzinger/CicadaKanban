@@ -308,7 +308,7 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 *When* instead a press on `R1` starts its drag in the modal, *then* carrying that row opens no Sheet. The drag still places by gap and depth, as in [DRAG-7.9](drag-7-overflow-and-hierarchy-modal.md).
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`, `tests/ui/drag-7-modal-sheet.spec.ts`, `client/src/components/HierarchyModal.test.tsx`
 
 ## DRAG-7.29 — The side highlight can name an overflow row, and a release still places by gap and depth
 
@@ -340,7 +340,7 @@ The Escape rule also holds once the Sheet has begun opening and is visible above
 
 After each, the same modal remains at its prior place, with the same list order, depths and scroll position, and nothing is written. While the Sheet is open, the modal cannot be dismissed by its own X, its backdrop or Escape. Once the Sheet has closed, another Escape closes the modal. This hold applies only to those dismissal gestures: an automatic close because the Card is gone or its hierarchy is empty does not wait for the Sheet ([DRAG-7.26](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.35](drag-7-overflow-and-hierarchy-modal.md)).
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-7-modal-sheet.spec.ts`, `client/src/components/HierarchyModal.test.tsx`
 
 ## DRAG-7.33 — Child links replace the Sheet over the same modal
 
@@ -348,7 +348,7 @@ After each, the same modal remains at its prior place, with the same list order,
 
 *Given* `R`'s Sheet open over `P`'s hierarchy modal, *when* the link to child `R1` is followed, *then* `R1`'s Sheet replaces `R`'s in the foreground. *When* the link to its child `R1a` is followed, *then* `R1a`'s Sheet replaces it in turn. No second Sheet is left open underneath. The same modal stays open beneath every replacement, at its prior place, with the same hierarchy and scroll position. Following these links writes nothing; closing the last Sheet returns to that modal.
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-7-modal-sheet.spec.ts`
 
 ## DRAG-7.34 — An edit in the Sheet appears in the open modal
 
@@ -356,7 +356,7 @@ After each, the same modal remains at its prior place, with the same list order,
 
 *Given* `R1`'s Sheet open over the modal, with title `First child`, *when* its title is successfully changed to `Renamed child`, *then* the modal's row for `R1` shows `Renamed child`, not `First child`, without closing and reopening the modal. `R1` remains under `R` with `R1a` beneath it, at the same position in the hierarchy; unrelated rows keep their titles and places. Closing the Sheet returns to that updated modal, not an older snapshot of the item.
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-7-modal-sheet.spec.ts`
 
 ## DRAG-7.35 — An empty hierarchy modal closes immediately while its Sheet stays open
 
@@ -366,4 +366,4 @@ After each, the same modal remains at its prior place, with the same list order,
 
 *When* the Sheet is then closed by its X, its backdrop or Escape, each from that state, *then* the board is shown with no hierarchy modal. The old modal is not restored or reopened, and no additional hierarchy write is caused by closing either surface. The Sheet-open hold on dismissal gestures does not postpone this automatic close.
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-7-modal-sheet.spec.ts`
