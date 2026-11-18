@@ -221,6 +221,9 @@ The board's own state, outside the gesture:
   during which an item answer was applied (`useItemManagement.ts`'s `answersApplied`) is read
   again, as part of the same load, so a snapshot that predates a write never undoes it and the
   stop cue's flash plays once, when the board is finally drawn.
+- `CardExpansionContext.ts` — which Cards' lists of Stubs the user has opened or closed by hand,
+  by item id, above the Card remounts and board reloads that would lose a choice held in the Card.
+  `BoardView.tsx` holds the store, in memory only.
 
 Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
 depth rule and the branch a carried item takes with it (`carriedBranchOf`), and

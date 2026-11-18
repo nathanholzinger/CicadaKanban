@@ -122,7 +122,7 @@ describe('overlayShapeFor', () => {
     expect(overlayShapeFor(startPopSession(modalList.key), [modalList], null)).toEqual({ form: 'stub', widthPx: 240 });
   });
 
-  it('anywhere else, or with no drag: the shortCard, with no width', () => {
+  it("anywhere else, or with no drag, and no containing Card's width: the shortCard, with no width", () => {
     const noWidth = { form: 'short-card', widthPx: null };
     expect(overlayShapeFor(startPopSession(columnC1.key), [columnC1], null)).toEqual(noWidth);
     expect(overlayShapeFor(null, [columnC1], null)).toEqual(noWidth);
