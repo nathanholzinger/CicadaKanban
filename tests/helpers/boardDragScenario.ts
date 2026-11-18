@@ -9,8 +9,19 @@ import {
   updateColumn,
   type SeededColumn,
 } from './seed';
-import { boxOf, center, hoverTo, dragMachine, clocksMargin, type Point } from './dragGesture';
-import { column, dragRegion } from './boardLocators';
+import {
+  awaitPoppedOut,
+  boxOf,
+  center,
+  hoverTo,
+  dragMachine,
+  clocksMargin,
+  gapBetween,
+  pickUp,
+  release,
+  type Point,
+} from './dragGesture';
+import { article, column, dragRegion } from './boardLocators';
 import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
 import { columnRegionKey } from '../../client/src/components/workflow/dragRegions';
 
@@ -166,6 +177,19 @@ export async function settleOnTopBand(page: Page, region: Locator): Promise<void
 }
 export async function settleOnBottomBand(page: Page, region: Locator): Promise<void> {
   return settleOnBand(page, region, 'bottom');
+}
+// The answer a case holds for any item's move, as `requestHarness.ts::holdNextWrite` takes it.
+export const ANSWER = { method: 'PATCH', url: '**/api/items/*/move', outcome: 'succeed' } as const;
+// X is carried from Todo to the end of In Progress and let go. This is the gesture only: what answers
+// the move is the caller's, which holds it (`holdNextWrite`) or lets it through.
+export async function dropXAtEndOfInProgress(page: Page, tuning: DragTuning) {
+  const todo = column(page, 'Todo');
+  const inProgress = column(page, 'In Progress');
+  await pickUp(page, article(page, 'Item X'));
+  await hoverTo(page, await gapBetween(todo, inProgress));
+  await awaitPoppedOut(page, tuning);
+  await settleOnBottomBand(page, dragRegion(inProgress));
+  await release(page);
 }
 // The single band a terminal or truly-empty region collapses to — any
 // point in it is a workphase-only move, whatever the fixture's tuning.

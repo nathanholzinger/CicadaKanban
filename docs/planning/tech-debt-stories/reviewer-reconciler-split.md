@@ -29,7 +29,7 @@ All from the conversation with Nathan on 2026-11-18.
   | Change | Check |
   |---|---|
   | A comment, or a title's wording outside its ID | The gate |
-  | How a test reaches its state or aims its gesture, with the same state and every clause still asserted (an equivalent or checked helper swapped in) | A run of the spec |
+  | How a test reaches its state or aims its gesture, with the same state and every clause still asserted (an equivalent or checked helper swapped in) | A run of the spec, with the tests' times compared to their last green run |
   | A test moved to another file or renamed, otherwise unchanged | A run, then the Reconciler rewrites the Automation lines whose paths moved |
   | What a test asserts, its Given or an expected value; or a new test | The Test Reviewer, then the Reconciler writes from its verdict |
 
@@ -49,6 +49,7 @@ All from the conversation with Nathan on 2026-11-18.
 - **D8. The trade-off, accepted (Nathan).** A test is judged once per change instead of twice, but by two differently spawned and differently instructed reviewers across authoring and the close, both independent of the test's writer. A test with a current verdict is confirmed, not judged again, and that's where the saving is.
 - **D9. Names.** The agents keep their names: the Reconciler still keeps the catalog reconciled with the suite, and a rename would reach about 25 files for no change in meaning. The close report gets a new name (Open questions).
 - **D10. The test-plans README stays the Test Planner's.** Its lines that give the whole-Then confirmation to the Reconciler go to the Test Planner as a handoff (batch 2).
+- **D11. Story 10's batches B and C follow D5 before this lands (Nathan).** Neither changes a test's clauses, so neither gets a Test Reviewer pass. A run shows a helper swap caused no false failure, and comparing the tests' times with their last green run shows it added no real cost. Nathan's comparison is now part of D5's second row. The close records the exception to its step 8 in its Amendments.
 
 ## Work, in batches
 
@@ -105,8 +106,6 @@ Each batch ends with `npm run check` (its lint runs `check:docs`) and a stop for
 
 - **For Nathan: the close report's name.** The Architect proposes "coverage review", saved as `docs/audits/coverage-review-<scope>.md`. Existing reports keep their names; they're transient and move to the archive at their stories' sign-off.
 - **For Nathan: the Reconciler's model.** It judges nothing under D7. The Architect proposes `sonnet`, which two of the four audit passes already use.
-- **For Nathan: Story 10's batches B and C run before this lands.** The Architect recommends they follow D5 now: a run of the specs that changed, and no Test Reviewer pass, since B changes only how tests reach their state and C only moves tests. The close's step 8 says a batch that changes a case's tests gets a Test Reviewer pass and a confirming Reconciler run; this would be the exception, recorded in the close's Amendments.
-
 ## Handoff
 
 - **To the Test Planner, at batch 2:** the README lines, listed here when batch 1 is done.

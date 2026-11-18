@@ -23,6 +23,7 @@ import {
   awaitProjection,
 } from '../helpers/dragGesture';
 import { setSectionExpanded } from '../helpers/boardDragSurface';
+import { holdAt } from '../helpers/overflowTree';
 import { holdNextWrite, successfulWrite, watchWrites } from '../helpers/requestHarness';
 import { article, column, itemPanel, itemRow, titlesIn, dragRegion } from '../helpers/boardLocators';
 
@@ -58,11 +59,7 @@ test.describe('attached children on the board', () => {
       url: '**/api/items/*/move',
       outcome: 'succeed',
     });
-    const from = await pickUp(page, itemRow(page, c.id).getByRole('button', { name: 'C' }));
-    let point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
-    await hoverTo(page, point);
-    point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
-    await hoverTo(page, point);
+    await holdAt(page, c, p, () => bottomQuarter(itemRow(page, s.id)), 0);
     await awaitProjection(page, '1:0:true');
     await release(page);
     expect((await older.arrived()).status).toBe(200);
@@ -121,11 +118,7 @@ test.describe('attached children on the board', () => {
     await setSectionExpanded(itemRow(page, p.id), true);
 
     const older = await holdNextWrite(page, { method: 'PATCH', url: '**/api/items/*/move', outcome: 'succeed' });
-    const from = await pickUp(page, itemRow(page, c.id).getByRole('button', { name: 'C' }));
-    let point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
-    await hoverTo(page, point);
-    point = { x: from.x, y: (await bottomQuarter(itemRow(page, s.id))).y };
-    await hoverTo(page, point);
+    await holdAt(page, c, p, () => bottomQuarter(itemRow(page, s.id)), 0);
     await awaitProjection(page, '1:0:true');
     await release(page);
     expect((await older.arrived()).request.url).toContain(`/api/items/${c.id}/move`);
