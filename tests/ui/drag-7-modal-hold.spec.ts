@@ -25,6 +25,7 @@ import {
   NO_POP,
 } from '../helpers/dragGesture';
 import { article, hierarchyModal, itemRow, overflowRow, dragRegion } from '../helpers/boardLocators';
+import { releaseMove } from '../helpers/boardDragSurface';
 import {
   expectCentered,
   expectInside,
@@ -713,9 +714,7 @@ async function expectReleaseCommitsShown(
   p: { id: string },
 ) {
   const shown = await placementShown(modal, x.id);
-  const written = page.waitForResponse(res => res.request().method() === 'PATCH' && res.url().endsWith('/move'));
-  await release(page);
-  expect((await written).ok()).toBe(true);
+  await releaseMove(page, x.id);
   const placed = await fetchItem(request, x.id);
   expect(placed.parentId).toBe(shown.parentId ?? p.id);
   expect(placed.isAttached, 'the item is attached under its new parent').toBe(1);

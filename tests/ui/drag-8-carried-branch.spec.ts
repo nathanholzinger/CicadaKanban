@@ -9,6 +9,7 @@ import {
   dragBoxOf,
 } from '../helpers/boardDragSurface';
 import { carveZone } from '../helpers/boardDragScenario';
+import { openTargetModal } from '../helpers/dragTargetScenario';
 import { seedItem, fetchItem, moveItem, columnForWorkphase, type SeededItem } from '../helpers/seed';
 import {
   article,
@@ -211,7 +212,7 @@ test('DRAG-8.7: restores the reloaded branch under Q when a resync stops the dra
         if (display === 'open modal') {
           await leaveDescendants(page, s, tuning);
           await zoomHolding(page, s, tuning);
-          await openHeldModal(page, s, tuning);
+          await openTargetModal(page, s.x, s.q, s.u2, s.levels, tuning);
         }
         await moveItem(request, s.x.id, { parentId: s.q.id, isAttached: true });
         const c = await seedItem(request, { title: 'C', parentId: s.x.id });
@@ -893,18 +894,6 @@ async function leaveDescendants(page: Page, s: Scenario, tuning: Tuning) {
   await expect(modal).toHaveCount(0);
 }
 
-async function openHeldModal(page: Page, s: Scenario, tuning: Tuning) {
-  const base = await center(itemRow(page, s.x.id));
-  for (let pass = 0; pass < 2; pass++) {
-    const target = await topQuarter(overflowRow(page, s.u2.id));
-    await tabBy(page, { x: base.x, y: target.y }, s.levels);
-  }
-  const modal = hierarchyModal(page, 'Q');
-  await expect(modal).toBeVisible({ timeout: clocksMargin(tuning.modalHoldDwellMs, tuning.modalHoldCueMs) });
-  await awaitDragContext(page, descendantsRegionKey(s.q.id));
-  return modal;
-}
-
 // Reads the screen's unrelated titles; their static backdrop drawings intentionally have no sortable IDs.
 async function expectUnrelated(page: Page, s: Scenario) {
   for (const row of [s.z, s.w, s.u]) await expect(page.getByText(row.title, { exact: true }).first()).toBeVisible();
@@ -943,7 +932,7 @@ test('DRAG-8.1: keeps the attached branch absent through every layer switch and 
       }
       await zoomHolding(page, s, tuning);
       await expectBranchAbsent(page, s.branch);
-      await openHeldModal(page, s, tuning);
+      await openTargetModal(page, s.x, s.q, s.u2, s.levels, tuning);
       await expectBranchAbsent(page, s.branch);
       await expectUnrelated(page, s);
       await cancel(page);
@@ -971,7 +960,7 @@ async function visitQ(page: Page, s: Scenario, tuning: Tuning, observe: (stage: 
   }
   await zoomHolding(page, s, tuning);
   await test.step('Q section', () => observe('section'));
-  await openHeldModal(page, s, tuning);
+  await openTargetModal(page, s.x, s.q, s.u2, s.levels, tuning);
   await test.step('Q modal', () => observe('modal'));
 }
 

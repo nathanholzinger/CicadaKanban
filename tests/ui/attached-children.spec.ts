@@ -1,10 +1,10 @@
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import {
   seedTemplatedWorkflow,
   pickWorkphases,
   addWorkphases,
+  deleteWorkphase,
   seedItem,
   moveItem,
   fetchItem,
@@ -211,10 +211,12 @@ test.describe('attached children on the board', () => {
     // the attached grandchild — an attached+parented row with an invalid
     // workphase — must render nested inside it and nowhere else.
     //
-    // (Moving an attached child to a different workphase than its parent
-    // via PATCH /move is a 400 — an attached item inherits its parent's
-    // workphase — so a real workphase deletion is the only way to reach
-    // this stale-row shape.)
+    // (Real workphase deletion is how a row that had a workphase ends up in
+    // this shape: moving an attached child to a different workphase than its
+    // parent via PATCH /move is a 400, since an attached item inherits its
+    // parent's workphase. Creating a Free child with no workphase and an
+    // attached grandchild under it would reach the same shape, but not by the
+    // path a user takes.)
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Invalid Workphase Child Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await seedItem(request, { title: 'Diverged Parent', projectId: project.id, workphaseId: todo.id });
@@ -226,7 +228,7 @@ test.describe('attached children on the board', () => {
       workphaseId: temp.id,
     });
     const grandchild = await seedItem(request, { title: 'Diverged Attached Grandkid', parentId: child.id });
-    await request.delete(`${API}/workphases/${temp.id}`);
+    await deleteWorkphase(request, temp.id);
 
     const reloaded = await fetchItem(request, grandchild.id);
     expect(reloaded.workphaseId).toBeNull(); // confirms the invalid reference actually landed
@@ -523,7 +525,8 @@ test.describe('reparent and attach/detach controls', () => {
 
     await projectSidebar.openBoard('Free Reparent Project');
 
-    // The picker sends only the new parent, never the attachment flag.
+    // Reparenting a child that already has a parent, the picker sends only the new parent, never
+    // the attachment flag. (Only a top-level item's first parent comes with `isAttached: true`.)
     await page.getByRole('article', { name: 'Free Kid' }).click();
     await itemPanel(page).getByLabel('Parent item').selectOption({ label: 'Second Parent' });
     await expect.poll(async () => (await fetchItem(request, kid.id)).parentId).toBe(second.id);

@@ -188,10 +188,7 @@ test('TREE-4.7: drag release, create and parent edit retain the server reindex o
         await expect.poll(() => drawnProjectNames(projectSidebar)).toEqual(['P', 'A', 'B', 'X']);
         gate!.release();
       } else if (mode === 'create') {
-        await projectSidebar.row('P').hover();
-        await projectSidebar.row('P').getByTitle('Add subproject').click();
-        await page.getByPlaceholder('Subproject name').fill('New');
-        await page.getByRole('button', { name: 'Create subproject' }).click();
+        await projectSidebar.createSubproject('P', 'New');
       } else {
         await projectSidebar.select('X');
         await page.locator('main').getByRole('combobox').selectOption(ids.P);
@@ -438,10 +435,7 @@ test('TREE-4.15: older initial and refresh reads never remove a created child or
           const created = page.waitForResponse(
             response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/projects',
           );
-          await projectSidebar.row('P').hover();
-          await projectSidebar.row('P').getByTitle('Add subproject').click();
-          await page.getByPlaceholder('Subproject name').fill('N');
-          await page.getByRole('button', { name: 'Create subproject' }).click();
+          await projectSidebar.createSubproject('P', 'N');
           const response = await created;
           expect(response.ok()).toBe(true);
           ids.N = (await response.json()).id;

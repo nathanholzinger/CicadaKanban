@@ -71,8 +71,9 @@ import { DEFAULT_DRAG_TUNING, type DragTuning } from '../../client/src/component
 // open it is the Card's Descendants layer, drawn whole. The cases assert what it draws and what a
 // release writes, never a duration.
 //
-// Where a case drags a row, it's a Stub of `P` picked up in the modal, which starts at the
-// Descendants layer with no pop.
+// Where a case drags a row without naming an arrival, it's a Stub of `P` picked up in the open modal
+// after a click, which starts at the Descendants layer with no pop. The arrival cases (`ARRIVALS`)
+// also bring a section Stub, and a Free Card, into a modal a hold opened.
 
 test.beforeEach(async () => {
   await resetAndSeedDb();

@@ -1,18 +1,19 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
-import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import { holdRequests } from '../helpers/holdRequests';
 import { pickUp, release } from '../helpers/dragGesture';
 import { aimAtOwnRow, drawnProjectNames, expectSavedProjectTree } from '../helpers/projectTreeDrag';
 import { holdNextWrite } from '../helpers/requestHarness';
-import { fetchProject, seedProjects } from '../helpers/seed';
+import { fetchProject, fetchProjects, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 
 // Which projects the sidebar shows open (wiki project-tree §11). A collapse is the user's, by the chevron,
-// and lasts until the project is opened again or the app reloads. A write that puts a project under a
-// collapsed parent opens it once the write has succeeded, and a write that fails or puts no project under
-// it leaves it as the user left it. The writes are held unanswered where a case reads the page meanwhile.
+// and lasts until the project is opened again or the app reloads. A create or a parent edit that puts a
+// project under a collapsed parent opens it once the write has succeeded, and one that fails or puts no
+// project under it leaves it as the user left it. A drop is the other way: it opens its destination before
+// the write is sent, and a refusal leaves it open. The writes are held unanswered where a case reads the
+// page meanwhile.
 
 test.beforeEach(async () => {
   await resetAndSeedDb();
@@ -37,15 +38,8 @@ const shows = (sidebar: ProjectSidebarPage, ...names: string[]) =>
 const hidden = (sidebar: ProjectSidebarPage, ...names: string[]) =>
   Promise.all(names.map(name => expect(sidebar.projectName(name)).toHaveCount(0)));
 
-// The sidebar's Add subproject dialog, for the project's row: its control shows on hover.
-async function createFromSidebar(page: Page, sidebar: ProjectSidebarPage, parent: string, name: string) {
-  const row = sidebar.row(parent);
-  await row.hover();
-  await row.getByTitle('Add subproject').click();
-  await submitSubproject(page, name);
-}
-
-// The same dialog, from the subprojects list of the project's page.
+// The Add subproject dialog, from the subprojects list of the project's page. The sidebar row's
+// is `ProjectSidebarPage::createSubproject`.
 async function createFromPage(page: Page, sidebar: ProjectSidebarPage, parent: string, name: string) {
   await sidebar.select(parent);
   await page.locator('main').getByTitle('Add subproject').click();
@@ -60,11 +54,9 @@ async function submitSubproject(page: Page, name: string) {
 const parentSelect = (page: Page) => page.locator('main').getByRole('combobox');
 
 async function idOf(request: APIRequestContext, name: string): Promise<string> {
-  const res = await request.get(`${API}/projects`);
-  expect(res.status(), 'GET /projects').toBe(200);
-  const found = (await res.json()).find((project: { name: string }) => project.name === name);
+  const found = (await fetchProjects(request)).find(project => project.name === name);
   expect(found, `a project named ${name}`).toBeDefined();
-  return found.id;
+  return found!.id;
 }
 
 test('TREE-11.1: existing and newly created projects start open', async ({ page, request, projectSidebar }) => {
@@ -87,11 +79,11 @@ test('TREE-11.1: existing and newly created projects start open', async ({ page,
   await page.getByRole('button', { name: 'Create project' }).click();
   await shows(projectSidebar, 'P', 'C', 'G', 'N');
 
-  await createFromSidebar(page, projectSidebar, 'N', 'N1');
+  await projectSidebar.createSubproject('N', 'N1');
   await shows(projectSidebar, 'P', 'C', 'G', 'N', 'N1');
   await open(projectSidebar, 'N');
 
-  await createFromSidebar(page, projectSidebar, 'N1', 'N1a');
+  await projectSidebar.createSubproject('N1', 'N1a');
   await shows(projectSidebar, 'P', 'C', 'G', 'N', 'N1', 'N1a');
   await open(projectSidebar, 'N1');
 });
@@ -159,7 +151,7 @@ test('TREE-11.3: a successful create opens its collapsed parent from either crea
   await hidden(projectSidebar, 'C', 'Q1');
   // The sidebar's dialog: P stays collapsed while the create is unanswered, and opens on its success, with C
   // then N under it. Q, which the create is not under, stays collapsed.
-  await createFromSidebar(page, projectSidebar, 'P', 'N');
+  await projectSidebar.createSubproject('P', 'N');
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P', 'Q');
@@ -200,7 +192,7 @@ test('TREE-11.4: a failed create leaves its parent collapsed', async ({ page, re
   await collapsed(projectSidebar, 'P');
   await hidden(projectSidebar, 'C');
   // Through the sidebar's dialog: P stays collapsed while the request is out, and after it fails.
-  await createFromSidebar(page, projectSidebar, 'P', 'N');
+  await projectSidebar.createSubproject('P', 'N');
   await creates.arrived();
   await collapsed(projectSidebar, 'P');
   await shows(projectSidebar, 'P');
@@ -225,7 +217,7 @@ test('TREE-11.4: a failed create leaves its parent collapsed', async ({ page, re
   await hidden(projectSidebar, 'C', 'N');
 
   // Neither request reached the server: no N exists, and C is still the only child.
-  const names = (await (await request.get(`${API}/projects`)).json()).map((p: { name: string }) => p.name);
+  const names = (await fetchProjects(request)).map(p => p.name);
   expect(names.sort()).toEqual(['C', 'P']);
 });
 

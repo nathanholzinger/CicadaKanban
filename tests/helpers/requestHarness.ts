@@ -128,7 +128,10 @@ export async function holdNextWrite(
   };
 }
 
-// Holds one board or item read after the server has produced its snapshot.
+// Holds the first GET that matches `url`, a board, an item or the project list. By default
+// (`succeed`) the request reaches the server and its real answer is held after the server has
+// produced its snapshot. With `refuse` the request never reaches the server: no snapshot is taken,
+// and release answers with a synthesized 400.
 // Later matching reads pass through, so the page can retry while this answer is held.
 export async function holdNextRead(page: Page, url: string, outcome: 'succeed' | 'refuse' = 'succeed') {
   let captured = false;

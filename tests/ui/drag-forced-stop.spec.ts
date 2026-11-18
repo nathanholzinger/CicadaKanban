@@ -919,7 +919,8 @@ test('DRAG-6.22: a Stub released at its own gap and depth shows no banner and no
   const { p, x } = scene.ids;
 
   // X is picked up and set back down where the pointer first pressed, so its ghost is in its own slot:
-  // the eighth gap among P's rows without X (A, Q, R, R1, R1a, R2, T, B), at P's own level.
+  // projection `8:0:true`, gap index 8 (after all eight of P's rows without X: A, Q, R, R1, R1a, R2, T, B)
+  // at depth 0 among P's children.
   const from = await pickUp(page, itemRow(page, x).getByRole('button', { name: 'X', exact: true }));
   await awaitDragContext(page, descendantsRegionKey(p));
   await hoverTo(page, from);

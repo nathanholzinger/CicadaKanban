@@ -28,9 +28,11 @@ import {
 // can go stale the moment that happens, so this approaches in two passes:
 // once toward the target as measured after the pickup, then again after
 // re-measuring it once that approach has reflowed the board, for the final,
-// precise approach. Every measurement is in layout space (`boxOf`), which is
-// the space dnd-kit resolves collisions in — see its comment for the trap
-// that avoids.
+// precise approach. A point aimed at a collision slot is measured in layout
+// space (`boxOf`), which is the space dnd-kit resolves collisions in — see its
+// comment for the trap that avoids. A gesture may also aim by what the user
+// sees, from `paintedBoxOf` or the browser's hit-testing, when the painted
+// position is the thing under test.
 //
 // A drag is locked in the context it started in, and a release commits that
 // context's own within-action wherever the cursor rests: hovering another
@@ -233,7 +235,8 @@ export async function boxOf(locator: Locator) {
 
 // The element's box as it is painted right now, every transform included: what the user sees,
 // where `boxOf` is what dnd-kit's collision sees. For asserting where something is drawn, such as
-// the ghost under the cursor, never for aiming a drag.
+// the ghost under the cursor, and for a gesture that aims by what is drawn on purpose. Never for
+// aiming at a collision slot, which is `boxOf`'s.
 export async function paintedBoxOf(locator: Locator, { layoutSize = false }: { layoutSize?: boolean } = {}) {
   const box = await locator.boundingBox();
   if (!box) throw new Error('element not visible/measurable');

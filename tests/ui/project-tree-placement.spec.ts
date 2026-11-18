@@ -283,10 +283,7 @@ test('TREE-1.15: edit and create growth retain the pickup height, and shrink ret
     });
     try {
       if (kind === 'create-growth') {
-        await projectSidebar.row('X').hover();
-        await projectSidebar.row('X').getByTitle('Add subproject').click();
-        await page.getByPlaceholder('Subproject name').fill('Y');
-        await page.getByRole('button', { name: 'Create subproject' }).click();
+        await projectSidebar.createSubproject('X', 'Y');
       } else {
         await projectSidebar.select('Y');
         await page

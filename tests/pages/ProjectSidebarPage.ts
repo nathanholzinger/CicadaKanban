@@ -93,6 +93,16 @@ export class ProjectSidebarPage {
     await row.getByRole('button', { name: 'Yes' }).click();
   }
 
+  // The row's Add subproject dialog, filled and submitted: hover reveals the row's control. A spec that
+  // holds or watches the create sets its wait before calling this, and asserts the outcome after.
+  async createSubproject(parent: string, name: string) {
+    const row = this.row(parent);
+    await row.hover();
+    await row.getByTitle('Add subproject').click();
+    await this.page.getByPlaceholder('Subproject name').fill(name);
+    await this.page.getByRole('button', { name: 'Create subproject' }).click();
+  }
+
   async toggle(name: string) {
     await this.row(name)
       .getByTitle(/Collapse|Expand/)

@@ -103,7 +103,8 @@ test.describe('ordinal preview and reconciliation', () => {
   });
 });
 
-// X is carried from Todo to the end of In Progress and let go, and the answer to its move is `hold`'s.
+// X is carried from Todo to the end of In Progress and let go. This is the gesture only: what answers
+// the move is the caller's, which holds it (`holdNextWrite`) or lets it through.
 async function dropXAtEndOfInProgress(page: Page, tuning: Awaited<ReturnType<typeof seedDragTuning>>) {
   const todo = column(page, 'Todo');
   const inProgress = column(page, 'In Progress');

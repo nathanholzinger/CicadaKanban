@@ -49,7 +49,9 @@ export function dragRegion(scope: Page | Locator, key?: string): Locator {
     : scope.locator(`[${DRAG_REGION_ATTR}="${key}"]`);
 }
 
-// The carried copy of the item being dragged, which exists only for the length of the drag.
+// The carried copy of the item being dragged. It exists from the pickup until its drop animation ends,
+// so it outlives the live drag after a release, and `dragGesture.ts::release` and `cancel` wait for it
+// to go. Whether a drag is still live is `dragGesture.ts::dragMachine`'s to say, not this copy's.
 export function dragOverlay(page: Page): Locator {
   return page.locator(`[${DRAG_OVERLAY_ATTR}]`);
 }

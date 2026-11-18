@@ -431,10 +431,7 @@ test('TREE-2.14: a late created row stays untiered and reachable until cancel th
   const ids = await openTree(page, request, projectSidebar, tree);
   const gate = await holdNextWrite(page, { method: 'POST', url: '**/api/projects', outcome: 'succeed' });
   try {
-    await projectSidebar.row(t).hover();
-    await projectSidebar.row(t).getByTitle('Add subproject').click();
-    await page.getByPlaceholder('Subproject name').fill('Y');
-    await page.getByRole('button', { name: 'Create subproject' }).click();
+    await projectSidebar.createSubproject(t, 'Y');
     const saved = await gate.arrived();
     ids.Y = (saved.body as { id: string }).id;
     expect((await fetchProject(request, ids.Y)).parentId).toBe(ids[t]);
