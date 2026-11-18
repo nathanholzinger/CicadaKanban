@@ -40,4 +40,4 @@ What's listed here stays as it is, with its existing tests. During the MVP it ge
 
 One line each: the finding, where it came from, and the area above it falls under. A story is written for an area once Nathan schedules it.
 
-- None yet.
+- **Selected-board reload failure:** existing `useBoardLoad.test.ts` tests keep the drawn board and finish loading/cue after a reload or repeated read fails, beyond the two BCU cases' specified outcomes; defer this outside-drag failure-recovery candidate from [Story 10 close slice 6](../audits/test-reconciliation-story-10-close-slice-6.md#candidate-new-cases), with the built cue frozen and no new case or ruling request.

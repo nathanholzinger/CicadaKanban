@@ -12,7 +12,7 @@ describe('bandFor', () => {
   const metrics = { heightPx: 40, gapPx: 8 };
   const twoCards = { contentRect, isTerminal: false, cardCount: 2 };
 
-  it('DRAG-3.5: switches exactly at the boundaries bandBoundaries reports — the guides draw from the same numbers', () => {
+  it('DRAG-3.5, DRAG-3.15: switches exactly at the boundaries bandBoundaries reports — the guides draw from the same numbers', () => {
     const boundaries = bandBoundaries(twoCards, metrics);
     expect(boundaries).toEqual({ top: 140, bottom: 260 });
     expect(bandFor(139, twoCards, metrics)).toBe('top');

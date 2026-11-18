@@ -69,8 +69,8 @@ again for it. **Why:** otherwise one board's columns would show under
 another's name and controls, and those controls would act on the other
 board.
 
-**Planned:** **A read of the board that began before a write's answer
-was applied never undoes that write,** however late it lands, and the
+**A read of the board that began before a write's answer was applied
+never undoes that write,** however late it lands, and the
 read a switch to another board starts is no exception. **Why:** the read
 holds the items as they were before the write, so applying it would put
 back a workphase, a parent or an order the user has already changed, and

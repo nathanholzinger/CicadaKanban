@@ -428,7 +428,7 @@ test('DRAG-2.12: pending parent changes and detach keep visible descendants Cycl
   }
 });
 
-test('DRAG-2.15: Cycle-forming and Depth-capped Free Cards are Mid neighbors and their Stubs are Low', async ({
+test('DRAG-1.7, DRAG-1.8, DRAG-2.15: Cycle-forming and Depth-capped Free Cards are Mid neighbors and their Stubs are Low', async ({
   page,
   request,
   projectSidebar,

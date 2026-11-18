@@ -138,7 +138,7 @@ describe('TC-2.11: toRequest', () => {
     expect(detach('last')).toEqual({ workphaseId: 'w2', isAttached: false, anchorId: 'C', side: 'after' });
   });
 
-  it('TC-7.3: first and last anchor on the rendered order, which breaks a position tie by creation time', () => {
+  it('TC-7.3, DRAG-3.1, DRAG-3.2: first and last anchor on the rendered order, which breaks a position tie by creation time', () => {
     // Each tied pair arrives newest first, so only the tie-break puts the older one ahead.
     const rendered = getWorkphaseItemsFrom(
       [

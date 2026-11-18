@@ -498,7 +498,7 @@ async function drawnRelativeDepth(scope: Locator, rowId: string, rootId: string)
   return 1 + Math.round(((await indent(rowId)) - (await indent(rootId))) / DESCENDANTS_INDENT_PX);
 }
 
-test('DRAG-8.12: rejects an over-cap set-down and restores the pickup branch', async ({
+test('DRAG-4.18, DRAG-8.12: rejects an over-cap set-down and restores the pickup branch', async ({
   page,
   request,
   projectSidebar,

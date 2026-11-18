@@ -7,17 +7,17 @@
 | ID        | Case                                                                                              | Priority | Status    |
 | --------- | ------------------------------------------------------------------------------------------------- | -------- | --------- |
 | DRAG-1.1  | A drag starts in exactly one layer, set by the item and its column's display mode                 | P0       | Automated |
-| DRAG-1.2  | A release at Column layer lands the item exactly where the ghost is                               | P0       | Automated |
+| DRAG-1.2  | A release at Column layer lands the item exactly where the ghost is                               | P0       | Open      |
 | DRAG-1.3  | A sustained signal outside the locked context pops out one layer                                  | P0       | Automated |
 | DRAG-1.4  | Brushing past a Card while repositioning never attaches                                           | P0       | Automated |
 | DRAG-1.5  | After a zoom in, a release commits the new layer's within-action                                  | P0       | Automated |
 | DRAG-1.6  | Expanded mode: a sibling sub-row is a different context, reached only through Board               | P0       | Automated |
 | DRAG-1.7  | A Cycle-forming Card can be named for a reposition, but is never zoomed into                      | P0       | Automated |
-| DRAG-1.8  | A Depth-capped Card can be named for a reposition, but is never zoomed into                       | P0       | Automated |
+| DRAG-1.8  | A Depth-capped Card can be named for a reposition, but is never zoomed into                       | P0       | Open      |
 | DRAG-1.9  | At Board layer, nowhere is no region, and a release there writes nothing                          | P0       | Automated |
-| DRAG-1.10 | A region is clipped to what is visible                                                            | P1       | Automated |
+| DRAG-1.10 | A region is clipped to what is visible                                                            | P1       | Open      |
 | DRAG-1.11 | The Board → Column pop-in clock counts time in the region and fires only from the middle band     | P1       | Automated |
-| DRAG-1.12 | A popped-out card can pop back into the column it just left                                       | P1       | Automated |
+| DRAG-1.12 | A popped-out card can pop back into the column it just left                                       | P1       | Open      |
 | DRAG-1.13 | A drag picked up from Unsorted starts at Board layer, with no context                             | P1       | Automated |
 | DRAG-1.14 | Pop-out by distance: when enabled, either the clock or the distance satisfies                     | P2       | Automated |
 | DRAG-1.16 | Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests | P0       | Automated |
@@ -25,10 +25,10 @@
 | DRAG-1.18 | Rule 3: distance never satisfies a zoom in                                                        | P1       | Automated |
 | DRAG-1.19 | A distant yank out of a Card cascades through two pops, one layer at a time                       | P1       | Automated |
 | DRAG-1.20 | Only the locked column's or sub-row's own Cards can be zoomed into                                | P0       | Automated |
-| DRAG-1.22 | The dragged card's own slot counts: resting over its pickup place opens no gap elsewhere          | P1       | Automated |
-| DRAG-1.23 | At either end of a list the one neighbor is named; a ghost alone names nothing                    | P0       | Automated |
-| DRAG-1.24 | Setting a card back down in its own slot saves the named anchor; only a card alone writes nothing | P0       | Automated |
-| DRAG-1.25 | A short merged column's empty space below its last card still counts as the context               | P1       | Automated |
+| DRAG-1.22 | The dragged card's own slot counts: resting over its pickup place opens no gap elsewhere          | P1       | Open      |
+| DRAG-1.23 | At either end of a list the one neighbor is named; a ghost alone names nothing                    | P0       | Open      |
+| DRAG-1.24 | Setting a card back down in its own slot saves the named anchor; only a card alone writes nothing | P0       | Open      |
+| DRAG-1.25 | A short merged column's empty space below its last card still counts as the context               | P1       | Open      |
 | DRAG-1.26 | Exactly the locked context is marked active                                                       | P2       | Automated |
 | DRAG-1.27 | The carried copy and active-context outline use their configured held treatment                   | P2       | Manual    |
 | DRAG-1.28 | The carried card is bounded by its context                                                        | P1       | Automated |
@@ -59,7 +59,7 @@ A Free Card's drag never starts inside a Card. Nothing the user does at pickup c
 
 ## DRAG-1.2 — A release at Column layer lands the item exactly where the ghost is
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §2
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
 
 *Given* a column rendering `A, B, Q, X`, *when* `X` is dragged up until the ghost opens a gap between `A` and `B`, *then*:
 
@@ -68,7 +68,7 @@ A Free Card's drag never starts inside a Card. Nothing the user does at pickup c
 
 In both, `X` lands between `A` and `B`, where the ghost was, and `workphaseId`, `parentId` and `isAttached` are unchanged. The card the side highlight names is always the card the release names. The side is never chosen by which half of a hovered card the cursor is over.
 
-**Automation test:** `tests/ui/drag-contexts.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.3 — A sustained signal outside the locked context pops out one layer
 
@@ -117,15 +117,15 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 *Given* Card `X` with a detached descendant `D`, a Free Card in the same column, *when* `X` is locked into that column and the side highlight names `D` for well past the full zoom-in hold, *then* the dwell never starts: no cue appears on `D`, nothing zooms in, and a release commits the column's reposition naming `D`. `X` is never reparented, and the user never sees an item settle and bounce back. Validity is judged by the rule the API enforces ([ATT-4.2](../item-attachment/att-4-legal-parent-depth-cap.md), [ATT-4.3](../item-attachment/att-4-legal-parent-depth-cap.md)).
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`, `client/src/components/workflow/dragClassification.test.ts`, `tests/ui/drag-target-classification.spec.ts`
 
 ## DRAG-1.8 — A Depth-capped Card can be named for a reposition, but is never zoomed into
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3.2, wiki board-drag-interaction §6.1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.2, wiki board-drag-interaction §6.1
 
 *Given* Card `X` with subtree height `H`, and Card `T` at depth `D` in the same column with `D + 1 + H > CAP` ([ATT-4.4](../item-attachment/att-4-legal-parent-depth-cap.md)), *when* `X` is locked into that column and the side highlight names `T` for well past the full zoom-in hold, *then* the dwell never starts, no cue appears, nothing zooms in, and a release commits the column's reposition. `T` stays a zoom-in target for another drag whose subtree fits.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
+**Automation test:** —
 
 ## DRAG-1.9 — At Board layer, nowhere is no region, and a release there writes nothing
 
@@ -146,11 +146,11 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-1.10 — A region is clipped to what is visible
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1
 
 *Given* an expanded column whose sub-rows overflow its view, with sub-row `W3` scrolled out of sight, *when* a Card at Board layer has its cursor where `W3`'s box would be, *then* the cursor is nowhere ([DRAG-1.9](drag-1-contexts-and-popping.md)): no pop-in clock starts, and a release writes nothing. *When* the column scrolls so that `W3` comes into view under the cursor, *then* `W3` is a region from that moment: the pop-in clock starts, and a release resolves by `W3`'s band. Where a divider sits inside a visible region is [DRAG-3.16](drag-3-card-column-bands.md).
 
-**Automation test:** `client/src/components/workflow/dragStructure.test.ts`
+**Automation test:** —
 
 ## DRAG-1.11 — The Board → Column pop-in clock counts time in the region and fires only from the middle band
 
@@ -170,13 +170,13 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-1.12 — A popped-out card can pop back into the column it just left
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §3
 
 *Given* Card `X` in a column rendering `A, B, X`, *when* the cursor leaves the column for `popDelayMs` (a pop out), comes back into its middle band for `popInDelayMs` (a pop in), and the user releases with the ghost directly above `A` and the side highlight naming `A`, *then* the commit is `{anchorId: A, side: before}`, with `workphaseId`, `parentId` and `isAttached` unchanged.
 
 *And when* the user instead releases in the column's middle band at Board layer, after popping out but before popping in, *then* nothing is written: `X` is a member of the column's covered set, being set back down ([DRAG-3.12](drag-3-card-column-bands.md)).
 
-**Automation test:** `tests/ui/drag-contexts.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.13 — A drag picked up from Unsorted starts at Board layer, with no context
 
@@ -198,7 +198,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 A single cursor sample decides the distance term, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
 
-**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`, `client/src/components/workflow/popSession.test.ts`
 
 ## DRAG-1.16 — Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests
 
@@ -252,41 +252,41 @@ A single cursor sample decides both pops, without another movement or a later sa
 
 ## DRAG-1.22 — The dragged card's own slot counts: resting over its pickup place opens no gap elsewhere
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
 
 *Given* Card `X` picked up from a column rendering `A, X, B`, *when* the carried card rests over the place it was picked up from, *then* no card shuffles: the ghost stays in `X`'s own slot, between `A` and `B`. A release there is [DRAG-1.24](drag-1-contexts-and-popping.md)'s set-down.
 
-**Automation test:** `tests/ui/drag-contexts.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.23 — At either end of a list the one neighbor is named; a ghost alone names nothing
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §2
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
 
 - *Given* a column rendering `A, B, X`, *when* `X`'s ghost is in the first slot, above `A`, *then* the side highlight is on `A`, and a release commits `{anchorId: A, side: before}` wherever the carried card sits relative to the ghost's middle.
 - *Given* a column rendering `X, A, B`, *when* `X`'s ghost is in the last slot, below `B`, *then* a release commits `{anchorId: B, side: after}`.
 - *Given* Card `X` in workphase `W1` with position `p`, popped into an empty column for workphase `W2`, *when* its ghost is alone in the list and the user releases, *then* the release takes the column's no-anchor slot, the middle band's meaning: the request carries `workphaseId: W2` and no anchor, and `X.position` stays `p` ([DRAG-3.3](drag-3-card-column-bands.md)). An item with no comparable position to keep lands last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `tests/ui/item-repositioning-cross-column-dnd.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.24 — Setting a card back down in its own slot saves the named anchor; only a card alone writes nothing
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §2
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
 
 *Given* a column rendering `A, X, B`, and an item `U` this view doesn't show whose position falls between `A`'s and `X`'s in the workflow-wide order (wiki item-positioning §2), *when* `X` is picked up and released in its own slot with the side highlight on `A`, *then* a request is made, `{anchorId: A, side: after}`, and `X`'s saved position lands directly after `A`'s, so that it now also sorts before `U`. The column still renders `A, X, B`.
 
 *And given* `X` alone in its column's list, *when* it is picked up and set back down in its own slot, *then* nothing is written: there is no neighbor to name.
 
-**Automation test:** `tests/ui/drag-contexts.spec.ts`, `tests/ui/item-repositioning-cross-column-dnd.spec.ts`, `tests/ui/item-repositioning-cross-project-dnd.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.25 — A short merged column's empty space below its last card still counts as the context
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §2, wiki board-drag-interaction §3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2, wiki board-drag-interaction §3
 
 *Given* merged column `K` whose cards fill only the top part of its body, and Card `X` locked in `K`, *when* the cursor moves into `K`'s empty space below the last card and rests there for well past `popDelayMs`, *then* `X` doesn't pop out. For whether the context holds, a merged column is bounded by its outer body (its full available height), not the content-sized list box its bands use. What a release there commits is [DRAG-1.16](drag-1-contexts-and-popping.md)'s.
 
 *When* the cursor leaves `K`'s outer body, for example into the gap between columns, and stays for `popDelayMs`, *then* `X` pops out ([DRAG-1.3](drag-1-contexts-and-popping.md)). A sub-row's box already is its full bound, so sub-rows have no such space.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`
+**Automation test:** —
 
 ## DRAG-1.26 — Exactly the locked context is marked active
 

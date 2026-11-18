@@ -525,7 +525,7 @@ describe('descendantsReleasePlacement', () => {
     expect(descendantsReleasePlacement(projection, P)).toEqual({ parentId: 'S1', slot: 'first' });
   });
 
-  it('DRAG-4.18: writes nothing over the cap, or with no projection', () => {
+  it('DRAG-4.18, DRAG-7.21: writes nothing over the cap, or with no projection', () => {
     const entered = advanceProjection(NO_PROJECTION, sample({ cap: 2 }));
     const { projection } = advanceProjection(entered, held({ cap: 2, pointerX: START_X + DESCENDANTS_INDENT_PX }));
     expect(descendantsReleasePlacement(projection, P)).toBeNull();

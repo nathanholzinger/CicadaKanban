@@ -135,7 +135,7 @@ describe('placementFor', () => {
   // takes the append fallback instead of the position-sort's null-coerced
   // top slot, in either of the two places band resolution lands on
   // 'existing'.
-  it('DRAG-6.10: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
+  it('DRAG-1.23, DRAG-3.3, DRAG-3.11, DRAG-6.10: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
     expect(placementFor(subject(hoverAt(bMiddle), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'append',

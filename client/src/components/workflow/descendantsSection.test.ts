@@ -82,7 +82,7 @@ describe('sectionEntries', () => {
       e.kind === 'item' ? `${e.row.item.id}@${e.row.depth}` : `${e.row.id}@${e.row.depth}×${e.row.count}`,
     );
 
-  it('shows every level down to the last, and an overflow row one level under the row whose children are hidden', () => {
+  it('DRAG-7.1: shows every level down to the last, and an overflow row one level under the row whose children are hidden', () => {
     expect(shape(3)).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×2', 'T@2', 'B@0']);
   });
 
@@ -97,7 +97,7 @@ describe('sectionEntries', () => {
     expect(shape(3).filter(s => s.startsWith('overflow'))).toEqual(['overflow:R@3×2']);
   });
 
-  it('shows more, and moves the overflow row, as the level count rises', () => {
+  it('DRAG-7.1: shows more, and moves the overflow row, as the level count rises', () => {
     expect(shape(4)).toEqual(['A@0', 'Q@1', 'R@2', 'R1@3', 'overflow:R1@4×1', 'R2@3', 'T@2', 'B@0']);
   });
 

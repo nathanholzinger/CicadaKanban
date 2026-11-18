@@ -377,7 +377,7 @@ describe('applyPlacements', () => {
     expect(ids({ slot: 'last' })).toEqual(['A', 'C', 'E', 'X']);
   });
 
-  it("'append' draws at the end, as 'last' does, whatever the position sort says", () => {
+  it("DRAG-1.23, DRAG-3.11: 'append' draws at the end, as 'last' does, whatever the position sort says", () => {
     const [a, c, e] = sorted();
     const list = [a, item('X', { position: 2 }), c, e];
     expect(applyPlacements(list, placements([['X', { slot: 'append' }]])).map(i => i.id)).toEqual(['A', 'C', 'E', 'X']);

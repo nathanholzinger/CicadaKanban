@@ -314,7 +314,7 @@ for (const state of [
 }
 
 for (const invalidRelease of [false, true]) {
-  test(`DRAG-4.32, DRAG-5.9: B15 ${invalidRelease ? 'invalid release restores origin' : 'invalid depth cue clears at a valid shallower state in the same gap'}`, async ({
+  test(`DRAG-4.18, DRAG-4.32, DRAG-5.9: B15 ${invalidRelease ? 'invalid release restores origin' : 'invalid depth cue clears at a valid shallower state in the same gap'}`, async ({
     page,
     request,
     projectSidebar,

@@ -81,7 +81,7 @@ describe('position resolution', () => {
     expect(res.body.position).toBe(3);
   });
 
-  it('TC-2.24, DRAG-3.10: an item with no position takes the append fallback when it is assigned a workphase', async () => {
+  it('TC-2.24, DRAG-3.3, DRAG-3.10: an item with no position takes the append fallback when it is assigned a workphase', async () => {
     const { project, todo, inProgress } = await setupWorkflow();
     const pb = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'PB' });
     setItemPosition(pb.id, 3.0);

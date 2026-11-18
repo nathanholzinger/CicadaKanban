@@ -12,8 +12,8 @@
 | BCU-1.6 | A project that comes to use another workflow takes its items to that workflow's boards | P1 | Automated |
 | BCU-1.7 | A late load for another board cannot replace the selected board or complete its loading or cue | P0 | Automated |
 | BCU-1.8 | A shared change begun on another board refreshes the board currently selected | P1 | Automated |
-| BCU-1.9 | A failed switch cannot show the previous board under the selected board's name or controls | P0 | Open |
-| BCU-1.10 | A board read cannot undo a write whose answer was applied while it ran | P0 | Planned |
+| BCU-1.9 | A failed switch cannot show the previous board under the selected board's name or controls | P0 | Automated |
+| BCU-1.10 | A board read cannot undo a write whose answer was applied while it ran | P0 | Automated |
 
 ---
 
@@ -108,15 +108,15 @@ This holds even though the successful write's follow-up load starts after the se
 
 ## BCU-1.9 — A failed switch cannot show the previous board under the selected board's name or controls
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §3
 
 *Given* workflow `WF` with workphases `W1, W2`, selected and loaded board `A` with column `CA` covering both, and board `B` with separate columns `CB1` for `W1` and `CB2` for `W2`, *when* the user selects `B` and `B`'s load fails, *then* `B` stays selected and its loading ends, with no board drawn. `CA` is absent, and no column of `A` is shown or available to manage under `B`'s name or controls. The failure does not restore selection to `A`. No particular error message or no-board wording is prescribed.
 
-**Automation test:** —
+**Automation test:** `tests/ui/board-read-order.spec.ts`
 
 ## BCU-1.10 — A board read cannot undo a write whose answer was applied while it ran
 
-**Priority:** P0 · **Status:** Planned · **Rule:** wiki boards-columns-unsorted §3, wiki board-drag-interaction §10
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §3, wiki board-drag-interaction §10
 
 *Given* workflow `WF` with non-terminal workphases `W1, W2`, selected and loaded board `A` with column `CA` covering both, board `B` with separate columns `CB1` for `W1` and `CB2` for `W2`, and Free items `X` in `W1` and `Y` in `W2`, *when* a move of `X` to `W2` is sent from `A`, the user selects `B`, and `B`'s read captures `X` still in `W1` before the move is saved, with its answer held, *then*, once the successful move answer has been applied, `X` holds `workphaseId = W2` in the board's item state.
 
@@ -126,4 +126,4 @@ This holds even though the successful write's follow-up load starts after the se
 
 *Given* that same-board reload belongs to a stopped item drag of `Y`, with its flash waiting for the board and `Y` visible in the final view, and no new drag or separate reload starts, *when* the older snapshot arrives after `X`'s move answer, *then* loading and the waiting flash are not completed by it. Reading again belongs to the same reload and does not cancel or start the flash window. *When* the current board finally draws, *then* `Y`'s flash window opens exactly once with its full configured length `F`; no part of `F` was spent waiting for either read. The window's subsequent lifetime is [DRAG-6.27](../board-drag-interaction/drag-6-preview-reconciliation.md)'s, and its painted pulses are [DRAG-6.30](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useBoardLoad.test.ts`, `tests/ui/board-read-order.spec.ts`

@@ -484,6 +484,7 @@ to Q2, Q6 and Q17.
   is written in its place;
 - §12's TC-5.15 fix, and the retiring of TC-6.11, TC-6.13 and BCU-3.4;
 - §12's ATT-5.11, first half only (G9);
+- §12's ATT-1.15, revised or retired with the cascade (G10);
 - the A6 audit's #44 and #45, with the re-run's #24 and #25: the
   workflow-membership rule written four ways, and the active/done split's
   three homes.

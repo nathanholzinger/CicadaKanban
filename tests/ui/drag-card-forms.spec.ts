@@ -126,7 +126,7 @@ for (const typed of [false, true]) {
 
 for (const expanded of [false, true]) {
   test(
-    'DRAG-3.19: both shortCard copies reserve the same line and box with long or empty descriptions (' +
+    'DRAG-1.33, DRAG-3.19: both shortCard copies reserve the same line and box with long or empty descriptions (' +
       (expanded ? 'expanded' : 'collapsed') +
       ')',
     async ({ page, request, projectSidebar }) => {

@@ -1,6 +1,6 @@
 # Code Quality Audit Workflow
 
-How an audit runs: four focused passes in parallel, one reconciled report, then a close-out. Every pass reads the Auditor persona first (`.claude/personas/auditor.md`).
+How an audit runs: four focused passes in parallel, one reconciled report, then a close-out. Every pass reads the Auditor persona first (`.claude/personas/auditor.md`). The orchestrator, which spawns the passes and writes the report, is an Auditor session.
 
 An audit is a transient doc (`.claude/guides/documentation-standards.md`). Its report is written to `docs/audits/` while the audit is open, moves to `docs/archive/` when it closes, and is never edited after that.
 

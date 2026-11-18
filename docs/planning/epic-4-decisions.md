@@ -112,15 +112,16 @@ derived in three places) is due when this epic's done-column rework
 settles `isTerminal`, if the column rework hasn't come first. Its note is
 under that section's item 2.
 
-### 12. Revisit with the done-column rework: dragging within a done column, and four test-plan cases
+### 12. Revisit with the done-column rework: dragging within a done column, and five test-plan cases
 These wait for this epic's done-column rework, or for its status model
 (§13). Nathan routed the drag questions on 2026-09-27 and 2026-09-28,
-TC-5.15 at A3 batch 5's Stop 1, TC-6.11 and 6.12 at batch 6's, and TC-6.13
-and ATT-5.11 during A5a's phase 1 (2026-09-30).
+TC-5.15 at A3 batch 5's Stop 1, TC-6.11 and 6.12 at batch 6's, TC-6.13
+and ATT-5.11 during A5a's phase 1 (2026-09-30), and ATT-1.15 at Epic 3.5
+Story 10's close (2026-11-17).
 
-**Four test-plan cases, routed here by ID.** TC-5.15 and 6.11 stay `Open`
-until this rework lands. TC-6.13 and ATT-5.11 stay `Pending PO` until this
-epic answers their questions.
+**Five test-plan cases, routed here by ID.** TC-5.15, 6.11 and ATT-1.15
+stay `Open` until this rework lands. TC-6.13 and ATT-5.11 stay `Pending PO`
+until this epic answers their questions.
 
 *TC-6.12 left this list on 2026-10-05.* It's BCU-3.4 now, in A5c's new
 boards-columns-unsorted catalog. The terminal-flag refusal it asserts is
@@ -163,6 +164,16 @@ which retires the rule and the case with it.
   workphase. The wiki holds both halves as one Open question
   (item-attachment, "A project that uses no workflow"), and no case covers the
   first half.
+- **ATT-1.15: an older child answer can't undo a later parent workphase
+  cascade** (wiki item-attachment §2, boards-columns-unsorted §10). The fix
+  it guards is built, and its tests run: two in
+  `tests/ui/attached-children.spec.ts` and a `describe` in
+  `client/src/components/workflow/useItemManagement.test.ts`. One gap was
+  left open: no test observes the no-workphase variant's Unsorted fields,
+  `invalidItems` and `needsAttention`. Nathan routed the case here rather
+  than close that gap, since G10 ends an attached item's workphase and the
+  cascade with it (§9), which is what the case is about. The status model
+  revises or retires it, and its tests keep running until then.
 
 Nathan routed TC-6.11 and 6.13 here because the rework may retire the
 terminal flag. TC-6.13 has no test. TC-6.11's exist in

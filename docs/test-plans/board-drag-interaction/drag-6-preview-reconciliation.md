@@ -11,14 +11,14 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.4 | A response that orders the item differently from its preview is shown as the server saved it | P1 | Automated |
 | DRAG-6.5 | Re-dragging a pending item: responses are sequenced per item, so a stale one can't land last | P0 | Automated |
 | DRAG-6.6 | A failed drop resyncs the board from the server; the guess is never kept | P0 | Automated |
-| DRAG-6.7 | A stale response carrying reindex pairs triggers a resync, not a guess | P1 | Open |
+| DRAG-6.7 | A stale response carrying reindex pairs triggers a resync, not a guess | P1 | Automated |
 | DRAG-6.8 | Cancelling a re-drag restores the still-pending marker rather than clearing it | P1 | Automated |
 | DRAG-6.9 | A response landing mid-drag of the same item doesn't leave the ghost missing | P1 | Automated |
 | DRAG-6.10 | "Where its kept position falls" never means "no position": an item with none previews last | P1 | Automated |
 | DRAG-6.11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | Automated |
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
-| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Automated |
+| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Open |
 | DRAG-6.16 | A forced stop shows its cause in a banner that stays across the reload | P1 | Open |
 | DRAG-6.18 | A click leaves the cue up; starting the next drag clears it | P1 | Automated |
 | DRAG-6.19 | The cue expires at its configured lifetime without restarting on reload | P1 | Automated |
@@ -79,11 +79,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.7 — A stale response carrying reindex pairs triggers a resync, not a guess
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
 *Given* the two writes of [DRAG-6.5](drag-6-preview-reconciliation.md), where write 1's response arrives after write 2's and carries reindex pairs, *when* the stale response is received, *then* its row for `X` is discarded, **and** the board resyncs from the server instead of applying the pairs: the client doesn't guess whether they are still current after write 2. After the resync, the board matches the server, every reindexed item included. *And given* a stale response with no reindex pairs, *then* discarding its row is all that happens; no resync is needed.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-preview-reconciliation.spec.ts`
 
 ## DRAG-6.8 — Cancelling a re-drag restores the still-pending marker rather than clearing it
 
@@ -135,11 +135,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.15 — A reload that lands mid-drag stops the drag, and nothing is written
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10, wiki boards-columns-unsorted §7
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki boards-columns-unsorted §7
 
 *Given* the user is dragging item `X`, *when* the board reloads from the server mid-drag because another item's earlier drop failed ([DRAG-6.6](drag-6-preview-reconciliation.md)), because a stale response carries reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)), or because a column reorder released just before this pickup failed, *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. This holds in a column/sub-row, a Card's descendants section, and the hierarchy modal. These are the three resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios. A column drag stopped by the same resyncs is [DRAG-6.25](drag-6-preview-reconciliation.md)'s.
 
-**Automation test:** `tests/ui/drag-forced-stop.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-6.16 — A forced stop shows its cause in a banner that stays across the reload
 
@@ -250,7 +250,7 @@ The banner's full-strength appearance and final-quarter fade are checked in [DRA
 
 *Starting again, when* a new drag starts or another reload starts before `t0 + F`, *then* the flash ends at that start. The other reload, with no new stop behind it, draws no flash, even if it draws the same item or finishes before `t0 + F`. Ending the new drag, redrawing the row or keeping the banner visible does not replay the old flash. The window is measured from the board drawing, even when the stopped item is hidden ([DRAG-6.28](drag-6-preview-reconciliation.md)), and is not the banner's lifetime.
 
-**Automation test:** `tests/ui/drag-forced-stop.spec.ts`
+**Automation test:** `tests/ui/drag-forced-stop.spec.ts`, `client/src/components/workflow/useForcedStop.test.ts`
 
 ## DRAG-6.28 — A stopped item brought into view flashes only for the window's remaining time
 

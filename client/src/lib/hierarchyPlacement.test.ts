@@ -186,7 +186,7 @@ describe('ownSlotOf', () => {
 describe('DRAG-4.8: depthRangeFor', () => {
   const rows = flattenHierarchy('P', childrenOf);
 
-  it('the gap between S1a1 (Top, depth 2) and S2 (Bottom, depth 0) offers depths 0–3', () => {
+  it('DRAG-7.5: the gap between S1a1 (Top, depth 2) and S2 (Bottom, depth 0) offers depths 0–3', () => {
     const gap = gapIndexFor(rows, 'S2', 'before');
     expect(depthRangeFor(rows, gap)).toEqual({ lo: 0, hi: 3 });
   });

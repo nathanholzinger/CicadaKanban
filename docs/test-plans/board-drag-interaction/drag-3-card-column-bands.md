@@ -9,11 +9,11 @@
 | DRAG-3.1  | Top band → `{anchorId: first item in the region, side: before}`                                                    | P0       | Automated |
 | DRAG-3.2  | Bottom band → `{anchorId: last item in the region, side: after}`                                                   | P0       | Automated |
 | DRAG-3.3  | Middle band, released without popping in → a workphase-only move that keeps the position                           | P0       | Automated |
-| DRAG-3.4  | Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor                        | P0       | Automated |
+| DRAG-3.4  | Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor                        | P0       | Open      |
 | DRAG-3.5  | With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned                          | P1       | Automated |
-| DRAG-3.6  | A drop into a merged column from outside its covered set takes the entry workphase                                 | P0       | Automated |
-| DRAG-3.7  | A drop into a merged column by a covered-set member leaves the workphase alone                                     | P0       | Automated |
-| DRAG-3.8  | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row         | P0       | Automated |
+| DRAG-3.6  | A drop into a merged column from outside its covered set takes the entry workphase                                 | P0       | Open      |
+| DRAG-3.7  | A drop into a merged column by a covered-set member leaves the workphase alone                                     | P0       | Open      |
+| DRAG-3.8  | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row         | P0       | Open      |
 | DRAG-3.9  | A done region is a single band; any release is a workphase-only move with no anchor                                | P0       | Automated |
 | DRAG-3.10 | An empty region is a single band; any release is a workphase-only move                                             | P1       | Automated |
 | DRAG-3.11 | The ghost's placement is ordinal and follows the band's meaning                                                    | P1       | Automated |
@@ -38,7 +38,7 @@
 
 *Given* Card `X` at Board layer over a region rendering `A, B, C`, *when* the cursor is above the top divider and the user releases without popping in, *then* the request is `{anchorId: A, side: before}`, plus a change to the region's workphase if `X` isn't already a covered member ([DRAG-3.6](drag-3-card-column-bands.md), [DRAG-3.7](drag-3-card-column-bands.md)). `A` is first in the client's rendered order under the tie-break ([TC-7.3](../item-positioning/part-7-board-placement-intents.md)). The server's result is [TC-7.1](../item-positioning/part-7-board-placement-intents.md).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
 ## DRAG-3.2 — Bottom band → `{anchorId: last item in the region, side: after}`
 
@@ -46,7 +46,7 @@
 
 *Given* the same region rendering `A, B, C`, *when* the cursor is below the bottom divider and the user releases without popping in, *then* the request is `{anchorId: C, side: after}`, plus the workphase change if it applies. The server's result is [TC-7.2](../item-positioning/part-7-board-placement-intents.md).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
 ## DRAG-3.3 — Middle band, released without popping in → a workphase-only move that keeps the position
 
@@ -54,15 +54,15 @@
 
 *Given* Card `X` with position `p` at Board layer over a region `X` isn't a covered member of, *when* the cursor is between the dividers and the user releases without popping in, *then* the request is a workphase-only move, with no `anchorId` and no `side`. After the response, `X.workphaseId` is the region's workphase and `X.position` is exactly `p` ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)). An `X` with no position gets one by the append fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)), and previews last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/placement.test.ts`
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/placement.test.ts`, `server/tests/routes/items.positioning.test.ts`
 
 ## DRAG-3.4 — Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
 *Given* the setup of [DRAG-3.3](drag-3-card-column-bands.md), over a region rendering `A, B, C`, *when* the cursor stays in the middle band for `popInDelayMs`, *then* `X` pops into the column, and from then on it is placed by anchor and side ([DRAG-1.2](drag-1-contexts-and-popping.md)), not by band. A release with the ghost between `B` and `C` and the side highlight on `B` commits `{anchorId: B, side: after}`, plus the workphase change if it applies. Releasing without holding, or after popping out but before popping in, commits the band's meaning instead.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.5 — With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned
 
@@ -74,27 +74,27 @@
 
 ## DRAG-3.6 — A drop into a merged column from outside its covered set takes the entry workphase
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
 *Given* a merged column covering `W2, W3`, with `W2` first in its range (the column's entry workphase), and Card `X` in `W1`, *when* `X` is released in the column at Board layer, in any band, *then* the request's workphase is `W2`, combined with the band's placement ([DRAG-3.1](drag-3-card-column-bands.md), [DRAG-3.2](drag-3-card-column-bands.md), [DRAG-3.3](drag-3-card-column-bands.md)).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.7 — A drop into a merged column by a covered-set member leaves the workphase alone
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
 *Given* the same merged column, and Card `X` in `W3` (a covered member, not the entry workphase), *when* `X` is released in the column at Board layer in the top or bottom band, *then* the request carries the band's anchor and side and **no** workphase change: `X` stays in `W3`. Membership of the covered set decides it, not which workphase a neighboring card is in. A covered member in the middle band is [DRAG-3.12](drag-3-card-column-bands.md).
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
 *Given* an expanded column with sub-rows `W2` (rendering `A, B`) and `W3` (rendering `C, D`), and Card `X` at Board layer, *when* `X` is released above the `W3` sub-row's top divider, *then* the request is `{anchorId: C, side: before}` with workphase `W3`: the first item of that sub-row, in exactly that workphase. *When* it is released below the `W3` sub-row's bottom divider, *then* the request is `{anchorId: D, side: after}`, workphase `W3`. Each sub-row carves its own bands from its own content.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-3.9 — A done region is a single band; any release is a workphase-only move with no anchor
 
@@ -118,7 +118,7 @@
 
 *Given* Card `X` with position `p` at Board layer over a region rendering `A, B, C`, where `p` falls between `A`'s and `B`'s positions, *when* the cursor is in the top band, *then* the ghost is at index 0; in the bottom band, at the end; in the middle band, at index 1, where `p` already falls in this region's order. The ghost's index comes from the rendered order and `X`'s existing position; no position value is invented ([TC-2.27](../item-positioning/part-2-anchor-resolution.md)). An `X` with no position previews at the end instead ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
-**Automation test:** `tests/ui/drag-band-contracts.spec.ts`, `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** `tests/ui/drag-band-contracts.spec.ts`, `tests/ui/drag-column-bands.spec.ts`, `client/src/components/workflow/itemListOps.test.ts`, `client/src/components/workflow/placement.test.ts`
 
 ## DRAG-3.12 — Middle band, item already in this region → nothing is written
 

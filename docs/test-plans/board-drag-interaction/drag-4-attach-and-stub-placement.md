@@ -31,7 +31,7 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 | DRAG-4.20 | The hold is a silent dwell, then a visible cue on the named Card, ending in the zoom in | P1 | Automated |
 | DRAG-4.21 | The cue never moves or resizes anything | P1 | Automated |
 | DRAG-4.22 | Both stages reset when the named relation changes, on a pop out, and on a cancel | P1 | Automated |
-| DRAG-4.23 | A ghost alone in its list names no Card, so nothing can be zoomed into | P1 | Automated |
+| DRAG-4.23 | A ghost alone in its list names no Card, so nothing can be zoomed into | P1 | Open |
 | DRAG-4.24 | The cue's progress says how long to keep holding, and that letting go still repositions | P2 | Manual |
 | DRAG-4.25 | Zooming in takes a deliberate hold, and once inside, the ghost reads as nesting | P1 | Manual |
 | DRAG-4.29 | A Stub set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
@@ -157,7 +157,7 @@ In both, `X.parentId = P`, `X.isAttached` is true, `X.workphaseId = W_done`, `X.
 
 *And given* `X` has descendants, *then* no tab state in any gap makes `X` its own descendant: its subtree is passed over and is never Top or Bottom ([DRAG-4.8](drag-4-attach-and-stub-placement.md)). A cycle simply has no state, and needs no cue.
 
-**Automation test:** `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/workflow/descendantsProjection.test.ts`
+**Automation test:** `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/workflow/descendantsProjection.test.ts`, `tests/ui/drag-descendants-placement.spec.ts`, `tests/ui/drag-8-carried-branch.spec.ts`
 
 ## DRAG-4.19 — The Card zoomed into is the one the side highlight names
 
@@ -205,11 +205,11 @@ After a card or side change while still locked in the column/sub-row, a release 
 
 ## DRAG-4.23 — A ghost alone in its list names no Card, so nothing can be zoomed into
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §6.1
 
 *Given* Card `X` locked in a column whose list holds only `X`'s ghost, *when* the cursor rests anywhere in the column for well past the full zoom-in hold, *then* no side highlight shows, no dwell starts, no cue appears, and nothing zooms in. What a release commits is [DRAG-1.23](drag-1-contexts-and-popping.md)'s.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragCollision.test.ts`
+**Automation test:** —
 
 ## DRAG-4.24 — The cue's progress says how long to keep holding, and that letting go still repositions
 
