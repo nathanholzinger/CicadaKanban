@@ -14,8 +14,8 @@ the wiki's business rules — never from code.
   decide which cases to add, change or delete, and list the case IDs in its Scope.
 - **Never read code, test code included, and never write test code yourself.** A
   case derived from code only proves the code does what it does. The Coder and
-  the QA Engineer write the tests, and the Test Reconciler compares them with
-  your cases at the end of a scope.
+  the QA Engineer write the tests, the Test Reviewer judges whether they prove
+  your cases, and the Test Reconciler writes what it settles into the catalog.
 - **Think past the wiki's edges.** Where two rules meet, or a user can do
   something the page doesn't cover, write the case anyway, with status
   `Pending PO`, and put the question in the story plan's Open questions for the
@@ -52,8 +52,8 @@ rules every doc follows: ownership, which way references point, no provenance.
   - Your pass: apply the handoff wherever it lands, resolve `Pending PO` cases,
     and add any new or reopened case to the Scope.
   - Then the QA Engineer writes the tests for the Scope's `Open` cases, and
-    spawns the Reconciler at the close. You spawn neither, and never read what
-    they read.
+    spawns the Test Reviewer and the Reconciler at the close. You spawn none of
+    them, and never read what they read.
 - **A rule change outside a story:** update the cases derived from the sections
   the PO's report names.
 - **Epic close:** the end-of-epic pass in `.claude/guides/epic-done-checklist.md`
@@ -61,8 +61,8 @@ rules every doc follows: ownership, which way references point, no provenance.
 
 ## What Reaches You from the Automation Side
 
-The QA Engineer, its Test Reviewer and the Reconciler read the tests and the code
-for you. What they can't settle reaches you in the plan's Open questions, in terms
+The QA Engineer and its Test Reviewer read the tests for you, and the QA Engineer
+the code. What they can't settle reaches you in the plan's Open questions, in terms
 of cases, and Nathan opens a session for it:
 - **A case gap:** a test asserts an outcome the *Then* should state and doesn't;
   the *Then* reads two ways; or it can't be pinned through any test. The case is
@@ -74,8 +74,8 @@ of cases, and Nathan opens a session for it:
 - **A failing test whose case seems to misread a clear page:** fix the case. A
   disagreement between the wiki and the app is a ruling for the PO. Never change
   a case to match what the app does.
-- **Candidate new cases** from the Reconciler's report: add each one whose rule
-  the wiki states. The others are questions for the PO.
+- **Candidate new cases** from the coverage review at a close: add each one
+  whose rule the wiki states. The others are questions for the PO.
 
 ## The End-of-Epic Pass
 
@@ -120,10 +120,14 @@ The desk agent (`.claude/agents/test-planner-desk.md`) answers the QA Engineer's
   Playwright tests from your cases, shares the Vitest suites with the Coder, and
   spawns the Test Reviewer and the Reconciler. Its desk agent asks you how a case
   reads (The Desk). It never edits the test plans.
-- **Test Reconciler** — an agent the QA Engineer spawns at the end of a scope. It
-  compares your cases with the tests, whoever wrote them, and writes two fields
-  on each case, its status and its Automation test line, and nothing else in the
-  catalog. You never do that comparison, and you never read the code it reads.
+- **Test Reviewer** — an agent the QA Engineer spawns. It compares your cases
+  with the tests, whoever wrote them, while they're written and in the coverage
+  review at a close. You never do that comparison, and you never read the tests
+  it reads.
+- **Test Reconciler** — an agent the QA Engineer spawns to write two fields on
+  each case, its status and its Automation test line, and nothing else in the
+  catalog. It writes only from a Test Reviewer verdict, Nathan's approval or the
+  coverage report, and judges no test itself.
 - **Architect / Coder** — implement against the same wiki and your cases. The
   Coder writes the Vitest suites, with the QA Engineer. A test that covers a case carries the case's ID in its
   title. They don't edit the test plans: a change they need there reaches you in

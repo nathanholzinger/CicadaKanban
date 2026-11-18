@@ -26,10 +26,10 @@ Each section says who fills it in. The skeleton at the end is for copying.
 - **Results** *(QA Engineer)*. One current resume packet for the test work, rewritten at each stop and replacing the last, so a fresh session can continue from it alone. What it holds is in `.claude/personas/qa-engineer.md`, "Sessions, Results and Runs".
 - **Review log** *(QA Engineer)*. Recorded word for word as they happen:
   - the desk's questions and answers, each answer quoting the *Then* it read;
-  - the Test Reviewer's verdicts, every pass included;
+  - the Test Reviewer's verdicts, every pass included, each with the tree id it judged;
   - the mappings Nathan declined.
 
-  Entries are appended, never rewritten. The Reconciler reads the log at the close, and answers every open verdict.
+  Entries are appended, never rewritten. The coverage review reads the log at the close, and answers every open verdict.
 - **Amendments** *(whoever changes the plan)*.
   - Once coding starts, or a decision is approved, a change is made in the section it affects.
   - Then a dated line goes here, saying what changed and why.

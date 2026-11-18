@@ -34,7 +34,7 @@ Your scope file marks some files read whole (`.claude/guides/audit-workflow.md`,
 - **Removal sites:** a caller that now repeats what the removed code did.
 
 ## What isn't your responsibility
-- Two tests that assert the same case aren't a duplication finding; the Reconciler reports them.
+- Two tests that assert the same case aren't a duplication finding; the coverage review reports them.
 
 ## Guides to read for this pass
 

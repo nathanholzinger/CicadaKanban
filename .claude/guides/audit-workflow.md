@@ -80,7 +80,7 @@ Spawn the four audit agents in parallel:
 
 **The audit reviews test code as code:** duplication, fixtures and helpers, file shape, the layer a test sits in, and how it sets up state (`.claude/guides/testing-strategy.md`). Each pass applies its lens to a test file as to any other.
 
-**What a test proves belongs to the Test Reviewer and the Reconciler** (`.claude/agents/test-reviewer.md`, `.claude/agents/test-reconciler.md`): whether it covers its case, and whether it asserts the rule or restates the code. An audit doesn't file either as a finding. A pass that notices one adds a one-line note for the orchestrator. If the reconciliation report doesn't already answer it (see Reconcile), the orchestrator routes it to the QA Engineer, who puts it to the Test Reviewer (see Close-out).
+**What a test proves belongs to the Test Reviewer** (`.claude/agents/test-reviewer.md`): whether it covers its case, and whether it asserts the rule or restates the code. An audit doesn't file either as a finding. A pass that notices one adds a one-line note for the orchestrator. If the coverage review doesn't already answer it (see Reconcile), the orchestrator routes it to the QA Engineer, who puts it to the Test Reviewer (see Close-out).
 
 ## 5. Reconcile
 
@@ -97,7 +97,7 @@ The orchestrating session does this itself; it's never delegated.
   - *Amendments:* which rules changed while the story was open, when judging whether code is vestigial.
   - *Code map:* for a cleanup refactor, each item on a "Makes dead" list is gone.
   - *Handoff items addressed to the audit,* or to "the next story or audit" and not routed anywhere since. Each one matches a pass's finding, or the orchestrator rules on it and tiers the ruling.
-- **The reconciliation report** from the close that runs the audit, in `docs/audits/`. A finding that overlaps one of its entries, such as a drift finding on a test title that promises more than its test checks, merges into that entry by reference. The audit report's opening lists it with the entry it cites, and it needs no Close-out row: each finding has one home.
+- **The coverage review** from the close that runs the audit, in `docs/audits/` (`.claude/guides/test-coverage-workflow.md`). A finding that overlaps one of its entries, such as a drift finding on a test title that promises more than its test checks, merges into that entry by reference. The audit report's opening lists it with the entry it cites, and it needs no Close-out row: each finding has one home.
 - **The wiki passage each correctness finding touches,** to classify it.
 
 Nothing else in the archive gets read.
@@ -158,7 +158,7 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 - the split: the instances each pass ran as, and the config if the run used one (see Scope);
 - what the passes got, from the script's summary: how many lines changed, how many removal sites there were, how many moved lines were left out, and which files were marked read whole;
 - the number of files, and a sentence on what the range contains;
-- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and the reconciliation report). Findings merged into the reconciliation report are listed here, each with the entry it cites.
+- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and the coverage review). Findings merged into the coverage review are listed here, each with the entry it cites.
 
 **Findings:**
 - **Numbered once across the whole report,** not per section, so a finding's number identifies it on its own.

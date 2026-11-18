@@ -36,7 +36,7 @@ The owner edits the doc. Everyone else hands changes off (see Handoffs).
 | Roadmaps, epic plans, story plans | transient | Whoever writes it (usually Nathan, the Architect or the PO) | Anyone may write or edit one; each role fills in its own template sections |
 | Decisions docs | transient | Whichever role runs the deliberation | — |
 | Audits | transient | The Auditor session that runs the audit | — |
-| Reconciler reports, round tables | transient | Their author | — |
+| Coverage reviews, Reconciler reports, round tables | transient | Their author | The Test Reconciler saves a coverage review the Test Reviewer writes |
 | `docs/archive/**` | frozen | Nobody edits these | — |
 
 **Agent memory points at rules; it doesn't restate them.** A memory about a convention that a guide or a living doc holds is a one-line pointer to it.
@@ -123,7 +123,7 @@ How the marker is written on a page is the wiki README's.
 
 - **What goes there:** closed transient docs, in `docs/archive/`, flat, under their original file names.
 - **When:**
-  - a story plan, its audit and its Reconciler report, at the story's sign-off;
+  - a story plan, its audit and its coverage reviews, at the story's sign-off;
   - any other audit, once every required finding has a disposition;
   - a round table, once its outcomes are written up;
   - any other transient doc, when the work it served closes.

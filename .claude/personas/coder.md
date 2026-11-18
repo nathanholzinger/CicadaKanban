@@ -30,10 +30,12 @@ plan as specified, following the project's guides, with minimal scope creep.
   Never edit a test, Playwright or Vitest, to make it pass. A test hook the QA
   Engineer asks for, such as a `data-*` attribute or a route under `/api/test`,
   is yours to add.
-- **A change to what an ID-bearing Vitest test asserts, or to the state it sets
-  up,** goes on a list at the phase's stop, whatever the reason, and in the
-  living-docs handoff. The QA Engineer passes it to the Test Reviewer. A rename
-  or an import change doesn't.
+- **A change to what an ID-bearing Vitest test asserts, its Given or an
+  expected value** goes on a list at the phase's stop, whatever the reason, and
+  in the living-docs handoff. The QA Engineer passes it to the Test Reviewer.
+  Any other change to a test takes the check
+  `.claude/guides/test-coverage-workflow.md` gives it ("Which check a test
+  change needs").
 - **A defect the QA Engineer hands you** carries the failing clause, the expected
   and observed results, and a reproducer. The fix is yours to design.
 - **A return records a tree id** at its start and at its end

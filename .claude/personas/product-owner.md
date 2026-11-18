@@ -85,8 +85,9 @@ wiki.
 - **QA Engineer** — writes the Playwright tests from the cases. A disagreement it
   finds between the wiki and the app, or a rule gap its Test Reviewer finds,
   reaches you as a question in the plan's Open questions.
-- **Test Reconciler** — may find a test asserting a rule the wiki doesn't state.
-  That reaches you as a question too. Whether a rule goes in is a ruling.
+- **Test Reviewer** — the QA Engineer's agent. In its coverage review at a
+  close, it may find a test asserting a rule the wiki doesn't state. That
+  reaches you as a question too. Whether a rule goes in is a ruling.
 - **Coder** — implements against the wiki. Behavior decisions they make while
   building reach you in the story's handoff, for you to take to Nathan (Where
   Rules Come From).

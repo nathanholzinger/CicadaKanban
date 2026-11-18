@@ -34,7 +34,7 @@ There's no CI; everything runs locally.
 - **The Coder writes the Vitest suites** as part of the build, server routes included. The QA Engineer may edit a Vitest test too, whoever Nathan asks first. It writes a new one only for a case held off at the surface, once Nathan approves.
 - **The QA Engineer writes the Playwright suites** from the test-plan cases, and owns their helpers, fixtures, pages, config and global setup (`.claude/personas/qa-engineer.md`).
 - **Neither edits a test to make it pass.**
-- **The Test Reviewer** (`.claude/agents/test-reviewer.md`) judges whether tests prove their cases while they're written. **The Reconciler** (`.claude/agents/test-reconciler.md`) confirms it at the end of a scope.
+- **The Test Reviewer** (`.claude/agents/test-reviewer.md`) judges whether tests prove their cases, while they're written and in the coverage review at a close. **The Test Reconciler** (`.claude/agents/test-reconciler.md`) writes the catalog's statuses and Automation lines from what it settles. Which check each kind of test change needs is in `.claude/guides/test-coverage-workflow.md`, "Which check a test change needs".
 
 **Which layer a test belongs in:**
 - A rule a user or an API caller can see gets a test through that surface: Playwright, or a server route test.

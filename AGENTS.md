@@ -203,7 +203,7 @@ KanbanApp/
 │   └── personas/
 ├── docs/
 │   ├── planning/        ← roadmaps, story plans, decisions docs — open work (transient)
-│   ├── audits/          ← open audit and Reconciler reports (transient)
+│   ├── audits/          ← open audit, coverage and Reconciler reports (transient)
 │   ├── archive/         ← closed plans, audits, reports and walkthroughs (frozen — skip unless asked)
 │   ├── wiki/            ← feature-organized source of truth (hardened, testable rules) — read before touching positioning, attachment, board drag, hierarchy placement, the project tree, or boards/columns/Unsorted
 │   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/ (a page of shared rules has none)

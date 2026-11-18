@@ -11,8 +11,8 @@ The sections run in the order the work happens: stories, then the test-plan pass
 
 ## Tests
 - [ ] **The end-of-epic test-plan pass.** The Test Planner re-reads each feature the epic touched against the finished wiki, adds, revises or deletes cases, and regroups suites where the story-by-story passes split them awkwardly (`docs/test-plans/README.md`).
-- [ ] If that pass moved cases between suites, the QA Engineer re-titles their tests with the new IDs before the Reconciler runs, and the Coder may take the Vitest ones. Otherwise the Reconciler reports false gaps.
-- [ ] **One Reconciler close** after that, which the QA Engineer spawns (`.claude/agents/test-reconciler.md`), with its report saved in `docs/audits/`. Its quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them.
+- [ ] If that pass moved cases between suites, the QA Engineer re-titles their tests with the new IDs before the coverage review runs, and the Coder may take the Vitest ones. Otherwise the review reports false gaps.
+- [ ] **One coverage review** after that (`.claude/guides/test-coverage-workflow.md`). The QA Engineer spawns a fresh Test Reviewer for it, and the Reconciler saves the review in `docs/audits/` and writes the statuses it settles. Its quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them.
 - [ ] Every test-plan case in the features the epic touched is `Automated` or `Manual`, except `Planned` cases, and `Open` cases routed by ID to a later story whose plan or roadmap entry names them. None is `Pending PO`.
 - [ ] A code coverage goal of 80%+ has been attempted. It's a holistic sanity check, separate from the hard per-file thresholds in `server/vitest.config.ts`, and deliberately not a blanket rule: some code is legitimately awkward to test. But we should know *why* if we don't meet 80%.
 - [ ] No skipped or pending tests left over from this epic.

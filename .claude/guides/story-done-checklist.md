@@ -22,15 +22,15 @@ What happens when a story's code is complete, in order, and what must hold befor
    - A case it holds off on goes to the Test Reviewer, which weighs the internal tests, and Nathan decides.
    - A defect or a test hook goes to the Coder. A case gap goes to a Planner session, and a rule gap to the PO. All three go through the plan's Open questions.
    - The Coder's Vitest tests for the Scope's cases came in with the build.
-5. **Reconcile, once the tests are green.** The QA Engineer spawns the Reconciler (`.claude/agents/test-reconciler.md`) with the inputs its definition fixes, among them the coverage report and a green run's record. Running it earlier would map a test layout that step 4 is still changing.
-   - It confirms the Scope's cases, and every case the story's test and catalog changes touch.
+5. **The coverage review, once the tests are green.** The QA Engineer spawns a fresh Test Reviewer with the inputs `.claude/guides/test-coverage-workflow.md` fixes ("The coverage review"), among them the coverage report and a green run's record. It then hands the review to the Reconciler (`.claude/agents/test-reconciler.md`), which saves it and writes the statuses it settles. Running it earlier would map a test layout that step 4 is still changing.
+   - It gives a status to the Scope's cases, and to every case the story's test and catalog changes touch. It dissects what the story changed, and only surveys settled tests.
    - It acts on the coverage report's findings across the whole catalog, since a story can delete the only test for a case it never scoped.
    - It answers every open verdict in the Review log.
-   - Gaps it finds go back to the QA Engineer for a Playwright test, or to the Coder for a Vitest test, or get routed. The QA Engineer then continues the same Reconciler to confirm only those.
+   - Gaps it finds go back to the QA Engineer for a Playwright test, or to the Coder for a Vitest test, or get routed. The QA Engineer then continues the same Test Reviewer for one confirming pass over only those, and the Reconciler writes what it settles. There's no second coverage review.
 6. **The story's audit** (`.claude/guides/audit-workflow.md`). It runs last, so it reads the finished code with its tests in place.
    - Its Fix Now findings land in batches. Each runs `/code-review`, and ends with the gate and a stop for review and commit.
-   - A batch that changes a case's behavior or its tests gets its Playwright tests updated by the QA Engineer, with a Test Reviewer pass. Then a confirming Reconciler run covers just the cases the batches touched.
-7. **Sign off.** Nathan signs off, and the story plan, its audit and its Reconciler reports move to `docs/archive/`.
+   - A batch that changes a case's behavior or its tests gets its Playwright tests updated by the QA Engineer. Each test change takes the check `.claude/guides/test-coverage-workflow.md` gives it ("Which check a test change needs"), and the Reconciler writes what those checks settle, such as a moved path.
+7. **Sign off.** Nathan signs off, and the story plan, its audit and its coverage reviews move to `docs/archive/`.
 
 ## Before sign-off
 
@@ -50,6 +50,6 @@ A tech-debt story that also changes what the app does closes by the full checkli
 - its own acceptance checks pass;
 - its handoff is applied.
 
-**If it deleted, moved or split test files,** the coverage report is run (`npm run report:catalog`). If it finds lost coverage, a QA Engineer session spawns the Reconciler to close it, and the lost-coverage condition above applies. Refactors are where tests get split and deleted, so this is the check a tech-debt story needs most.
+**If it deleted, moved or split test files,** the coverage report is run (`npm run report:catalog`). A QA Engineer session hands its findings and the move's diff to the Reconciler, which sets lost coverage back to `Open` and rewrites the paths that moved (`.claude/guides/test-coverage-workflow.md`, "What the Reconciler accepts"). The lost-coverage condition above then applies. Refactors are where tests get split and deleted, so this is the check a tech-debt story needs most.
 
-It gets an audit only when it restructures code. Its plan, and any Reconciler report, move to `docs/archive/` at sign-off like any other.
+It gets an audit only when it restructures code. Its plan, and any coverage review, move to `docs/archive/` at sign-off like any other.
