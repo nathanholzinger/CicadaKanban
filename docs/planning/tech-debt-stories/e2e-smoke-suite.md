@@ -1,6 +1,6 @@
 # E2E Smoke Suite
 
-**Type:** tech-debt story. It changes how the Playwright suite is organized and run, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) · **Sequenced:** after Epic 3.5 Story 10 closes, on the runner from [Parallel E2E Workers](e2e-parallel-workers.md) · **Status:** a placeholder. It's groomed from the round table when it's picked up, and the round table stays open until then
+**Type:** tech-debt story. It changes how the Playwright suite is organized and run, not what the app does, so it closes by the gate and its own acceptance, with no audit · **Written:** 2026-11-09 by the Architect, from the [E2E run time round table](../round-tables/e2e-run-time-and-smoke-suite.md) · **Sequenced:** after Epic 3.5 Story 10 closes, on the runner from [Parallel E2E Workers](../../archive/e2e-parallel-workers.md) · **Status:** a placeholder. It's groomed from the round table when it's picked up, and the round table stays open until then
 
 ## Goal
 

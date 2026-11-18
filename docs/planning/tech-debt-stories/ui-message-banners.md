@@ -15,7 +15,7 @@ What the app has today, as grooming input:
 ## Inbound deferrals
 
 - **From Story 8.4** (Nathan, 2026-11-02): the banner look was picked for the forced-stop cue, its styling "fine for now". Its look and placement are the first input to this pattern.
-- **DRAG-6.16, Story 10 close slice 4:** no running test confirms the forced-stop banner along the window's top edge; record the placement gap for grooming, with the built cue frozen during the MVP ([reconciliation](../../audits/test-reconciliation-story-10-close-slice-4.md)).
+- **DRAG-6.16, Story 10 close slice 4:** no running test confirms the forced-stop banner along the window's top edge; record the placement gap for grooming, with the built cue frozen during the MVP ([reconciliation](../../archive/test-reconciliation-story-10-close-slice-4.md)).
 
 ## Decisions
 

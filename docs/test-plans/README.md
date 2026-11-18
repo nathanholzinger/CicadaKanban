@@ -97,7 +97,7 @@ The report checks lost coverage, running tests that carry a Manual case, stale A
   - write a new test focused on the case;
   - put the ID on another existing test that asserts the missing part.
 
-  A test through the surface where the rule is visible is preferred, usually a Playwright test for a behavior (`.claude/guides/testing-strategy.md`).
+  A test through the surface where the rule is visible is preferred, usually a Playwright test for a behavior. The exception is in `.claude/guides/testing-strategy.md`, "When a surface test costs more than it proves".
 
 ## Which tests count, and what's manual
 

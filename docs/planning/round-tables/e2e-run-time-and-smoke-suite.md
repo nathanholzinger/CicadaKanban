@@ -268,7 +268,7 @@ _2026-11-09, after reading every response._
 
 Thanks, all. The table agrees on the order Nathan suggested, and he has confirmed it:
 
-- **Parallel workers now,** as its own tech-debt story right after batch 4b: [Parallel E2E Workers](../tech-debt-stories/e2e-parallel-workers.md).
+- **Parallel workers now,** as its own tech-debt story right after batch 4b: [Parallel E2E Workers](../../archive/e2e-parallel-workers.md).
 - **The smoke suite and area tags after Story 10:** [E2E Smoke Suite](../tech-debt-stories/e2e-smoke-suite.md). That plan is a placeholder recording where this table leans. It's groomed from here when it's picked up, and this table stays open until then.
 
 **Corrections to my proposal:**

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 10 — DnD automation catch-up
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** in progress; Phase 5, the close, is next, in [Story 10's close](story-10-close.md), the story's third part. Phases 1–4 are committed, and batch 4h, the last, is `e8cf4f2c`. [Story 10's second part](story-10-batches.md) indexes the batches, with a file each for 4e to 4h, and [the 4a to 4d log](story-10-batch-4a-4d-log.md) holds the earlier batches' history and Review log. 4i and 4j moved to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md) (D10, amended 2026-11-13), and conditional DRAG-3.12 followed them (2026-11-17). DRAG-4.35 stays retired/deferred.
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's Story 10 entry · **Status:** signed off 2026-11-18 (Nathan). Phase 5, the close, is in [Story 10's close](story-10-close.md), and the epic-wide audit runs from [its own plan](epic-3-5-audit.md).
 
 ## Goal
 
@@ -19,7 +19,7 @@ It also builds one rule: the banner for a column drag the board stops (DRAG-6.26
 2. the tests;
 3. the one Reconciler run.
 
-The epic-wide audit comes after this story, by the checklist. Its scope isn't settled yet (Open questions).
+The epic-wide audit is planned in [its own plan](epic-3-5-audit.md). Grooming and planning that audit precedes this story's sign-off; its execution follows this story's close. It adds no coverage review to this story's end-of-epic test effort (Nathan, 2026-11-18).
 
 **When it runs:** after Story 8's close-out, in Nathan's order (2026-11-04; roadmap, Story 8, "How each story closes"). All three steps are done:
 
@@ -78,7 +78,7 @@ Phase 2 starts from those reports.
   - TREE-9.4, and TREE-11.2, 11.4, 11.6, 11.7 and 11.8 (What it starts from).
   - **Phase 2 step 1 additions:** BCU-5.6, BCU-5.7, TREE-4.15 and TREE-2.14, Open. TREE-2.14 follows the PO's ruling in hierarchy-placement §7: a new row stays untiered until the next pickup. Each is this story's to settle, or route under D10.
   - **Cases revised in that pass:** ATT-4.9; TC-2.6, TC-2.16, TC-2.17 and TC-6.4; DRAG-3.9, DRAG-3.10, DRAG-3.20 and DRAG-4.13; DRAG-6.22, DRAG-6.25 and DRAG-6.26. The baseline run rechecks the existing automation claims against the revised cases. TC-6.13's question was also rewritten without implementation observations; its Quick Items routing under D10 is unchanged.
-  - **D13, Phase 2 step 5:** the 26 original Split cases are listed in [The shared looks](story-10-batches.md). DRAG-1.27 and TREE-2.8 keep their IDs as shared Manual cases; the other 24 retain their automatable clauses. New shared Manual cases: DRAG-2.24, DRAG-6.30 and DRAG-6.31. DRAG-6.27, TREE-1.1 and TREE-2.13 point their appearance clauses to those shared looks while keeping timing, placement and geometry. No existing ID moves or retires.
+  - **D13, Phase 2 step 5:** the 26 original Split cases are listed in [The shared looks](../../archive/story-10-batches.md). DRAG-1.27 and TREE-2.8 keep their IDs as shared Manual cases; the other 24 retain their automatable clauses. New shared Manual cases: DRAG-2.24, DRAG-6.30 and DRAG-6.31. DRAG-6.27, TREE-1.1 and TREE-2.13 point their appearance clauses to those shared looks while keeping timing, placement and geometry. No existing ID moves or retires.
 
 - **4a case clarification:** DRAG-1.16 now states that a foreign/nowhere release commits the current locked-list ghost/highlight relation at release, including concrete A/after, A/before and B/after examples. Vertical movement may change the own-list slot; it does not freeze the pickup relation. The Descendants clause, ID, priority and Rule stay unchanged; the confirming Reconciler sets its status and Automation fields. This follows wiki board-drag-interaction §1.1 and §2 and needs no new PO ruling.
 
@@ -168,16 +168,16 @@ A spec that misses the bar gets one of these, in order of preference:
 - a state-machine or pure-module test in place of its surface half;
 - Manual, by Nathan's approval.
 
-Nathan takes this as the starting point (2026-11-04). It's revisited at the checkpoint after batch 4a ([Story 10's second part](story-10-batches.md)), once it's clear how many specs miss it.
+Nathan takes this as the starting point (2026-11-04). It's revisited at the checkpoint after batch 4a ([Story 10's second part](../../archive/story-10-batches.md)), once it's clear how many specs miss it.
 
-**On the parallel runner** (Nathan, 2026-11-09, [Parallel E2E Workers](../tech-debt-stories/e2e-parallel-workers.md)' decision 8):
+**On the parallel runner** (Nathan, 2026-11-09, [Parallel E2E Workers](../../archive/e2e-parallel-workers.md)' decision 8):
 - the 20-repeat evidence 4a and 4b earned on one worker stands, and isn't re-earned. The runner's contention check carries it onto the new runner;
 - from 4c on, the repeats and each batch's final full run use the runner's adopted worker count, so the repeats also run under load;
 - if no worker count passes the runner's acceptance, the suite stays on one worker and this bar is unchanged.
 
 **Adopted count and exception (Nathan, 2026-11-10): five workers.** After the extended trial, Nathan selects five for its measured full-suite speed gain with no newly observed failing test identity or mode. Re-evaluate with the smoke suite, when E2E execution should occupy less of each story and capacity for simultaneous work may weigh more heavily; revisit sooner if failures or contention change. Nathan accepts the runner trial with the recorded DRAG-7.10 and DRAG-3.16 failures so the suite runs faster during this story. DRAG-7.10 remains active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4i, a batch of returned cases (2026-11-12). The runner's raw stability/contention failures remain recorded; this adoption exception does not lower D2's repeat or batch-final-run requirements for the cases those batches add or change.
 
-**Ten repeats, from 4c on (Nathan, 2026-11-11).** The [flake investigation](../../audits/story-10-drag-flake-investigation.md) found that the count is a weak detector at either size: a test that fails one run in fifty passes twenty repeats two times in three. Most of the recorded flakes also needed load, which the one-worker repeats never applied. Ten repeats at five workers still catch a test that fails often, at half the cost. 4a and 4b's twenty-repeat evidence stands. The order of remedies above is unchanged.
+**Ten repeats, from 4c on (Nathan, 2026-11-11).** The [flake investigation](../../archive/story-10-drag-flake-investigation.md) found that the count is a weak detector at either size: a test that fails one run in fifty passes twenty repeats two times in three. Most of the recorded flakes also needed load, which the one-worker repeats never applied. Ten repeats at five workers still catch a test that fails often, at half the cost. 4a and 4b's twenty-repeat evidence stands. The order of remedies above is unchanged.
 
 **A failing test during a batch (Nathan, 2026-11-12).** For the rest of this story, in place of D2's order of remedies for a test that existed before the batch:
 
@@ -219,7 +219,7 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - An older spec moves onto it only where the batch already changes that spec, since D2's bar applies to every spec a batch changes.
 - A helper that needs support in the app goes to the Coder (D12).
 
-**D5. One batch per suite, or per two that share setups,** ordered so a later batch reuses an earlier one's work. The batches and their cases are in [Story 10's second part](story-10-batches.md), with a checkpoint after 4a, where Nathan decides how the rest runs. Each batch:
+**D5. One batch per suite, or per two that share setups,** ordered so a later batch reuses an earlier one's work. The batches and their cases are in [Story 10's second part](../../archive/story-10-batches.md), with a checkpoint after 4a, where Nathan decides how the rest runs. Each batch:
 
 - reworks or deletes its suite's skips (D3);
 - extends partial tests, or writes new ones, as Phase 2's inventory sets out;
@@ -229,9 +229,9 @@ No case's coverage changes in this phase. The specs it touches pass before and a
 - lists unresolved held-off cases, proposed Manual calls and internal mappings at its stop, for Nathan;
 - ends with the gate and its spec files green, then a stop for review and commit.
 
-**For 4c–4j, the five session stops in [Story 10's second part](story-10-batches.md) govern execution under the [Testing Roles Refactor](../tech-debt-stories/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
+**For 4c–4j, the five session stops in [Story 10's second part](../../archive/story-10-batches.md) govern execution under the [Testing Roles Refactor](../../archive/testing-roles-refactor.md):** proof/variant review; tests/discovery with the desk and Test Reviewer; separate Coder/review when needed; frozen validation on a tree ID; one cold reconciliation/closure. One session per stop, with Nathan's file list and check-in. Results are one current packet, rewritten after each matrix family; the Review log is append-only. This changes the execution boundaries, not D2, the assigned cases or batch order. The parallel runner's five-worker adoption and bounded failure deferrals are recorded in D2 above.
 
-**From 4e, four stops (Nathan, 2026-11-13; the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s D6).** Stops 4 and 5 merge into "Frozen validation and closure": if the freeze holds, the same session spawns the Reconciler. The four stops are in [Story 10's second part](story-10-batches.md), and the five that 4c and 4d ran under are in [the 4a to 4d log](story-10-batch-4a-4d-log.md). After 4e, Nathan decides whether Stops 1 and 2 merge too, by how often he overrules the Stop 1 proposal.
+**From 4e, four stops (Nathan, 2026-11-13; the [MVP test-process trim](../../archive/mvp-test-process-trim.md)'s D6).** Stops 4 and 5 merge into "Frozen validation and closure": if the freeze holds, the same session spawns the Reconciler. The four stops are in [Story 10's second part](../../archive/story-10-batches.md), and the five that 4c and 4d ran under are in [the 4a to 4d log](../../archive/story-10-batch-4a-4d-log.md). After 4e, Nathan decides whether Stops 1 and 2 merge too, by how often he overrules the Stop 1 proposal.
 
 **D6. Case IDs settle before any test is written** (Phase 2). The Planner's end-of-epic pass may revise, retire, move or renumber cases, and a test titled before it would need re-titling after (epic-done checklist, Tests).
 
@@ -298,7 +298,7 @@ This story takes the open cases outside the drag work too, rather than leaving t
 | Phase 1: D9's build and D11's probe, with their Vitest tests                             | Coder                                   |
 | The end-of-epic pass and later case decisions                                            | Test Planner                            |
 | A baseline Reconciler run                                                                | QA Engineer spawns the Reconciler       |
-| Phase 2: the inventory, in [Story 10's second part](story-10-batches.md)                 | Architect                               |
+| Phase 2: the inventory, in [Story 10's second part](../../archive/story-10-batches.md)                 | Architect                               |
 | Phase 2: D13's rewording and its shared `Manual` cases                                   | Test Planner                            |
 | D4's helpers and each remaining batch's Playwright specs, skips included                 | QA Engineer                             |
 | Phase 4: app source, test hooks/routes and a defect's fix with its regression tests (D7) | Coder                                   |
@@ -311,7 +311,7 @@ This story takes the open cases outside the drag work too, rather than leaving t
 | Phase 5: D13 into the catalog README                                                     | Test Planner                            |
 | Phase 5: this story's audit                                                              | Auditor                                 |
 
-**The remaining automation batches use one session per stop.** Nathan names the file list. The QA Engineer never edits app source, including hooks and test routes; those go through D7's separate Coder session and return check-in. It or the Coder may edit an existing Vitest test, whoever Nathan asks first. It writes a new Vitest test only for a held-off case, after the Test Reviewer's internal-coverage verdict and Nathan's approval, from the Then, never a fix-pinned regression. The Coder lists ID-bearing Vitest assertion/setup changes for review. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze; the Reconciler stamps only what it finds new at the close. Tree IDs replace per-file fingerprints, and the QA Engineer keeps the current Results packet and append-only Review log in each batch's own file, from 4e (through 4d, in [Story 10's second part](story-10-batches.md), now in [the 4a to 4d log](story-10-batch-4a-4d-log.md)). D2 and the remaining assignments are unchanged.
+**The remaining automation batches use one session per stop.** Nathan names the file list. The QA Engineer never edits app source, including hooks and test routes; those go through D7's separate Coder session and return check-in. It or the Coder may edit an existing Vitest test, whoever Nathan asks first. It writes a new Vitest test only for a held-off case, after the Test Reviewer's internal-coverage verdict and Nathan's approval, from the Then, never a fix-pinned regression. The Coder lists ID-bearing Vitest assertion/setup changes for review. The QA Engineer stamps its Playwright tests and approved Vitest mappings before the freeze; the Reconciler stamps only what it finds new at the close. Tree IDs replace per-file fingerprints, and the QA Engineer keeps the current Results packet and append-only Review log in each batch's own file, from 4e (through 4d, in [Story 10's second part](../../archive/story-10-batches.md), now in [the 4a to 4d log](../../archive/story-10-batch-4a-4d-log.md)). D2 and the remaining assignments are unchanged.
 
 **D13. A case's look is checked by hand; the rest is automated** (Nathan, 2026-11-06). Some cases say how something is drawn: a tier's strength, a pulse, a fade, a tilt, a colour. A test can read the attribute the client sets for it, such as `data-drop-tier`, `data-pending`, `data-stop-flash`, `data-active-context` or `data-drag-overlay-form`. It can't tell whether the result looks right.
 
@@ -327,9 +327,9 @@ This story takes the open cases outside the drag work too, rather than leaving t
 - **A spec that reads an attribute keeps it** under D8.
 - **The final look is the Dashboard, Navigation & Notifications epic's** (Out of scope). The shared cases check today's configured values, and their *Then*s follow the wiki as it changes.
 
-The Split cases, and the shared looks proposed for them, are listed in [Story 10's second part](story-10-batches.md).
+The Split cases, and the shared looks proposed for them, are listed in [Story 10's second part](../../archive/story-10-batches.md).
 
-**A standing rule now (Nathan, 2026-11-13; the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s D8).** `.claude/guides/testing-strategy.md`'s "What stays manual" states it, and it's the later word. It extends the look to a measurement that only says how something is drawn, such as an exact height, width, offset or alignment. Relative placement stays automated: the highlight under A rather than above B, or the ghost between two rows. An automated geometry assertion that already exists stays until it's weighed on its cost and stability. Phase 5's D13 item is done for the guide. The catalog README part is the trim plan's handoff to the Planner.
+**A standing rule now (Nathan, 2026-11-13; the [MVP test-process trim](../../archive/mvp-test-process-trim.md)'s D8).** `.claude/guides/testing-strategy.md`'s "What stays manual" states it, and it's the later word. It extends the look to a measurement that only says how something is drawn, such as an exact height, width, offset or alignment. Relative placement stays automated: the highlight under A rather than above B, or the ghost between two rows. An automated geometry assertion that already exists stays until it's weighed on its cost and stability. Phase 5's D13 item is done for the guide. The catalog README part is the trim plan's handoff to the Planner.
 
 **D14. One test per case, for the remaining batches** (Nathan, 2026-11-13; the trim plan's D7).
 
@@ -363,7 +363,7 @@ This phase is complete under the prior roles. The numbered sequence and results 
    - the fixes story's confirming run (`test-reconciliation-stories-8-8-8-11-8-12-fixes-confirming.md`);
    - 8.13's confirming run (`test-reconciliation-story-8-13-confirming.md`);
    - the close-out's confirming run (`test-reconciliation-story-8-close-out-confirming.md`), the later word for DRAG-1.19, TREE-1.1, TREE-1.9, TREE-2.9 and TREE-4.14.
-3. **The Architect writes the inventory,** in [Story 10's second part](story-10-batches.md). Done 2026-11-06, from the baseline report. It holds:
+3. **The Architect writes the inventory,** in [Story 10's second part](../../archive/story-10-batches.md). Done 2026-11-06, from the baseline report. It holds:
    - each Open case's batch (D5), the kind of work that closes it, and its intended end (D1);
    - D13's Split cases and their shared looks;
    - each skip's fate (D3);
@@ -376,7 +376,7 @@ This phase is complete under the prior roles. The numbered sequence and results 
    - **Every proposed internal mapping is declined,** so each case gets a fresh look at whether a surface Playwright test can cover it. A batch that still finds an internal test the better fit proposes it again, one case at a time, through its confirming run (D5).
    - **ATT-1.10** goes to the Tags & Type System epic (D10).
    - **The roadmap entry's items stay as they are,** as the history of each route.
-5. **The Planner applies D13:** rewords the Split cases, and writes the shared `Manual` cases. Done 2026-11-06; the results and IDs are below and in [The shared looks](story-10-batches.md). At the step 5 stop, after which the case IDs hold still (D6).
+5. **The Planner applies D13:** rewords the Split cases, and writes the shared `Manual` cases. Done 2026-11-06; the results and IDs are below and in [The shared looks](../../archive/story-10-batches.md). At the step 5 stop, after which the case IDs hold still (D6).
 
 #### Step 1 results — Test Planner, 2026-11-06
 
@@ -400,7 +400,7 @@ Re-read all five feature pages and all 44 suites (478 existing cases), with posi
 
 #### Step 2 results — baseline reconciliation, 2026-11-06
 
-**Report:** [Story 10 baseline test reconciliation](../../audits/test-reconciliation-story-10-baseline.md). The Reconciler assessed all 248 scoped cases against the current tests at source HEAD `dd0341be`, including TREE-2.14 after the PO's ruling, and ran the mandatory whole-catalog checks. Its coverage table has one decision per scoped case; its Open rows name the current ID-bearing tests and the exact clauses still missing. This is a static reconciliation, with no app or test suite execution.
+**Report:** [Story 10 baseline test reconciliation](../../archive/test-reconciliation-story-10-baseline.md). The Reconciler assessed all 248 scoped cases against the current tests at source HEAD `dd0341be`, including TREE-2.14 after the PO's ruling, and ran the mandatory whole-catalog checks. Its coverage table has one decision per scoped case; its Open rows name the current ID-bearing tests and the exact clauses still missing. This is a static reconciliation, with no app or test suite execution.
 
 | Scope         | Automated | Open | Manual | Planned | Pending PO | Total |
 | ------------- | --------: | ---: | -----: | ------: | ---------: | ----: |
@@ -471,7 +471,7 @@ D4 is complete. The Planner delegated the Playwright work to the Test Automator,
 | `requestHarness.ts`, beside `holdRequests.ts` | Delayed/refused answers and write observation, with method, URL and body; can hold a real successful answer. The board and sidebar request controls now use it.  |
 | `forcedStopCause.ts`                          | Genuine resyncs from a refused item drop, a stale response carrying server-produced reindex pairs, or a refused column reorder. Existing setup support suffices. |
 
-DRAG-6's three existing Playwright declarations now live in `tests/ui/drag-preview-reconciliation.spec.ts`; DRAG-1 and DRAG-3 remain together in `drag-column-bands.spec.ts`. The [Phase 3 Reconciler report](../../audits/test-reconciliation-story-10-phase-3.md) confirms the moved assertions and repairs only the Automation paths for DRAG-6.1, DRAG-6.2, DRAG-6.5 and DRAG-6.6. Their statuses and approved internal pointers stay unchanged.
+DRAG-6's three existing Playwright declarations now live in `tests/ui/drag-preview-reconciliation.spec.ts`; DRAG-1 and DRAG-3 remain together in `drag-column-bands.spec.ts`. The [Phase 3 Reconciler report](../../archive/test-reconciliation-story-10-phase-3.md) confirms the moved assertions and repairs only the Automation paths for DRAG-6.1, DRAG-6.2, DRAG-6.5 and DRAG-6.6. Their statuses and approved internal pointers stay unchanged.
 
 **DRAG-6.25 defect and fix:** the genuine-cause exercise exposed an extra `PATCH /columns/reorder` when the held pointer was released after a column drag had stopped and reloaded. All three causes failed, confirmed in nine of nine column exercises; a quiet check before release ruled out a delayed setup write. Nathan authorized the small D7 fix. The Coder prepared it in isolation and applied its four client files only after the preservation run released the checkout, with baseline/revised hashes checked and no drift. A stopped or cancelled column gesture, or a release with no live column drag, now writes nothing; a fresh normal column gesture still reorders. The two permanent lifecycle regressions fail before the fix and pass afterward. Applied-checkout focused units passed 182/182, and the final gate includes the full 997-test client suite.
 
@@ -507,7 +507,7 @@ The diagnostic command above is historical: its temporary file is retired. Runti
 
 ### Phase 4: the batches (D5)
 
-The batches, their cases, the skips' fates and the checkpoint after 4a are in [Story 10's second part](story-10-batches.md), and each batch's results go there. In run order:
+The batches, their cases, the skips' fates and the checkpoint after 4a are in [Story 10's second part](../../archive/story-10-batches.md), and each batch's results go there. In run order:
 
 - **4a.** DRAG-1 and DRAG-3, with TC-6.4, and BCU-5.6 and 5.7. Then the checkpoint.
 - **4b.** DRAG-4 and DRAG-5.
@@ -520,11 +520,11 @@ The batches, their cases, the skips' fates and the checkpoint after 4a are in [S
 - **4i.** Work returned after its tests were skipped: DRAG-3.16 (from 4a, after the runner trial's setup connection reset), DRAG-5.3 and DRAG-5.10's B21 test (from 4b), and any later flaky test that predates its batch. DRAG-7.18 came here from 4c and moved to 4j on 2026-11-13.
 - **4j.** Deferred from 4c's close: the weak hold-opened distance variants of DRAG-7.10 and DRAG-1.14, and three candidate new cases (two for a Planner session, one for the PO). Batch 4d adds the three tier variants of DRAG-6.23 and, from 2026-11-13, its skipped ghost test and DRAG-6.24's skipped drop-line test, DRAG-6.7's held-off discard clause, catalogued as an example, and four questions: the stop matrix's four skipped cells, DRAG-6.22's two endings and asserting DRAG-6.16's top edge, to revisit, and whether a section collapsed by hand stays collapsed across a reload, a possible Product Owner gap to resolve. DRAG-7.18 and its cost study moved here from 4i on 2026-11-13.
 
-**From 2026-11-13 (Nathan):** 4e to 4h each have a file of their own, linked from [Story 10's second part](story-10-batches.md). 4a to 4d's history is in [the 4a to 4d log](story-10-batch-4a-4d-log.md). 4i and 4j are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), outside this story (D10).
+**From 2026-11-13 (Nathan):** 4e to 4h each have a file of their own, linked from [Story 10's second part](../../archive/story-10-batches.md). 4a to 4d's history is in [the 4a to 4d log](../../archive/story-10-batch-4a-4d-log.md). 4i and 4j are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md), outside this story (D10).
 
 #### Batch 4a results — 2026-11-08
 
-The [confirming Reconciler report](../../audits/test-reconciliation-story-10-batch-4a.md) makes all 34 scoped cases Automated: 10 Extend, 22 New and two Split. The catalog totals are 352 Automated, 120 Open, 10 Manual, one Planned and two Pending PO; 118 of the original 152 story assignments remain Open. The [batch results](story-10-batches.md) record the per-kind case/test counts, helper contracts, measured cost and six resolved Coder round trips: DRAG-1.26's observation hook, DRAG-3.18's workphase label, DRAG-1.33's expansion preference, DRAG-3.10's title-only route stamp, and DRAG-1.5's saved-intent and visible-gap fixes. No Coder handoff remains open.
+The [confirming Reconciler report](../../archive/test-reconciliation-story-10-batch-4a.md) makes all 34 scoped cases Automated: 10 Extend, 22 New and two Split. The catalog totals are 352 Automated, 120 Open, 10 Manual, one Planned and two Pending PO; 118 of the original 152 story assignments remain Open. The [batch results](../../archive/story-10-batches.md) record the per-kind case/test counts, helper contracts, measured cost and six resolved Coder round trips: DRAG-1.26's observation hook, DRAG-3.18's workphase label, DRAG-1.33's expansion preference, DRAG-3.10's title-only route stamp, and DRAG-1.5's saved-intent and visible-gap fixes. No Coder handoff remains open.
 
 All 89 drag variants have twenty accepted passes each, zero retries: 1,780 total. The interrupted failed attempt and seven excluded overlapping successes remain explicit; raw per-variant JSON and matching source/test fingerprints support the combined proof. Both continuation cohorts pass. Final full E2E passes 329 tests with 24 existing skips, and the root gate passes types, lint, formatting, docs, 444 server, 1,023 client and 258 scripts tests. These checks ran sequentially and the temporary system-idle lease was restored. The usage-limit interruption was recovered from completed artifacts without rerunning them.
 
@@ -532,7 +532,7 @@ Stopped at the checkpoint for Nathan's decisions on D2, the remaining batches' s
 
 #### Batch 4b results — confirming reconciliation complete
 
-The [confirming Reconciler report](../../audits/test-reconciliation-story-10-batch-4b.md) makes all **26 scoped cases Automated**: four Extend, 20 New and two Rework. The [batch close-out](story-10-batches.md) records five specs, one changed shared helper, the separate Coder returns and final coverage complements. Authored/changed scope is 26 expressions / 70 variants; the maintained file union is 71 with unchanged DRAG-1.14. No scoped case is held off and no new Manual or mapping approval is needed. Associated DRAG-3.3 Automation-pointer maintenance adds no closure or assignment to this count.
+The [confirming Reconciler report](../../archive/test-reconciliation-story-10-batch-4b.md) makes all **26 scoped cases Automated**: four Extend, 20 New and two Rework. The [batch close-out](../../archive/story-10-batches.md) records five specs, one changed shared helper, the separate Coder returns and final coverage complements. Authored/changed scope is 26 expressions / 70 variants; the maintained file union is 71 with unchanged DRAG-1.14. No scoped case is held off and no new Manual or mapping approval is needed. Associated DRAG-3.3 Automation-pointer maintenance adds no closure or assignment to this count.
 
 All 70 scoped variants pass twenty distinct executions each, **1,400/1,400 with zero failures/retries/skips**. Final full E2E is **394 passed / 21 existing skips / zero failed**, and the root gate passes **444 server / 1,040 client / 258 script tests, docs 433 / zero hits**, on the unchanged snapshot. The existing background run finishes during a usage-limit delivery interruption; recovery reruns nothing. Stop 4 takes about two hours three minutes of executed command time; final reconciliation performs no test execution or source edit.
 
@@ -540,7 +540,7 @@ Catalog totals are **378 Automated / 93 Open / 10 Manual / one Planned / two Pen
 
 #### Batches 4c to 4h — closed
 
-All six are closed and committed: 4c in `4d89c152`, 4d in `e4f34b9a`, 4e in `2becfdd6`, 4f in `1a7f13bd`, 4g in `b2f0b319` and 4h in `e8cf4f2c`. [Story 10's second part](story-10-batches.md) gives each one's outcome in its batch table and Amendments, and each batch's close-out packet is in its own file, or for 4c and 4d in [the 4a to 4d log](story-10-batch-4a-4d-log.md). The cases they left `Open` are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md). After 4h the catalog stands at 450 `Automated`, 24 `Open`, 10 `Manual`, 2 `Planned` and 2 `Pending PO`, of 488 cases.
+All six are closed and committed: 4c in `4d89c152`, 4d in `e4f34b9a`, 4e in `2becfdd6`, 4f in `1a7f13bd`, 4g in `b2f0b319` and 4h in `e8cf4f2c`. [Story 10's second part](../../archive/story-10-batches.md) gives each one's outcome in its batch table and Amendments, and each batch's close-out packet is in its own file, or for 4c and 4d in [the 4a to 4d log](../../archive/story-10-batch-4a-4d-log.md). The cases they left `Open` are in [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md). After 4h the catalog stands at 450 `Automated`, 24 `Open`, 10 `Manual`, 2 `Planned` and 2 `Pending PO`, of 488 cases.
 
 4h ran no Stop 4 of its own (Nathan, 2026-11-17). It deleted six unstamped skipped tests, which the Test Reviewer confirmed added no coverage, and stamped three existing tests, changing no test body. Its reconciliation is in [Story 10's close](story-10-close.md), in slices 1 and 3.
 
@@ -585,7 +585,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-09 — New Stop 2 selection blocker (Test Planner, from the Automator).** A stationary P/before highlight through dwell/cue enters Origin instead of P, confirmed three times with zero writes. The partial 57-variant snapshot is frozen; 13 variants remain unauthored. Root gate passes; the proposing Reconciler checks proof without catalog edits. Batch Results/Open questions hold the concrete separate Coder handoff; no in-session app fix or D2 run.
 
-- **2026-11-09 — Proposing review completed (Test Planner, from the Reconciler).** The [report](../../audits/test-reconciliation-story-10-batch-4b-proposing.md) independently confirms the selection defect, reviews all 26 cases and finds clean global identity checks. Three concrete test-proof corrections and the existing clock-test work are carried into the next authoring handoff. All cases remain Open; no source/catalog change or validation advancement is implied by the review.
+- **2026-11-09 — Proposing review completed (Test Planner, from the Reconciler).** The [report](../../archive/test-reconciliation-story-10-batch-4b-proposing.md) independently confirms the selection defect, reviews all 26 cases and finds clean global identity checks. Three concrete test-proof corrections and the existing clock-test work are carried into the next authoring handoff. All cases remain Open; no source/catalog change or validation advancement is implied by the review.
 
 - **2026-11-08 — Retirement cleanup accepted; Stop 2 continues (Nathan).** The Coder removed DRAG-4.35's ID stamp from the internal regression and Nathan authorized continuation. The Automator verifies that title-only change, no retired-ID carrier and green retained Playwright pilots. Resume the reduced 26-case/70-variant matrix within the existing boundaries; no app repair or D2 sweep is authorized here.
 
@@ -593,7 +593,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-08 — Batch 4b Stop 2 early checkpoint (Test Planner, from the Automator).** Authored five expressions / six variants and executed five unique representative variants before stopping expansion. Preserved DRAG-4.35's request/highlight mismatch and a separate nested-line question for the PO, each reproduced three times; saved orders are correct in the observed fixtures. No app/helper/Vitest edit or catalog promotion. The root gate passes; D2/full E2E/reconciliation remain unrun. Results/Open questions in the batch plan hold the separate-session handoff and unfinished-authoring scope.
 
-- **2026-11-08 — Batch 4b Stop 1 (Test Planner, with the Test Automator).** Completed the [proof/variant review](story-10-batch-4b-proof-plan.md) for the 27 assigned cases; forecast 78 scoped runnable variants plus one unchanged test in the file union. Clarified DRAG-4.22 and the legacy own-/cross-column case stamps; retained the separate Coder boundary for clock support. No tests, app changes or runtime execution. Stopped for Nathan before Stop 2; the resume packet is in the batch plan's Results.
+- **2026-11-08 — Batch 4b Stop 1 (Test Planner, with the Test Automator).** Completed the [proof/variant review](../../archive/story-10-batch-4b-proof-plan.md) for the 27 assigned cases; forecast 78 scoped runnable variants plus one unchanged test in the file union. Clarified DRAG-4.22 and the legacy own-/cross-column case stamps; retained the separate Coder boundary for clock support. No tests, app changes or runtime execution. Stopped for Nathan before Stop 2; the resume packet is in the batch plan's Results.
 
 - **2026-11-08 — Five-stop workflow approved (Nathan).** D5/D12 now point to the mandatory session stops in the batch plan: proof/variant review, tests/discovery, separate Coder/review when needed, frozen validation and reconciliation/closure. Each stop provides a resume handoff and returns to Nathan before the next stage. D2, case assignments and batch order are unchanged.
 
@@ -606,7 +606,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - The roadmap entry's items stay as written.
   - Step 5, the Planner's D13 rewording, is next.
 - **2026-11-06 — the inventory (Architect, with Nathan).** Phase 2 step 3, from the baseline report:
-  - **[Story 10's second part](story-10-batches.md) is new.** It holds the inventory, the batches, the skips' fates, the checkpoint and each batch's results. The decisions and Phases 1–3 and 5 stay here.
+  - **[Story 10's second part](../../archive/story-10-batches.md) is new.** It holds the inventory, the batches, the skips' fates, the checkpoint and each batch's results. The decisions and Phases 1–3 and 5 stay here.
   - **D13 is new (Nathan):** a case's look is checked by hand, in a shared `Manual` case, and the rest of the case is automated through the attributes the client sets.
   - **D4:** the request harness (#18) and a forced-stop cause helper join Phase 3. A helper found later is written in the batch that finds it.
   - **The batches:**
@@ -657,11 +657,11 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-09 — D2 on the parallel runner (Architect, Nathan's approval).** Nathan approved the runner plan's decision 8: 4a and 4b's one-worker repeat evidence stands, and from 4c on D2's repeats and each batch's final full run use the adopted worker count. Recorded in D2 and in the batches doc's execution boundary and Stop 4. D2 stays this story's bar only.
 
-- **2026-11-10 — Three-worker adoption with bounded failures (Nathan).** Accept the parallel-runner trial's recorded flaky failures to reduce suite runtime during Story 10. DRAG-7.10 stays active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4h alongside the six legacy skips. The [runner report](../tech-debt-stories/e2e-parallel-workers.md) holds all failures and comparisons; the batch plan holds the destinations. D2's bar and 4a/4b's prior evidence stand, and future repeats/final runs use three workers.
+- **2026-11-10 — Three-worker adoption with bounded failures (Nathan).** Accept the parallel-runner trial's recorded flaky failures to reduce suite runtime during Story 10. DRAG-7.10 stays active and is fixed in 4c. Both DRAG-3.16 variants are temporarily skipped and restored in 4h alongside the six legacy skips. The [runner report](../../archive/e2e-parallel-workers.md) holds all failures and comparisons; the batch plan holds the destinations. D2's bar and 4a/4b's prior evidence stand, and future repeats/final runs use three workers.
 
 - **2026-11-10 — Five-worker default after the extended trial (Nathan).** Five replaces three for future D2 repeats and batch-final full runs. The full-suite median is 3m 25.1s, 38.2s faster than four, with no newly observed failing test identity or mode. Six is dropped for its small additional saving. Re-evaluate with the smoke suite, when full E2E runs should occupy less of each story and capacity for simultaneous work may matter more; revisit sooner if failures or contention change. The known-failure deferrals and D2's bar remain in force.
 
-- **2026-11-11 — D2's repeats drop to ten (Nathan).** From 4c's Stop 4 on, an added or changed drag test passes ten repeats, not twenty, at the adopted five workers. The batch-final full run and the order of remedies are unchanged, and 4a and 4b's twenty-repeat evidence stands. The reason is in D2, from the [flake investigation](../../audits/story-10-drag-flake-investigation.md). Recorded in D2, in the batches doc's execution boundary and Stop 4, and in the 4c proof plan's decision 3 (61 variants, 610 passes). The batches doc's Results carries a note for the paused 4c session.
+- **2026-11-11 — D2's repeats drop to ten (Nathan).** From 4c's Stop 4 on, an added or changed drag test passes ten repeats, not twenty, at the adopted five workers. The batch-final full run and the order of remedies are unchanged, and 4a and 4b's twenty-repeat evidence stands. The reason is in D2, from the [flake investigation](../../archive/story-10-drag-flake-investigation.md). Recorded in D2, in the batches doc's execution boundary and Stop 4, and in the 4c proof plan's decision 3 (61 variants, 610 passes). The batches doc's Results carries a note for the paused 4c session.
 
 - **2026-11-12 — Batch 4i added (Nathan).** DRAG-3.16 moves from 4h to a new batch 4i, and DRAG-5.3 and DRAG-7.18 join it. Their tests are skipped: DRAG-5.3's eight B18 variants after the locked-after-A variant failed once in each form at five workers during 4c's Stop 4, and DRAG-7.18's two for their cost, about 24 s a pair, which Nathan wants kept as a cost and benefit study. A skipped test never counts, so the three cases' statuses and Automation lines are the Reconciler's to reflect. No decision changes: D2's bar and the order of remedies stand, and 4i applies them. The batches doc's 4i has the detail.
 
@@ -687,7 +687,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 
 - **2026-11-13 — Batch 4d closed: 12 of its 16 cases `Automated`, four held for 4j (the Reconciler, Nathan's rulings).** DRAG-6.7, 6.16, 6.23 and 6.24 stay `Open` in 4j. No decision changes. The batches doc's Results and the Reconciler's report have the detail.
 
-- **2026-11-13 — The MVP test-process trim (Nathan; [its plan](../tech-debt-stories/mvp-test-process-trim.md)).** Changes for the remaining batches:
+- **2026-11-13 — The MVP test-process trim (Nathan; [its plan](../../archive/mvp-test-process-trim.md)).** Changes for the remaining batches:
   - **The Goal and D10:** the story closes after 4h, and 4i and 4j, with their skips, move to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md).
   - **D2:** a flaky test that predates its batch is recorded there.
   - **D5:** four stops, with Stops 4 and 5 merged.
@@ -696,7 +696,7 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   - **New D14:** one test per case.
   - **Phases 4 and 5:** amended to match.
 
-  The batch doc is split, word for word, into an index, one file per batch from 4e to 4h, and [the 4a to 4d log](story-10-batch-4a-4d-log.md). The process docs gain confirming reviewer passes, a single Reconciler follow-up, cost verdicts, and [MVP Deferrals](../mvp-deferrals.md).
+  The batch doc is split, word for word, into an index, one file per batch from 4e to 4h, and [the 4a to 4d log](../../archive/story-10-batch-4a-4d-log.md). The process docs gain confirming reviewer passes, a single Reconciler follow-up, cost verdicts, and [MVP Deferrals](../mvp-deferrals.md).
 
 - **2026-11-17 — Phase 4 is done, and three loose ends are settled before Phase 5 (Nathan).** No decision changes.
   - **Batch 4h's Stop 4 is folded into Phase 5.** 4h changed no test body, and Phase 5's gate, full suite and Reconciler cover what its Stop 4 would have run. Phase 5's Reconciler bullet names what waits on it.
@@ -711,6 +711,9 @@ Expected, from the Architect's reading. The Coder corrects it while building.
   The two Open questions that stood here moved with Phase 5.
 
 - **2026-11-17 — D8 brought up to date (Nathan, from the step 1 Coder's audit of every client `data-*` attribute).** Batches 4a and 4b made `data-active-context` a read attribute, so it stays. Only `data-inversion-count` and `data-armed-stop` have no reader, and the close deletes them. D8 now also says an attribute the app reads stays.
+
+- **2026-11-18 — Surface-cost README pointer applied (Test Planner).** The Statuses section now points from the surface-test preference to the testing strategy's "When a surface test costs more than it proves". The proposed third approved internal-test category is not adopted; it moves to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md#handoff) for later consideration by Nathan. Existing approval rules, cases and coverage certifications are unchanged.
+- **2026-11-18 — Epic-wide audit grooming and sequence settled (Nathan, applied by the Auditor).** The audit's scope and approved agent adjustments live in [its own plan](epic-3-5-audit.md). Finish grooming it, then close Story 10, then run the audit. No additional epic-end coverage review is run, and the later post-merge audit returns to the standard four passes. This updates the orientation above without signing off Story 10.
 
 ## Open questions
 
@@ -730,13 +733,13 @@ None here. The close's Open questions are in [Story 10's close](story-10-close.m
 - **Implementation passages to place:**
 - **Test-plan cases affected:** DRAG-6.22, whose column, no-cue clause the Planner removes, and DRAG-6.26, which becomes Open (Phase 1).
   - **Planner applied in Phase 2 step 1:** the column clause is removed, DRAG-6.26 is Open, and DRAG-6.25 points to its banner and no-flash rule.
-- **D13's Split cases and their shared `Manual` cases, for the Planner** (Phase 2 step 5): the 26 cases listed in [Story 10's second part](story-10-batches.md), "The shared looks".
+- **D13's Split cases and their shared `Manual` cases, for the Planner** (Phase 2 step 5): the 26 cases listed in [Story 10's second part](../../archive/story-10-batches.md), "The shared looks".
   - **Planner applied:** 24 existing IDs retain their automatable clauses. DRAG-1.27 and TREE-2.8 are reused as shared Manual cases; DRAG-2.24, DRAG-6.30 and DRAG-6.31 are added as Manual. The shared-look table records every source ID and its destination. No ID is retired or moved, and the 152 Open batch assignments exclude the two reused Manual IDs.
-- **D13 as a catalog convention, for the Planner** (Phase 5; amended 2026-11-13). The rule goes in `docs/test-plans/README.md`, "Which tests count, and what's manual", worded as `.claude/guides/testing-strategy.md`'s "What stays manual" now states it. That version is the later word over this entry's earlier list: a measurement that only says how something is drawn goes manual too, and relative placement stays automated. It's the same item as the [MVP test-process trim](../tech-debt-stories/mvp-test-process-trim.md)'s Handoff, which also carries the one-test-per-case rule. One Planner session applies both.
-- **Weighing a surface test, for the Planner** (Nathan, 2026-11-11; not applied). The testing-strategy guide now says when a surface test costs more than it proves, and what the options are. `docs/test-plans/README.md` needs two things to match:
-  - **A pointer,** where "Statuses" says a surface test is preferred for closing a partial gap: the guide's "When a surface test costs more than it proves" is the exception's home.
+- **D13 as a catalog convention, for the Planner** (Phase 5; amended 2026-11-13). The rule goes in `docs/test-plans/README.md`, "Which tests count, and what's manual", worded as `.claude/guides/testing-strategy.md`'s "What stays manual" now states it. That version is the later word over this entry's earlier list: a measurement that only says how something is drawn goes manual too, and relative placement stays automated. It's the same item as the [MVP test-process trim](../../archive/mvp-test-process-trim.md)'s Handoff, which also carries the one-test-per-case rule. One Planner session applies both.
+- **Weighing a surface test, for the Planner** (Nathan, 2026-11-11; pointer applied 2026-11-18, category proposal deferred). The testing-strategy guide says when a surface test costs more than it proves, and what the options are. The `docs/test-plans/README.md` handoff has two parts:
+  - **Pointer applied:** where "Statuses" says a surface test is preferred for closing a partial gap, it points to the guide's "When a surface test costs more than it proves" as the exception's home.
   - **A third approved category of internal test, if Nathan rules for it:** the variants of a rule that one surface test already reaches. Proposed wording, for "Which tests count, and what's manual": _A third approved category: the variants of a rule a surface test already reaches. One surface test shows that the gesture reaches the rule and makes the right write. The variants that change the outcome and not the gesture, such as the origin, the place or the form, are tested in the pure module that decides them, each from the case's Then. The case is `Automated` when the surface test and those tests together assert all of it._
-  - Until that category exists, an internal test for a variant takes the README's existing route: the case is held off, the Test Reviewer weighs it, and Nathan approves it one case at a time.
+  - **Category disposition:** not adopted in this handoff; the proposal is carried to [Drag Automation Deferrals](../tech-debt-stories/drag-automation-deferrals.md#handoff) for Nathan's later consideration. Until that category exists, an internal test for a variant takes the README's existing route: the case is held off, the Test Reviewer weighs it, and Nathan approves it one case at a time.
 - **A case for D11's fix, for the Planner to write** (Phase 1). The probe failed: filing a parent out of Unknown status left the Unsorted bucket's "needs attention" badge up until a reload, since the client moved only the written row, where the server also moves its attached descendants. Wiki boards-columns-unsorted §10 already states the rule (`needsAttention` counts an Attached item whose own workphase is unknown). The case: _given_ a parent and its Attached descendants in Unknown status, _when_ the parent is filed into a workflow workphase and the write's answer lands, _then_ the badge goes without a reload. The Coder's tests carry no ID yet and take the Planner's: `useItemManagement.test.ts` ("filing a parent out of Unknown status") and `itemWriteReconciliation.test.ts` ("the workphase cascade").
   - **Planner applied in Phase 2 step 1:** BCU-5.6 is the case for the fix; BCU-5.7 holds the detached-descendant boundary. Both are Open. The baseline Reconciler assesses the candidate tests above and names which need the ID or more assertions; no mapping is presumed here.
 - **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §10 (Phase 1). The Planned passage is gone, its marker with it. A column drag the board stops now sits in the cue's own list: the banner is the same, and a bullet says it flashes nothing. The cue's opening line says the three resyncs show it on an item's drag or a column's. Nothing else on the page changed. Phase 2 step 1: hierarchy-placement §7 gains a sentence in its "One tier for the whole drag" bullet (an entry first drawn after pickup has no tier), and project-tree §1's mid-drag paragraph points to it (TREE-2.14).

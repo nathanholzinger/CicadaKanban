@@ -1129,7 +1129,7 @@ suppressed".
 ---
 
 ### Story 8.11 — A project's pickup takes its descendants with it ✅ (done 2026-11-04)
-**Plan:** [`story-8-11-project-pickup-carries-branch.md`](story-8-11-project-pickup-carries-branch.md)
+**Plan:** [`story-8-11-project-pickup-carries-branch.md`](../../archive/story-8-11-project-pickup-carries-branch.md)
 
 **Found with Story 8.8** (Nathan, 2026-11-04). Nathan wants the sidebar's
 drag to carry a project's branch the way 8.8 carries a Stub's:
@@ -1200,7 +1200,7 @@ than the story, planned as its D7–D9:
 ---
 
 ### Story 8.12 — The sidebar's ghost moves to the gap ✅ (done 2026-11-04)
-**Plan:** [`story-8-12-sidebar-ghost-moves-to-gap.md`](story-8-12-sidebar-ghost-moves-to-gap.md)
+**Plan:** [`story-8-12-sidebar-ghost-moves-to-gap.md`](../../archive/story-8-12-sidebar-ghost-moves-to-gap.md)
 
 **Found with Story 8.11** (Nathan, 2026-11-04). It runs next, after
 8.11 closes.
@@ -1288,7 +1288,7 @@ against the gesture they'll keep.
 ---
 
 ### The fixes from the audit and reconciliation of Stories 8.8, 8.11 and 8.12
-**Plan:** [`stories-8-8-8-11-8-12-fixes.md`](stories-8-8-8-11-8-12-fixes.md)
+**Plan:** [`stories-8-8-8-11-8-12-fixes.md`](../../archive/stories-8-8-8-11-8-12-fixes.md)
 
 **Runs before Story 8.13.** The code quality audit and the test
 reconciliation of Stories 8.8, 8.11 and 8.12, both 2026-11-04, left
@@ -1312,7 +1312,7 @@ audit (step 3 above).
 ---
 
 ### Story 8.13 — The hierarchy modal opens a Stub's Sheet, and a create stops at the cap ✅ (done 2026-11-05)
-**Plan:** [`story-8-13-modal-sheet-and-create-cap.md`](story-8-13-modal-sheet-and-create-cap.md)
+**Plan:** [`story-8-13-modal-sheet-and-create-cap.md`](../../archive/story-8-13-modal-sheet-and-create-cap.md)
 
 **Found in manual testing** (Nathan, 2026-11-04). Two small fixes,
 and the last 8.N story. It runs after the fixes from the audit and
@@ -1342,10 +1342,16 @@ Epic 3.5". Story 8 ends with Story 8.13.
 
 ---
 
-### Story 10 — DnD automation catch-up (no skipped Playwright tests)
-**Plan:** [`story-10-dnd-automation-catch-up.md`](story-10-dnd-automation-catch-up.md)
+### Story 10 — DnD automation catch-up (no skipped Playwright tests) ✅ (done 2026-11-18)
+**Status: done 2026-11-18.** It closed with its own audit and the close's
+reconciliation. The goal's zero skipped tests didn't hold under the MVP's
+rulings: the 23 skipped Playwright tests and the cases left `Open` are held
+in Drag Automation Deferrals. The epic-wide audit has its own plan,
+[`epic-3-5-audit.md`](epic-3-5-audit.md).
+
+**Plan:** [`story-10-dnd-automation-catch-up.md`](../../archive/story-10-dnd-automation-catch-up.md)
 (2026-11-04), and its second part,
-[`story-10-batches.md`](story-10-batches.md). Since 2026-11-06 the second
+[`story-10-batches.md`](../../archive/story-10-batches.md). Since 2026-11-06 the second
 part's inventory routes every case the items below name, by ID, from the
 baseline reconciliation, and it's the later word on each. The items stay
 here as the history of each route. New items aren't routed here any
