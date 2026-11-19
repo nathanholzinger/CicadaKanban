@@ -1,14 +1,18 @@
 // An item's position scope: classifyPositionScope and withPositionScope label what its
-// `position` is comparable against for API consumers, and positionScopeFor is the same rule
-// as a SQL predicate. Also here: isTerminalLookup, which builds the lookup withPositionScope
-// takes, and workflowIdForWorkphase. Distinct from positionResolver.ts, which computes and
-// writes the position value itself.
+// `position` is comparable against for API consumers, and positionScopeFor is the resolver's
+// comparison-bucket query: the rows a position is compared against. The two aren't
+// interchangeable. Classification answers `none` for a Free item in a terminal or foreign
+// workphase; positionScopeFor follows the stored workphase's workflow whatever its state, and
+// looks up no project's workflow, so its callers decide those cases (a foreign workphase is
+// refused in itemHierarchy.ts::foreignWorkphaseError). Also here: isTerminalLookup, which
+// builds the lookup withPositionScope takes, and workflowIdForWorkphase. Distinct from
+// positionResolver.ts, which computes and writes the position value itself.
 //
 // Items-only vocabulary (isAttached/parentId/workphaseId/workphaseIsTerminal) — not
 // table-generic the way positionResolver.ts is, so this doesn't apply to projects or any
-// other PositionedTable. positionScopeFor is classifyPositionScope's rule expressed as a
-// query instead of a string, so it lives here rather than in positionResolver.ts. Also used
-// by itemHierarchy.ts and the item, board, workflow and workphase routes.
+// other PositionedTable. positionScopeFor is an items query over `items`, so it lives here
+// rather than in positionResolver.ts. Also used by itemHierarchy.ts and the item, board,
+// workflow and workphase routes.
 import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
 import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';

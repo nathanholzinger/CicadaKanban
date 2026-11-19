@@ -40,7 +40,7 @@ export interface ItemWriteTracker {
   complete(itemId: string, seq: number, response: ItemWriteResponse): { applied: boolean; needsResync: boolean };
   /** Clears the pending placement so nothing from the guess survives; the caller resyncs. */
   fail(itemId: string, seq: number): void;
-  /** Whether a write for this item is currently outstanding — for restoring its pending marker after a re-drag that ends up writing nothing. */
+  /** Whether this item's latest tracked write is still outstanding — for restoring its pending marker after a re-drag that ends up writing nothing. An older write superseded by a later one doesn't count, whether or not its request has resolved. */
   isPending(itemId: string): boolean;
 }
 
@@ -60,8 +60,9 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   // How many item answers have been applied to the list: a board read that began before one landed may not
   // have the write (`answersApplied`).
   const answerCount = useRef(0);
-  // Item ids with a write currently outstanding — from `begin` until the
-  // matching non-stale `complete`/`fail` — backing `isPending`.
+  // Item ids whose latest tracked write is outstanding — from `begin` until the
+  // matching non-stale `complete`/`fail` — backing `isPending`. An older write's
+  // request can still be unresolved once the id has left.
   // `placements` alone can't answer this: a live drag's ghost occupies the
   // same slot and would read as "pending" too.
   const inFlight = useRef(new Set<string>());

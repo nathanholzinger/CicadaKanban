@@ -217,7 +217,7 @@ function toRect(domRect: DOMRect): Rect {
 
 // Clips `rect` vertically to `bounds` (a scrolling ancestor's own visible
 // box) — null when nothing of it remains visible. Horizontal is left
-// alone: the board scrolls whole columns sideways, never a fraction of one.
+// alone: the clip is vertical only, so a column partly scrolled out of view sideways keeps its full width.
 export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   const top = Math.max(rect.top, bounds.top);
   const bottom = Math.min(rect.bottom, bounds.bottom);

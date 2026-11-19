@@ -48,7 +48,7 @@ function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
   return childrenOf;
 }
 
-// A move that was sent and not yet answered, as its request carries it: the parent, and the
+// A move that was released and not yet answered, as its request carries it: the parent, and the
 // sibling to insert beside (`prevId` after it, `nextId` before it), never a position.
 export interface PendingMove {
   id: string;
@@ -62,7 +62,7 @@ export interface PendingMove {
 // too, so the sidebar's tree and the project page's parent dropdown, which both
 // walk this, agree on data with a dangling parent.
 //
-// `moves` are sent and not yet answered. Each, in the order sent, takes its node out of the
+// `moves` are released and not yet answered. Each, in the order released, takes its node out of the
 // children it sits in and puts it back in its new parent's, by its slot: after `prevId`, before
 // `nextId`, or last when it names neither or the one it names isn't a child there. A parent no node
 // has counts as the top level, as above. Beside a sibling that is there, this is the slot the board's
@@ -107,7 +107,7 @@ export function sortedChildrenByParent<T extends TreeNode & Positioned>(
 // (`getSubtree`, `getAncestors`, the drag's classification) sees the move, and the place among its
 // siblings is `sortedChildrenByParent`'s, given the same move. A surface that draws a move before its
 // answer lands lays both over, once, so its rows, its children and what the next drag reads are one
-// tree. Several moves are laid over in the order they were sent. A node that isn't in `nodes`
+// tree. Several moves are laid over in the order they were released. A node that isn't in `nodes`
 // (deleted since) is skipped.
 export function withMoveApplied<T extends TreeNode>(nodes: readonly T[], move: PendingMove): T[] {
   return nodes.map(n => (n.id === move.id ? { ...n, parentId: move.parentId } : n));

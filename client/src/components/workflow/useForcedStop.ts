@@ -1,8 +1,9 @@
 // The cue for a drag the board stopped (wiki board-drag-interaction §10), in two lifetimes:
 //   - the banner is the stop the drag layer reported, until `cueMs` has passed or the next drag starts;
 //   - the flash is the stopped item, named for the reloaded board to draw flashing. It waits for the
-//     reload the stop caused to draw the board, plays for `STOP_FLASH_MS`, and is let go sooner by
-//     another reload starting, so a reload with no stop behind it flashes nothing. A stop with no item
+//     reload the stop caused to draw the board, plays for `STOP_FLASH_MS`, and a flash that is playing
+//     is let go sooner by another reload starting, so a reload with no stop behind it flashes nothing.
+//     A flash still waiting survives reloads starting, until the board is drawn. A stop with no item
 //     (a column drag's) names none.
 // Held by `BoardView`, above the reload the stop causes, which swaps the board for "Loading
 // board…" and unmounts everything below it.

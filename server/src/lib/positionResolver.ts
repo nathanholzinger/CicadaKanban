@@ -14,8 +14,8 @@ import { db, type Tx } from '../db/index.js';
 import { coarsestFit } from './coarsestFit.js';
 
 const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new position to be placed. If it doesn't then something else went wrong that retries shouldn't fix
-const SOFT_MAX_POSITION = 1000; // We will reindex if a position value exceeds this soft max, unless the row count is also greater than the soft max
-const MAX_OVER_POSITION = 100; // If there are more rows than the soft max then max will be caluclated as (rows + MAX_OVER)
+const SOFT_MAX_POSITION = 1000; // A candidate below this soft max never reindexes; at or above it, the row count is also checked
+const MAX_OVER_POSITION = 100; // A candidate at or above SOFT_MAX_POSITION also has to reach (rows + MAX_OVER_POSITION) to reindex, so the trigger is max(SOFT_MAX_POSITION, rows + MAX_OVER_POSITION): the row count raises it only above 900 rows
 
 // Table Generic that defines a minimum structure for a table that can be ordered by 'position'
 export type PositionedTable = SQLiteTable & {
@@ -25,9 +25,9 @@ export type PositionedTable = SQLiteTable & {
   updatedAt: SQLiteColumn;
 };
 
-// One renumbered row from a reindex — `{id, position}` and nothing more,
-// since a reindex changes positions and never any other field
-// (wiki positioning §7).
+// One renumbered row from a reindex — `{id, position}` and nothing more: the disclosure
+// is the position pairs only. A reindex also sets each renumbered row's `updatedAt`, which
+// the disclosure doesn't carry (wiki positioning §7).
 export type ReindexedPosition = { id: string; position: number };
 
 // Used to bundle the query context so functions have fewer params to handoff

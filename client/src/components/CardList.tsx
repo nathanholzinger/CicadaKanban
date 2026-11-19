@@ -14,7 +14,7 @@ import { CARD_LIST_GAP_CLASS } from './cardMetrics';
 // (BoardColumn.tsx), one level up, since its list isn't the droppable.
 export const DROP_HIGHLIGHT_CLASS = 'bg-zinc-700/40 ring-2 ring-blue-500/30';
 
-/** What makes this list a drag region (wiki board-drag-interaction §1) — a card list is one iff it's a merged column's list or an expanded column's sub-row; Unsorted's lists are drag-source only. */
+/** What makes this list a drag region (wiki board-drag-interaction §1) — a card list is one iff it's an unbroken merged column's list or an unbroken expanded column's sub-row (a broken column supplies no region in either form); Unsorted's lists are drag-source only. */
 export interface CardListRegionProps {
   /** `columnRegionKey` / `subrowRegionKey` from dragRegions.ts. */
   key: string;

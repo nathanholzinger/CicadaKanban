@@ -66,7 +66,7 @@ export function parentPutUnder(before: Project | undefined, written: Project): s
 
 // The render list: the shared walk, with a collapsed project's children left
 // out of it. A collapsed project still reports that it has some. `moves` are the
-// moves sent and not yet answered, whose place among their siblings the order
+// moves released and not yet answered, whose place among their siblings the order
 // reads (`lib/hierarchy.ts::sortedChildrenByParent`).
 export function flattenTree(
   projects: Project[],

@@ -108,7 +108,7 @@ export type ReorderProject = (
 // project was just dropped into (`useCollapsedProjects.ts`, the one way a project opens). `depthCap` is the project cap, null until it's
 // known: a tab state that would put the dragged subtree past it is still
 // offered, marked invalid, and a release in it writes nothing
-// (wiki hierarchy-placement §6). `moves` are the moves sent and not yet answered: `projects` already
+// (wiki hierarchy-placement §6). `moves` are the moves released and not yet answered: `projects` already
 // carry their parents, and the order of their projects among siblings is what `moves` adds, read by the
 // first-child lookup and the branch walk as it is by `flatItems`.
 export function useProjectDragReorder(

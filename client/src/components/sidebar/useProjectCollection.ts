@@ -45,8 +45,9 @@ export type CreateProjectInput = Parameters<typeof createProject>[0];
 export function useProjectCollection(onParentOpened: (id: string) => void) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loaded, setLoaded] = useState(false);
-  // The moves that are sent and not yet answered, oldest first. Each is drawn at once, laid over `projects`
-  // where the sidebar reads them, and leaves with its own answer.
+  // The moves released and not yet answered, in the order they were released. Each is drawn at once,
+  // laid over `projects` where the sidebar reads them, and leaves with its own answer. A move can still
+  // be waiting on its project's earlier write (`writeInTurn`), so this order is not the order requests go out.
   const [pendingMoves, setPendingMoves] = useState<PendingMove[]>([]);
   // Each project's last write still out, so its next one waits for that answer (`writeInTurn`).
   const writeTails = useRef(new Map<string, Promise<void>>());
@@ -58,8 +59,10 @@ export function useProjectCollection(onParentOpened: (id: string) => void) {
   const deletedIds = useRef(new Set<string>());
   // The writes sent, numbered, and which one last set each project's position (`foldWrite`).
   const positionWrites = useRef(positionRecord());
-  // Each project as the latest answer or read applied to `projects` left it, read synchronously where `projects`
-  // is a render behind.
+  // Each project as the latest answer or read gave it, the raw row, read synchronously where `projects` is a
+  // render behind: for the parent a write moved a project from (`foldWrite`'s `before`) and for the ids
+  // known, to tell a deleted project from a new one. Not a mirror of `projects`: the reindex fold and a later
+  // write's protection of a position act on `projects` alone.
   const appliedRows = useRef(new Map<string, Project>());
 
   // The one reader of the whole tree. A read that a later one superseded is dropped: the later one decides.

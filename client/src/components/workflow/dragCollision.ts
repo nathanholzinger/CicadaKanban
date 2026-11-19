@@ -71,8 +71,9 @@ export function isSectionRow(data: Record<string, unknown> | undefined): boolean
   return isStubRow(data) || isOverflowRow(data);
 }
 
-// What the collision closure needs to know about the live pop session — a
-// read-only view the hook keeps in a ref.
+// What the collision resolver needs to know about the live pop session — a
+// read-only view its caller builds from the session on each call
+// (`useBoardDnd.ts::collisionDetection`).
 export interface CollisionSession {
   /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover: a mere hover never drives `over`. */
   hoverContainerId: string | null;
@@ -99,8 +100,9 @@ export interface CollisionSession {
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
 // so it has to agree with the pop machine — a mere hover never drives it
-// (wiki board-drag-interaction §1.1, rule 1) — which is why this is a
-// factory over the live session rather than a constant:
+// (wiki board-drag-interaction §1.1, rule 1) — which is why it takes the live
+// session's view as an argument on every call rather than deciding from the
+// drag alone:
 //
 //   - Card or Stub drag, locked at a column/sub-row or a Descendants section:
 //     closestCorners over the context's container and the cards (or, at a
@@ -289,8 +291,10 @@ export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): 
 // has the same ghost and shuffle, but a release there names the gap and the
 // depth, so it reads the ghost's slot, `over`'s place in the list, and no
 // neighbor; the board names the ghost's neighbor in dnd-kit's shuffled order.
-// Same outcome — a row of the dragged subtree is never Top or Bottom — from
-// different inputs.
+// The two don't remove the same rows: the sidebar's list leaves out the dragged project's
+// whole subtree, so none of its rows can be Top or Bottom, where the board's list leaves out
+// only the carried attached branch, and a Free descendant, still a Card in the column, can be
+// named. Different inputs, and a different set of rows to name from.
 export function namedAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over | null): AnchorRelation | null {
   return over ? dropAnchorFor(active, over) : null;
 }

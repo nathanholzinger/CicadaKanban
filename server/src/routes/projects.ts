@@ -198,8 +198,9 @@ router.put('/:id', (req, res) => {
 // project's resulting *predecessor*/*successor* — the project that should
 // end up immediately before/after the moved project (not "the project I go
 // before/after," which reads ambiguously either direction; prevId/nextId
-// describes a position in the sequence). When both are named, `prevId` is
-// the neighbor: it alone is checked and used, and `nextId` is ignored. Both
+// describes a position in the sequence). Each field supplied is shape-checked first. When
+// both name a project, `prevId` is the neighbor: it alone is validated as a row and used
+// for placement, and `nextId` is not read further. Both
 // omitted/null means "no positioning info, append to the true end of the
 // resulting scope," never "trust me, the scope is empty": the server always
 // re-derives the true current children, since a caller's view of them can be

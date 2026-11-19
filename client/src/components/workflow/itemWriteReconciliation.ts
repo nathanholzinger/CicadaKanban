@@ -95,9 +95,11 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // of its rows' leaves that row's workphase as it is and cascades nothing from it. That is a written row an
 // older answer carries a stale workphase for, and a row the cascade would otherwise move back. Only a write
 // that changes a row's workphase sets it: the written row, when its answer's differs from the loaded one, and
-// the attached descendants its cascade moves are recorded as `sent`'s. An answer that carries the workphase
-// the row already holds sets nothing, so it claims no row, and an older write's cascade landing after it
-// still reaches the row. An answer with no `sent` is the latest write there is, and records nothing.
+// the attached descendants its cascade moves are recorded as `sent`'s. A written row that already holds the
+// answer's workphase starts no cascade and claims nothing, so an older write's cascade landing after it
+// still reaches that row. When the written row does change, the cascade claims every attached descendant it
+// reaches that no later-sent write has set, one already holding the destination workphase included. An answer
+// with no `sent` is the latest write there is, and records nothing.
 function withWorkphases(
   state: ItemListState,
   after: Item[],

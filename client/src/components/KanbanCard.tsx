@@ -198,7 +198,7 @@ export default function KanbanCard({
   const isGhostLike = isOverlay || isDragging;
   // Where `overlayForm` changes what this component draws (`useItemRow` only
   // reports it as `data-drag-overlay-form`) — everywhere else in this
-  // component, `isOverlay` alone means "the shortCard drag copy."
+  // component, `isOverlay` alone means "the carried copy," in either form.
   const overlayIsStub = isOverlay && overlayForm === 'stub';
   const overlayIndent = overlayStubIndent(overlayIsStub ? overlayProjection : null);
   // The carried copy's second line, in either form: it hangs from the copy's box, outside what
