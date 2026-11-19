@@ -1,6 +1,6 @@
 # Epic 3.5 — the epic-wide audit
 
-**Type:** audit story: the epic close's code quality audit, in a plan of its own so Story 10 can close without it · **Written:** 2026-11-18 by the Architect, from a conversation with Nathan · **Sequenced:** finish grooming this plan, then close Story 10, then start this audit; before Epic 3.5 closes and before main and the API contract branch merge · **Status:** groomed and approved by Nathan; execution waits for Story 10's sign-off
+**Type:** audit story: the epic close's code quality audit, in a plan of its own so Story 10 can close without it · **Written:** 2026-11-18 by the Architect, from a conversation with Nathan · **Sequenced:** finish grooming this plan, then close Story 10, then start this audit; before Epic 3.5 closes and before main and the API contract branch merge · **Status:** audit review complete at frozen commit `6962415c`; the fix batch for the 15 required comment corrections is planned, and the optional findings aren't taken (Nathan); Coder session next, after the audit tag
 
 ## Goal
 
@@ -76,12 +76,34 @@ The session has four concurrency slots including the orchestrator, so at most th
 5. **Work them (Coder sessions),** each with `/code-review`, the gate, `npm run test:e2e` where it changes the drag layer's code, and a stop for review and commit.
 6. **Close.** Every required finding has a disposition (audit-workflow §9), and this plan and the report move to `docs/archive/` at the epic's close.
 
+## Audit results
+
+All 18 cold instances completed on `epic-3-2-complete..6962415c15df41434b557934ce4cbd106c1ab4a9` (302 commits). All 57 code files received the three lenses and both instruction files received Drift. All eight map nominations received full comparisons in the existing job instances. A usage limit interrupted three Duplication instances; the same tasks resumed, preserving completed work.
+
+The [report](../../audits/code-quality-audit-epic-3-5.md) holds **15 required comment corrections (#1–#15)** and **five optional structural findings (#16–#20)**. No required consolidation or file split was established. The orchestrator retraced every required claim; the comment corrections preserve existing behavior, including the frozen workphase reconciliation and forced-stop cue. No new PO decision, coverage review or deferral destination is needed.
+
+The Architect owns the next step: plan fix batches here, choose whether any optional work is worthwhile, and follow the existing review, gate, E2E and review/commit stops. The Auditor has not authored batches or changed source/tests. Required dispositions stay open until implemented, routed or rejected. Nathan has not yet applied the audit tag in this session. The [scope packet](../../audits/epic-3-5-scopes/README.md) retains the verified manifest, scopes, raw results and resume record.
+
+## Audit fix batch
+
+The Architect writes the batch (`.claude/guides/audit-workflow.md`, "Working Fix Now"), and a Coder session works it. Nathan took none of the optional findings, #16 to #20, and the informational #21 and #22 ask for nothing (2026-11-18). So there's one batch, of drift only, and it changes no code: every fix corrects a comment to describe the code as it is. It runs after Nathan commits the report and tags `epic-3-5-audited` (D8).
+
+**Batch 1 — a Coder session: #1 to #15.** 16 files, 3 server and 13 client, comment lines only. Each finding's fix is in the [report](../../audits/code-quality-audit-epic-3-5.md#fix-now), with the code it's checked against.
+- **Server:** #1 and #4 in `positionResolver.ts`, #2 in `itemPositionScope.ts`, #3 in `routes/projects.ts`. #2 describes the terminal flag as the code still reads it, though the Quick Items epic removes it.
+- **Board drag layer:** #5 and #6 in `dragCollision.ts`, #7 in `dragStructure.ts`, #12 in `CardList.tsx`, #13 in `KanbanCard.tsx`, #14 in `useLatest.ts`. #6 keeps the reason the neighbor and gap readers are separate, and corrects only the sentence about Free descendants. #7 keeps the clipping, and keeps a reason only if it's the real one. #14 describes the passive effect, and doesn't switch it to a layout effect.
+- **Writes:** #8 at all six of its locations together, in `useProjectCollection.ts`, `hierarchy.ts`, `projectTreeUtils.ts` and `useProjectDragReorder.ts`; #9 in `itemWriteReconciliation.ts`; #10 in `useProjectCollection.ts`; #11 in `useItemManagement.ts`.
+- **Frozen areas:** #9 sits in the out-of-order write reconciliation and #15 in the forced-stop cue (`ForcedStopContext.ts`, `useForcedStop.ts`), both Built and frozen in [MVP Deferrals](../mvp-deferrals.md#built-and-frozen). Correct the words only: no value-equality filter for #9, and no new rule, test or variant for either.
+- **If a comment can't be made true without changing code,** or a finding doesn't hold when you retrace it, leave that comment, change no code, and report it to Nathan.
+- **Check:** `/code-review`, then `npm run check`. Then confirm that only comment lines changed: `git diff -U0 -- '*.ts' '*.tsx' | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' | grep -vE '^[+-]\s*(//|/?\*|\{/\*|$)'` prints nothing, and anything it does print gets a look by hand. No E2E run: nothing changes behavior (audit-workflow §8 runs `npm run test:e2e` where a batch touches behavior). No test file changes, so there's no Test Reviewer pass, no Reconciler write and no catalog effect.
+- **Stop** for Nathan's review and commit.
+- **Done** when all 15 findings are fixed or carry Nathan's disposition; then this plan and the report move to `docs/archive/` at the epic's close (Work step 6).
+
 ## Acceptance
 
 - Story 10 signed off before any audit instance started, and the report records the frozen end SHA.
 - The report covers all 57 code files with the three lenses and the two instruction files with Drift only; no file under `docs/` is audited. Its Duplication job instances ran on horizontal seams, including `projectTreeUtils` in gesture and writes. Any map nomination reported as a finding received a full comparison read.
 - Every required finding has a disposition, and every route has landed where it's named.
-- After the last fix batch, the gate passes, and so does a full `npm run test:e2e`.
+- After the last fix batch, the gate passes. A full `npm run test:e2e` runs too if any batch changes behavior; the planned batch changes comments only (Audit fix batch).
 
 ## Open questions
 
@@ -113,3 +135,6 @@ The session has four concurrency slots including the orchestrator, so at most th
 - **2026-11-18 — Scope grooming approved (Nathan, applied by the Auditor).** Keep 18 initial instances. Add `projectTreeUtils.ts` to Duplication's gesture comparison while retaining it in writes; broaden the map to imports, private signatures and responsibility blocks, run it first, and require full reads before reporting its nominations. Count whole-file workloads, distinguish 57 code files from two instruction files outside `docs/`, and check actual readers separately from unspawned `out` placeholders.
 - **2026-11-18 — Execution and sequence clarified (Nathan, applied by the Auditor).** Everything under `docs/` stays outside code quality review. Freeze an explicit end SHA after Story 10 signs off; use up to three subagents, periodic completion/start updates and a persistent resume record across as many usage windows as needed. Grooming precedes Story 10's close and does not begin the audit. No additional epic-end coverage review is run.
 - **2026-11-18 — Post-merge audit returns to the standard four passes (Nathan).** Keep the explicit Story 10 audited base so its fixes carry forward. Apply the ordinary pass-selection and whole-file rules to the fixes and merge scope; horizontal Duplication seams remain a planning option, with no standing workflow change decided now.
+- **2026-11-18 — Audit started after Story 10 closed (Auditor).** Nathan confirmed the close and authorized execution. The working tree was clean at `6962415c15df41434b557934ce4cbd106c1ab4a9`; the exclusive range from `epic-3-2-complete` holds 302 commits. Generated scopes have verified actual readers for all 57 code files and the two instruction files. The map and independent File Responsibility/Drift instances start first; `docs/audits/epic-3-5-scopes/execution.json` records tasks, results and continuations. No source or test change.
+- **2026-11-18 — Review complete (Auditor).** All 18 cold instances and all eight full map comparisons completed at frozen `6962415c`. The report records 15 required comment corrections and five optional structural findings, with no required consolidation or split. Source/tests, wiki and test catalog are unchanged; no new coverage review or behavior ruling was made. The Architect owns fix planning, and required dispositions remain open.
+- **2026-11-18 — Fix batch planned (Architect).** Nathan took none of the optional or informational findings, so batch 1 holds the 15 comment corrections. With no behavior change, Acceptance runs a full E2E only if a batch changes behavior (audit-workflow §8), where it had run one after the last batch regardless.
