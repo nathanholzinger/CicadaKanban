@@ -1,4 +1,4 @@
-# Epic 3.5 — Story Roadmap: Drag-and-Drop Attach/Detach Gesture
+# Epic 3.5 — Story Roadmap: Drag-and-Drop Attach/Detach Gesture ✅ (done 2026-11-18)
 
 High-level story separation for Epic 3.5. Each story below is a discrete piece
 of work that can carry its own test plan with testable cases. **Implementation
